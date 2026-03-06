@@ -67,7 +67,13 @@ export default function ProfilePage() {
             </div>
           </div>
 
-          <Button onClick={() => budgetActions.updateProfile({ name: name.trim(), email: email.trim() })}>
+          <Button onClick={async () => {
+            try {
+              await budgetActions.updateProfile({ name: name.trim(), email: email.trim() });
+            } catch (err) {
+              console.error("Gagal menyimpan profil:", err);
+            }
+          }}>
             Simpan Profil
           </Button>
         </section>
@@ -77,13 +83,17 @@ export default function ProfilePage() {
           <div className="flex flex-wrap gap-2">
             <Button
               variant={profile.theme === "dark" ? "primary" : "outline"}
-              onClick={() => budgetActions.setTheme("dark")}
+              onClick={async () => {
+                try { await budgetActions.setTheme("dark"); } catch (err) { console.error(err); }
+              }}
             >
               Dark Mode
             </Button>
             <Button
               variant={profile.theme === "light" ? "primary" : "outline"}
-              onClick={() => budgetActions.setTheme("light")}
+              onClick={async () => {
+                try { await budgetActions.setTheme("light"); } catch (err) { console.error(err); }
+              }}
             >
               Light Mode
             </Button>
