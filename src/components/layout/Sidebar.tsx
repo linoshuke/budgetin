@@ -1,11 +1,6 @@
 import { formatCurrency } from "@/lib/utils";
-import type { Totals } from "@/store/budgetStore";
-
-type Category = {
-  name: string;
-  icon: string;
-  color: string;
-};
+import type { Totals } from "@/lib/budget";
+import type { Category } from "@/types/category";
 
 interface SidebarProps {
   categories: Category[];
@@ -16,27 +11,34 @@ export default function Sidebar({ categories, totals }: SidebarProps) {
   return (
     <aside className="glass-panel h-fit space-y-4 p-4">
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-400">Ringkasan</p>
-        <div className="mt-3 space-y-2">
-          <SummaryRow label="Saldo" value={formatCurrency(totals.balance)} />
-          <SummaryRow label="Pemasukan" value={formatCurrency(totals.income)} color="#34d399" />
-          <SummaryRow label="Pengeluaran" value={formatCurrency(totals.expense)} color="#fb7185" />
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Ringkasan Cepat</h2>
+        <div className="mt-3 space-y-2 text-sm">
+          <SummaryRow label="Saldo Total" value={formatCurrency(totals.balance)} />
+          <SummaryRow label="Pemasukan" value={formatCurrency(totals.income)} valueClass="text-emerald-400" />
+          <SummaryRow label="Pengeluaran" value={formatCurrency(totals.expense)} valueClass="text-rose-400" />
         </div>
       </div>
 
       <div>
-        <p className="text-xs uppercase tracking-wide text-slate-400">Kategori</p>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Kategori Aktif</h2>
         <ul className="mt-3 space-y-2">
-          {categories.map((cat) => (
+          {categories.slice(0, 6).map((category) => (
             <li
-              key={cat.name}
-              className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm"
+              key={category.id}
+              className="flex items-center justify-between rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-sm"
             >
-              <span className="flex items-center gap-2">
-                <span style={{ color: cat.color }}>{cat.icon}</span>
-                {cat.name}
+              <span className="flex items-center gap-2 text-[var(--text-primary)]">
+                <span
+                  className="inline-flex min-w-10 justify-center rounded-md px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
+                  style={{ backgroundColor: category.color }}
+                >
+                  {category.icon}
+                </span>
+                {category.name}
               </span>
-              <span className="text-xs text-slate-400">aktif</span>
+              <span className="text-xs text-[var(--text-dimmed)]">
+                {category.isDefault ? "Default" : "Custom"}
+              </span>
             </li>
           ))}
         </ul>
@@ -48,18 +50,16 @@ export default function Sidebar({ categories, totals }: SidebarProps) {
 function SummaryRow({
   label,
   value,
-  color,
+  valueClass,
 }: {
   label: string;
   value: string;
-  color?: string;
+  valueClass?: string;
 }) {
   return (
-    <div className="flex items-center justify-between rounded-lg bg-white/5 px-3 py-2 text-sm">
-      <span className="text-slate-300">{label}</span>
-      <span style={{ color: color ?? "inherit" }} className="font-semibold">
-        {value}
-      </span>
+    <div className="flex items-center justify-between rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2">
+      <span className="text-[var(--text-dimmed)]">{label}</span>
+      <span className={valueClass ?? "text-[var(--text-primary)]"}>{value}</span>
     </div>
   );
 }

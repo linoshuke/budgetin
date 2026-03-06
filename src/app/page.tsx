@@ -6,59 +6,60 @@ import AddTransactionFab from "@/components/shared/AddTransactionFab";
 import MonthlySummary from "@/components/shared/MonthlySummary";
 import StatCard from "@/components/shared/StatCard";
 import TransactionList from "@/components/shared/TransactionList";
-import { useTransactions } from "@/hooks/useTransactions";
-import { formatCurrency } from "@/lib/utils";
+import { calculateTotals, filterTransactionsByMonth, getRecentTransactions } from "@/lib/budget";
+import { formatCurrency, monthKey } from "@/lib/utils";
 import { useBudgetStore } from "@/store/budgetStore";
+import { useMemo } from "react";
 
-export default function Home() {
-  const { transactions, totals, recent } = useBudgetStore();
-  const incomes = useTransactions(transactions, "income");
-  const expenses = useTransactions(transactions, "expense");
+export default function DashboardPage() {
+  const transactions = useBudgetStore((state) => state.transactions);
+  const categories = useBudgetStore((state) => state.categories);
+
+  const totals = useMemo(() => calculateTotals(transactions), [transactions]);
+  const activeMonth = monthKey(new Date());
+  const monthTransactions = useMemo(
+    () => filterTransactionsByMonth(transactions, activeMonth),
+    [transactions, activeMonth],
+  );
+  const monthTotals = useMemo(() => calculateTotals(monthTransactions), [monthTransactions]);
+  const recent = useMemo(() => getRecentTransactions(transactions, 8), [transactions]);
 
   return (
-    <div className="relative min-h-screen">
+    <div className="min-h-screen">
       <Header />
 
-      <div className="mx-auto grid max-w-6xl grid-cols-1 gap-6 px-4 pb-24 pt-10 lg:grid-cols-[240px,1fr]">
-        <Sidebar
-          categories={[
-            { name: "Makanan", icon: "🍔", color: "#f97316" },
-            { name: "Transportasi", icon: "🚗", color: "#22d3ee" },
-            { name: "Tagihan", icon: "💡", color: "#a855f7" },
-            { name: "Gaji", icon: "💰", color: "#34d399" },
-            { name: "Hiburan", icon: "🎬", color: "#f472b6" },
-          ]}
-          totals={totals}
-        />
+      <div className="page-shell grid grid-cols-1 gap-6 lg:grid-cols-[280px,1fr]">
+        <Sidebar categories={categories} totals={totals} />
 
         <main className="space-y-6">
           <section className="card-grid">
             <StatCard
               title="Saldo Total"
               value={formatCurrency(totals.balance)}
-              helper="Total Pemasukan - Pengeluaran"
-              trend={totals.balance >= 0 ? "positif" : "negatif"}
+              helper="Pemasukan dikurangi pengeluaran"
+              accent="teal"
             />
             <StatCard
-              title="Pemasukan"
-              value={formatCurrency(totals.income)}
-              helper={`${incomes.length} sumber bulan ini`}
+              title="Pemasukan Bulan Ini"
+              value={formatCurrency(monthTotals.income)}
+              helper={`${monthTransactions.filter((item) => item.type === "income").length} transaksi`}
               accent="emerald"
             />
             <StatCard
-              title="Pengeluaran"
-              value={formatCurrency(totals.expense)}
-              helper={`${expenses.length} transaksi`}
+              title="Pengeluaran Bulan Ini"
+              value={formatCurrency(monthTotals.expense)}
+              helper={`${monthTransactions.filter((item) => item.type === "expense").length} transaksi`}
               accent="rose"
             />
           </section>
 
-          <MonthlySummary income={totals.income} expense={totals.expense} />
+          <MonthlySummary income={monthTotals.income} expense={monthTotals.expense} />
 
           <TransactionList
+            title="Recent Transactions"
+            subtitle="Menampilkan 8 transaksi terbaru"
             transactions={recent}
-            onEdit={(id) => console.log("Edit transaksi", id)}
-            onDelete={(id) => console.log("Hapus transaksi", id)}
+            categories={categories}
           />
         </main>
       </div>
