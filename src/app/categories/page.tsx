@@ -1,6 +1,7 @@
 "use client";
 
 import Header from "@/components/layout/Header";
+import AuthGate from "@/components/shared/AuthGate";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
@@ -46,16 +47,17 @@ export default function CategoriesPage() {
   };
 
   return (
-    <div className="min-h-screen">
-      <Header />
+    <AuthGate>
+      <div className="min-h-screen">
+        <Header />
 
-      <main className="page-shell space-y-6">
-        <section className="space-y-2">
-          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Manajemen Kategori</h1>
-          <p className="text-sm text-[var(--text-dimmed)]">
-            Kategori default sudah tersedia. Tambahkan kategori kustom untuk kebutuhan pribadi.
-          </p>
-        </section>
+        <main className="page-shell space-y-6">
+          <section className="space-y-2">
+            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Manajemen Kategori</h1>
+            <p className="text-sm text-[var(--text-dimmed)]">
+              Kategori default sudah tersedia. Tambahkan kategori kustom untuk kebutuhan pribadi.
+            </p>
+          </section>
 
         <form className="glass-panel grid gap-4 p-4 sm:grid-cols-2" onSubmit={handleSubmit}>
           <div className="space-y-2">
@@ -131,7 +133,8 @@ export default function CategoriesPage() {
             ))}
           </div>
         </section>
-      </main>
-    </div>
+        </main>
+      </div>
+    </AuthGate>
   );
 }

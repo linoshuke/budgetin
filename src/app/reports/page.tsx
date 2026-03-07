@@ -1,6 +1,7 @@
 "use client";
 
 import Header from "@/components/layout/Header";
+import AuthGate from "@/components/shared/AuthGate";
 import ExpenseChart from "@/components/shared/ExpenseChart";
 import MonthlySummary from "@/components/shared/MonthlySummary";
 import Button from "@/components/ui/Button";
@@ -47,16 +48,17 @@ export default function ReportsPage() {
   );
 
   return (
-    <div className="min-h-screen">
-      <Header />
+    <AuthGate>
+      <div className="min-h-screen">
+        <Header />
 
-      <main className="page-shell space-y-6">
-        <section className="space-y-2">
-          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Laporan dan Analitik</h1>
-          <p className="text-sm text-[var(--text-dimmed)]">
-            Pilih rentang waktu untuk melihat pengeluaran terbesar dan ringkasan performa keuangan.
-          </p>
-        </section>
+        <main className="page-shell space-y-6">
+          <section className="space-y-2">
+            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Laporan dan Analitik</h1>
+            <p className="text-sm text-[var(--text-dimmed)]">
+              Pilih rentang waktu untuk melihat pengeluaran terbesar dan ringkasan performa keuangan.
+            </p>
+          </section>
 
         <section className="glass-panel space-y-4 p-4">
           <div className="flex flex-wrap items-center gap-2">
@@ -132,7 +134,8 @@ export default function ReportsPage() {
             ) : null}
           </div>
         </section>
-      </main>
-    </div>
+        </main>
+      </div>
+    </AuthGate>
   );
 }

@@ -21,7 +21,7 @@ const initialState: BudgetState = {
     email: "",
     theme: "dark",
   },
-  loading: true,
+  loading: false,
 };
 
 let state: BudgetState = initialState;
