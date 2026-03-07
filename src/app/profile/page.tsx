@@ -11,6 +11,7 @@ export default function ProfilePage() {
   const profile = useBudgetStore((state) => state.profile);
   const transactions = useBudgetStore((state) => state.transactions);
   const categories = useBudgetStore((state) => state.categories);
+  const wallets = useBudgetStore((state) => state.wallets);
   const [name, setName] = useState(profile.name);
   const [email, setEmail] = useState(profile.email);
 
@@ -18,13 +19,18 @@ export default function ProfilePage() {
     () => new Map(categories.map((item) => [item.id, item.name])),
     [categories],
   );
+  const walletMap = useMemo(
+    () => new Map(wallets.map((item) => [item.id, item.name])),
+    [wallets],
+  );
 
   const exportCsv = () => {
-    const header = ["Tanggal", "Jenis", "Kategori", "Nominal", "Catatan"];
+    const header = ["Tanggal", "Jenis", "Kategori", "Dompet", "Nominal", "Catatan"];
     const rows = transactions.map((item) => [
       formatDate(item.date, true),
       item.type === "income" ? "Pemasukan" : "Pengeluaran",
       categoryMap.get(item.categoryId) ?? "Tanpa kategori",
+      walletMap.get(item.walletId) ?? "Tanpa dompet",
       item.amount,
       item.note ?? "",
     ]);
@@ -50,7 +56,7 @@ export default function ProfilePage() {
         <section className="space-y-2">
           <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Profil dan Pengaturan</h1>
           <p className="text-sm text-[var(--text-dimmed)]">
-            Atur data akun, ubah tampilan light/dark mode, dan export riwayat transaksi.
+            Atur data akun dan export riwayat transaksi.
           </p>
         </section>
 
@@ -76,28 +82,6 @@ export default function ProfilePage() {
           }}>
             Simpan Profil
           </Button>
-        </section>
-
-        <section className="glass-panel space-y-4 p-4">
-          <h2 className="text-lg font-semibold text-[var(--text-primary)]">Pengaturan Tampilan</h2>
-          <div className="flex flex-wrap gap-2">
-            <Button
-              variant={profile.theme === "dark" ? "primary" : "outline"}
-              onClick={async () => {
-                try { await budgetActions.setTheme("dark"); } catch (err) { console.error(err); }
-              }}
-            >
-              Dark Mode
-            </Button>
-            <Button
-              variant={profile.theme === "light" ? "primary" : "outline"}
-              onClick={async () => {
-                try { await budgetActions.setTheme("light"); } catch (err) { console.error(err); }
-              }}
-            >
-              Light Mode
-            </Button>
-          </div>
         </section>
 
         <section className="glass-panel space-y-3 p-4">

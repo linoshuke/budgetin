@@ -5,6 +5,7 @@ export interface Transaction {
   type: TransactionType;
   amount: number;
   categoryId: string;
+  walletId: string;
   date: string;
   note?: string;
 }
