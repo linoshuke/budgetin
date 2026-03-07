@@ -1,57 +1,32 @@
-import { supabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { handleServiceError } from "@/lib/service-error";
+import { getAuthUser } from "@/lib/auth";
+import { getAllCategories, createCategory } from "@/services/category.service";
+import { CreateCategorySchema } from "@/lib/validators";
 
-// GET /api/categories — ambil semua kategori
 export async function GET() {
-    const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .order("created_at", { ascending: true });
-
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    try {
+        const { user, supabase } = await getAuthUser();
+        const categories = await getAllCategories(supabase, user.id);
+        return NextResponse.json(categories);
+    } catch (error) {
+        const { body, status } = handleServiceError(error);
+        return NextResponse.json(body, { status });
     }
-
-    const categories = (data ?? []).map((row) => ({
-        id: row.id,
-        name: row.name,
-        icon: row.icon,
-        color: row.color,
-        type: row.type,
-        isDefault: row.is_default,
-    }));
-
-    return NextResponse.json(categories);
 }
 
-// POST /api/categories — tambah kategori baru
 export async function POST(request: Request) {
-    const body = await request.json();
-
-    const { data, error } = await supabase
-        .from("categories")
-        .insert({
-            name: body.name,
-            icon: body.icon ?? "MISC",
-            color: body.color ?? "#64748b",
-            type: body.type,
-            is_default: false,
-        })
-        .select()
-        .single();
-
-    if (error) {
-        return NextResponse.json({ error: error.message }, { status: 500 });
+    try {
+        const { user, supabase } = await getAuthUser();
+        const raw = await request.json();
+        const dto = CreateCategorySchema.parse(raw);
+        const category = await createCategory(supabase, user.id, dto);
+        return NextResponse.json(category, { status: 201 });
+    } catch (error) {
+        if (error instanceof Error && error.name === "ZodError") {
+            return NextResponse.json({ error: (error as import("zod").ZodError).issues.map(i => i.message).join(", ") }, { status: 400 });
+        }
+        const { body, status } = handleServiceError(error);
+        return NextResponse.json(body, { status });
     }
-
-    const category = {
-        id: data.id,
-        name: data.name,
-        icon: data.icon,
-        color: data.color,
-        type: data.type,
-        isDefault: data.is_default,
-    };
-
-    return NextResponse.json(category, { status: 201 });
 }

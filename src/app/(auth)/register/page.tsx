@@ -5,12 +5,20 @@ import Input from "@/components/ui/Input";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+
+/** Sanitasi redirect path untuk mencegah open redirect attack. */
+function sanitizeRedirect(path: string | null): string {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) return "/";
+  if (/^\/\\/.test(path)) return "/";
+  return path;
+}
 
 export default function RegisterPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const nextPath = useMemo(() => searchParams.get("next") || "/", [searchParams]);
+  const nextPath = useMemo(() => sanitizeRedirect(searchParams.get("next")), [searchParams]);
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -27,7 +35,7 @@ export default function RegisterPage() {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
       if (data.session) {
-        router.replace(nextPath);
+        router.replace(nextPath as Route);
       }
     };
 
@@ -75,7 +83,7 @@ export default function RegisterPage() {
 
     if (data.session) {
       setLoading(false);
-      router.replace(nextPath);
+      router.replace(nextPath as Route);
       return;
     }
 
@@ -83,7 +91,7 @@ export default function RegisterPage() {
     setLoading(false);
 
     if (loginData.session) {
-      router.replace(nextPath);
+      router.replace(nextPath as Route);
       return;
     }
 

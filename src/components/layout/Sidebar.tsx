@@ -1,6 +1,7 @@
 import { formatCurrency } from "@/lib/utils";
 import type { Totals } from "@/lib/budget";
 import Link from "next/link";
+import type { Route } from "next";
 
 interface SidebarProps {
   totals: Totals;
@@ -47,7 +48,7 @@ function SummaryRow({
   );
 }
 
-function QuickLink({ href, label }: { href: string; label: string }) {
+function QuickLink({ href, label }: { href: Route; label: string }) {
   return (
     <Link
       href={href}

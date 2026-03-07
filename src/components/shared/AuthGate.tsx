@@ -2,6 +2,7 @@
 
 import { supabase } from "@/lib/supabase";
 import { usePathname, useRouter } from "next/navigation";
+import type { Route } from "next";
 import { useEffect, useMemo, useState } from "react";
 
 export default function AuthGate({ children }: { children: React.ReactNode }) {
@@ -22,7 +23,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       if (!active) return;
 
       if (error || !data.session) {
-        router.replace(loginTarget);
+        router.replace(loginTarget as Route);
         return;
       }
 
@@ -33,7 +34,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       if (!session) {
-        router.replace(loginTarget);
+        router.replace(loginTarget as Route);
         return;
       }
       setChecking(false);
