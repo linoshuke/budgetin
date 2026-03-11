@@ -5,7 +5,7 @@ import {
     mapRowToWallet,
     mapRowsToWallets,
     mapDTOToInsertRow,
-} from "@/models/wallet.model";
+} from "@/app/api/wallets/models/wallet.model";
 import { ServiceError } from "@/lib/service-error";
 
 export async function getAllWallets(

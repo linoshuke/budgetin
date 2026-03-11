@@ -7,7 +7,7 @@ import {
     mapRowsToTransactions,
     mapCreateDTOToInsertRow,
     mapUpdateDTOToUpdateRow,
-} from "@/models/transaction.model";
+} from "@/app/api/transactions/models/transaction.model";
 import { ServiceError } from "@/lib/service-error";
 
 export async function getAllTransactions(

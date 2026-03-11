@@ -4,7 +4,7 @@ import {
     type UpdateProfileDTO,
     mapRowToProfile,
     mapDTOToUpdateRow,
-} from "@/models/profile.model";
+} from "@/app/api/profiles/models/profile.model";
 import { ServiceError } from "@/lib/service-error";
 
 export async function getProfile(

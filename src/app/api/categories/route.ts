@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/service-error";
 import { getAuthUser } from "@/lib/auth";
-import { getAllCategories, createCategory } from "@/services/category.service";
+import { getAllCategories, createCategory } from "@/app/api/services/category.service";
 import { CreateCategorySchema } from "@/lib/validators";
 
 export async function GET() {
