@@ -14,6 +14,7 @@ export default function TransactionsPage() {
   const transactions = useBudgetStore((state) => state.transactions);
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
+  const syncLoading = useBudgetStore((state) => state.syncLoading);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const sortedTransactions = useMemo(
@@ -60,6 +61,7 @@ export default function TransactionsPage() {
             onCreateWallet={(payload: Omit<Wallet, "id" | "isDefault">) => budgetActions.addWallet(payload)}
             submitLabel={editingId ? "Perbarui Transaksi" : "Tambah Transaksi"}
             onCancel={editingId ? () => setEditingId(null) : undefined}
+            disabled={syncLoading}
           />
 
           <TransactionList
@@ -68,17 +70,22 @@ export default function TransactionsPage() {
             transactions={sortedTransactions}
             categories={categories}
             wallets={wallets}
-            onEdit={setEditingId}
-            onDelete={async (id) => {
-              try {
-                await budgetActions.deleteTransaction(id);
-                if (editingId === id) {
-                  setEditingId(null);
-                }
-              } catch (err) {
-                console.error("Gagal menghapus transaksi:", err);
-              }
-            }}
+            onEdit={syncLoading ? undefined : setEditingId}
+            onDelete={
+              syncLoading
+                ? undefined
+                : async (id) => {
+                    try {
+                      await budgetActions.deleteTransaction(id);
+                      if (editingId === id) {
+                        setEditingId(null);
+                      }
+                    } catch (err) {
+                      console.error("Gagal menghapus transaksi:", err);
+                    }
+                  }
+            }
+            disabled={syncLoading}
           />
         </main>
       </div>

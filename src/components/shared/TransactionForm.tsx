@@ -16,6 +16,7 @@ interface TransactionFormProps {
   onCreateWallet?: (payload: Omit<Wallet, "id" | "isDefault">) => Promise<Wallet>;
   onCancel?: () => void;
   submitLabel?: string;
+  disabled?: boolean;
 }
 
 export default function TransactionForm({
@@ -26,6 +27,7 @@ export default function TransactionForm({
   onCreateWallet,
   onCancel,
   submitLabel = "Simpan Transaksi",
+  disabled = false,
 }: TransactionFormProps) {
   const [type, setType] = useState<TransactionType>(initialValue?.type ?? "expense");
   const [amountInput, setAmountInput] = useState(initialValue ? String(initialValue.amount) : "");
@@ -54,7 +56,7 @@ export default function TransactionForm({
   const amount = Number(amountInput || "0");
 
   const handleAddWallet = async () => {
-    if (!onCreateWallet) return;
+    if (!onCreateWallet || disabled) return;
 
     const name = newWalletName.trim();
     if (!name) {
@@ -78,6 +80,7 @@ export default function TransactionForm({
 
   const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (disabled) return;
     if (!selectedCategoryId || !selectedWalletId || amount <= 0) return;
 
     onSubmit({
@@ -103,6 +106,7 @@ export default function TransactionForm({
           type="button"
           variant={type === "income" ? "primary" : "outline"}
           onClick={() => setType("income")}
+          disabled={disabled}
         >
           Pemasukan
         </Button>
@@ -110,6 +114,7 @@ export default function TransactionForm({
           type="button"
           variant={type === "expense" ? "primary" : "outline"}
           onClick={() => setType("expense")}
+          disabled={disabled}
         >
           Pengeluaran
         </Button>
@@ -124,6 +129,7 @@ export default function TransactionForm({
             value={amountInput}
             onChange={(event) => setAmountInput(event.target.value.replace(/\D/g, ""))}
             required
+            disabled={disabled}
           />
           <p className="text-xs text-[var(--text-dimmed)]">Preview: {formatCurrency(amount)}</p>
         </div>
@@ -135,6 +141,7 @@ export default function TransactionForm({
             onChange={(event) => setCategoryId(event.target.value)}
             className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-sm text-[var(--text-primary)]"
             required
+            disabled={disabled}
           >
             {filteredCategories.map((item) => (
               <option key={item.id} value={item.id}>
@@ -152,6 +159,7 @@ export default function TransactionForm({
               onChange={(event) => setWalletId(event.target.value)}
               className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-sm text-[var(--text-primary)]"
               required
+              disabled={disabled}
             >
               {wallets.map((item) => (
                 <option key={item.id} value={item.id}>
@@ -166,7 +174,7 @@ export default function TransactionForm({
                 setWalletError("");
                 setShowWalletInput((value) => !value);
               }}
-              disabled={!onCreateWallet}
+              disabled={!onCreateWallet || disabled}
             >
               Tambah
             </Button>
@@ -182,9 +190,10 @@ export default function TransactionForm({
                 placeholder="Contoh: GoPay"
                 value={newWalletName}
                 onChange={(event) => setNewWalletName(event.target.value)}
+                disabled={disabled}
               />
               <div className="flex items-center gap-2">
-                <Button type="button" onClick={handleAddWallet} disabled={savingWallet}>
+                <Button type="button" onClick={handleAddWallet} disabled={savingWallet || disabled}>
                   {savingWallet ? "Menyimpan..." : "Simpan Dompet"}
                 </Button>
                 <Button
@@ -194,6 +203,7 @@ export default function TransactionForm({
                     setShowWalletInput(false);
                     setWalletError("");
                   }}
+                  disabled={disabled}
                 >
                   Batal
                 </Button>
@@ -205,7 +215,13 @@ export default function TransactionForm({
 
         <div className="space-y-2">
           <label className="text-sm text-[var(--text-dimmed)]">Tanggal</label>
-          <Input type="date" value={date} onChange={(event) => setDate(event.target.value)} required />
+          <Input
+            type="date"
+            value={date}
+            onChange={(event) => setDate(event.target.value)}
+            required
+            disabled={disabled}
+          />
         </div>
 
         <div className="space-y-2 sm:col-span-2">
@@ -214,14 +230,15 @@ export default function TransactionForm({
             placeholder="Contoh: Mie Gacoan dan es teh"
             value={note}
             onChange={(event) => setNote(event.target.value)}
+            disabled={disabled}
           />
         </div>
       </div>
 
       <div className="flex flex-wrap items-center gap-2">
-        <Button type="submit">{submitLabel}</Button>
+        <Button type="submit" disabled={disabled}>{submitLabel}</Button>
         {onCancel ? (
-          <Button type="button" variant="outline" onClick={onCancel}>
+          <Button type="button" variant="outline" onClick={onCancel} disabled={disabled}>
             Batal
           </Button>
         ) : null}
