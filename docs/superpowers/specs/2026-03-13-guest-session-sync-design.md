@@ -1,20 +1,21 @@
 ---
-title: Guest Session Storage and Sync to Supabase
+title: Guest Local Storage and Atomic Sync to Supabase
 date: 2026-03-13
 status: approved
 ---
 
 # Overview
 
-Enable Budgetin to be used without login. Guest data is stored in `sessionStorage` and is cleared when the browser window/tab is closed. When the user logs in or registers, the guest data is merged into Supabase and becomes part of the authenticated account. If the account already has data, the sync performs a merge based on wallet and category names; transactions are treated as distinct records.
+Enable Budgetin to be used without login. Guest data is stored in `localStorage` and persists until the user successfully logs in/registers and sync completes. When the user logs in or registers, the guest data is merged into Supabase and becomes part of the authenticated account. If the account already has data, the sync performs a merge based on wallet and category names; transactions are treated as distinct records. Sync is atomic: if any part fails, the entire sync is rolled back.
 
 # Goals
 
 - Allow full app usage without authentication.
-- Store guest data in `sessionStorage` only.
-- Show a browser close warning when guest data exists and user is still anonymous.
+- Store guest data in `localStorage` only.
 - On login/register, sync guest data into Supabase and merge with existing data.
 - Prevent accidental data loss during the transition from guest to authenticated user.
+- Prevent partial writes by using database transactions in `/api/sync`.
+- Block new transaction input during sync to avoid race conditions.
 
 # Non-goals
 
@@ -27,12 +28,13 @@ Enable Budgetin to be used without login. Guest data is stored in `sessionStorag
 - Supabase tables already include `user_id` and RLS policies per user.
 - Default categories and wallets are seeded per new user (via trigger).
 - Name matching is case-insensitive and whitespace-normalized; no fuzzy matching.
+- Wallet balances on server are authoritative and derived from transactions, not trusted from client.
 
 # Proposed Solution
 
 ## Guest Storage (Client)
 
-- Store guest state in `sessionStorage` under key `budgetin:guest:v1`.
+- Store guest state in `localStorage` under key `budgetin:guest:v1`.
 - Persist these entities:
   - `transactions`
   - `categories`
@@ -41,15 +43,32 @@ Enable Budgetin to be used without login. Guest data is stored in `sessionStorag
   - `meta` (timestamps and version)
 - On app load:
   - If user is authenticated: load from API.
-  - If not authenticated: load from `sessionStorage` and initialize in-memory state.
+  - If not authenticated: load from `localStorage` and initialize in-memory state.
 
 ## Sync Trigger
 
 - On successful login/register:
-  - Read guest data from `sessionStorage`.
+  - Read guest data from `localStorage`.
   - If data exists, call a new API endpoint `/api/sync`.
-  - After successful sync, clear `sessionStorage`.
+  - If the response is 200/201: clear `localStorage`.
   - Reload data from API to ensure canonical state.
+
+## Hybrid State Banner
+
+- If `isAuthenticated == true` but guest data still exists in `localStorage`, show a persistent banner:
+  - Message: "Ada data offline yang belum tersimpan."
+  - Action: "Sinkronisasi Sekarang" (triggers `/api/sync`).
+- The retry action must be available on the main dashboard, not only during login.
+
+## Global Sync Lock
+
+- While `SyncService` is running, set a global loading state to disable transaction input.
+- Purpose: prevent users from editing data during the critical sync window.
+
+## Cross-Tab Sync
+
+- Listen to the `storage` event to detect updates from another tab (e.g., sync cleared `localStorage`).
+- When changes are detected, refresh in-memory state accordingly.
 
 ## Merge Rules
 
@@ -61,18 +80,21 @@ Enable Budgetin to be used without login. Guest data is stored in `sessionStorag
 - Transactions:
   - Always inserted as new entries.
   - `wallet_id` and `category_id` are mapped using the name-based mapping above.
+- Wallet balance rule:
+  - Ignore any `wallet.balance` from client.
+  - After inserting guest transactions, update wallet balances by applying the sum of guest transactions (income - expense), or recompute from all transactions.
+
+## Saldo Awal as Transaction
+
+- "Saldo Awal/Adjustment" is a system income category.
+- When a guest creates a wallet with an initial balance, the app creates an implicit income transaction in that category.
+- On sync, the category is ensured to exist (type `income`), and the transaction is inserted like any other.
 
 ## Idempotency
 
 - Add `client_id` on transactions, categories, and wallets.
 - Store a UUID created on the client to prevent duplicate inserts on repeated syncs.
 - Enforce uniqueness with a composite unique index (`user_id`, `client_id`).
-
-## Warning on Close
-
-- If in guest mode and `sessionStorage` has data, attach a `beforeunload` handler.
-- This triggers the standard browser warning dialog before closing.
-- Also add an in-app banner notifying the user that guest data is temporary.
 
 # Data Model Changes (Supabase)
 
@@ -112,11 +134,15 @@ Request body:
 
 Server responsibilities:
 - Validate auth (must be logged in).
+- Start a DB transaction (atomic sync).
 - Fetch existing wallets/categories for the user.
 - Build name-based mapping with normalization (and category type).
-- Upsert wallets/categories as needed.
+- Upsert wallets/categories as needed (ignore client `balance`).
+- Ensure "Saldo Awal/Adjustment" category exists (type `income`).
 - Insert transactions with mapped IDs.
+- Update wallet balances based on transaction deltas (or recompute).
 - Respect `client_id` uniqueness to prevent duplicates.
+- Commit only if all steps succeed; otherwise rollback and return error.
 
 Response:
 ```json
@@ -128,46 +154,50 @@ Response:
 - `AuthGate` becomes optional or is bypassed for guest mode.
 - `DataLoader`:
   - If authenticated: load from API as today.
-  - If not authenticated: hydrate from `sessionStorage`.
+  - If not authenticated: hydrate from `localStorage`.
 - `budgetStore`:
-  - Add helpers to load/save state to `sessionStorage`.
-  - Wrap mutating actions so guest changes persist to `sessionStorage`.
-- Add a banner component for guest mode.
-- Add `beforeunload` warning when guest data exists.
+  - Add helpers to load/save state to `localStorage`.
+  - Wrap mutating actions so guest changes persist to `localStorage`.
+- Add a persistent hybrid-state banner with retry action when `isAuthenticated == true` and guest data exists.
+- Implement global loading state that disables transaction input while sync runs.
+- Add `storage` event listeners to sync state across tabs.
 
 # Error Handling
 
-- If sync fails:
-  - Keep `sessionStorage` intact.
-  - Show a visible error message and allow retry.
-- If mapping fails:
-  - Fallback to creating new categories/wallets to avoid data loss.
+- If sync fails (e.g., 500):
+  - Keep `localStorage` intact.
+  - Show a visible error message and allow retry from the dashboard banner.
+  - App remains usable (no blank screen).
+- Only clear `localStorage` when `/api/sync` returns 200/201.
 
 # Testing Plan
 
-- Guest mode CRUD operations stored in `sessionStorage`.
-- Data cleared after closing the browser tab (session scope).
+- Guest mode CRUD operations stored in `localStorage`.
+- Data persists after browser close until login/register success.
 - Login/register with existing data:
   - Wallet/category merge by normalized name.
   - Transactions inserted and linked to mapped IDs.
+  - Wallet balances updated based on transaction deltas.
 - Sync idempotency:
-  - Multiple logins do not duplicate records.
-- Error path:
-  - Simulated sync failure keeps guest data.
+  - Multiple syncs do not duplicate records.
+- Timezone test:
+  - Guest transaction in local timezone syncs to Supabase `timestamptz` without date shift.
+- Partial auth test:
+  - Valid token but `/api/sync` returns 500 -> data local tetap, app usable.
+- Cross-tab sync:
+  - Login in tab 1; tab 2 detects `localStorage` changes and refreshes.
 
 # Rollout
 
-1. Add DB columns and indexes.
-2. Implement `/api/sync`.
-3. Update client store and loaders.
-4. Add guest banner and close warning.
+1. Add DB columns and unique indexes.
+2. Implement `/api/sync` with DB transaction.
+3. Update client store, loaders, and sync service.
+4. Add hybrid-state banner, retry action, and global sync lock.
 5. QA flows for guest -> login -> merged state.
 
 # Risks and Open Questions
 
-- "Similar name" matching is strict normalization, not fuzzy. If fuzzy matching is needed, define rules and thresholds.
-- Browser `beforeunload` message is not customizable in most modern browsers.
-
-
-
+- Name matching is strict normalization; no fuzzy matching.
+- Balance recompute vs. delta update should follow existing wallet balance rules in codebase.
+- Ensure the "Saldo Awal/Adjustment" category does not appear in normal category pickers unless intended.
 
