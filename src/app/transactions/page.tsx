@@ -6,11 +6,13 @@ import TransactionList from "@/components/shared/TransactionList";
 import { getRecentTransactions } from "@/lib/budget";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import type { Transaction } from "@/types/transaction";
+import type { Wallet } from "@/types/wallet";
 import { useMemo, useState } from "react";
 
 export default function TransactionsPage() {
   const transactions = useBudgetStore((state) => state.transactions);
   const categories = useBudgetStore((state) => state.categories);
+  const wallets = useBudgetStore((state) => state.wallets);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const sortedTransactions = useMemo(
@@ -50,8 +52,10 @@ export default function TransactionsPage() {
         <TransactionForm
           key={editingId ?? "new-transaction"}
           categories={categories}
+          wallets={wallets}
           initialValue={editingTransaction}
           onSubmit={handleSubmit}
+          onCreateWallet={(payload: Omit<Wallet, "id" | "isDefault">) => budgetActions.addWallet(payload)}
           submitLabel={editingId ? "Perbarui Transaksi" : "Tambah Transaksi"}
           onCancel={editingId ? () => setEditingId(null) : undefined}
         />
@@ -61,6 +65,7 @@ export default function TransactionsPage() {
           subtitle={`${sortedTransactions.length} data`}
           transactions={sortedTransactions}
           categories={categories}
+          wallets={wallets}
           onEdit={setEditingId}
           onDelete={async (id) => {
             try {

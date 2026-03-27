@@ -2,10 +2,12 @@ import Button from "@/components/ui/Button";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Category } from "@/types/category";
 import type { Transaction } from "@/types/transaction";
+import type { Wallet } from "@/types/wallet";
 
 interface TransactionListProps {
   transactions: Transaction[];
   categories: Category[];
+  wallets: Wallet[];
   title?: string;
   subtitle?: string;
   onEdit?: (id: string) => void;
@@ -15,12 +17,14 @@ interface TransactionListProps {
 export default function TransactionList({
   transactions,
   categories,
+  wallets,
   title = "Transaksi Terakhir",
   subtitle,
   onEdit,
   onDelete,
 }: TransactionListProps) {
   const categoryMap = new Map(categories.map((item) => [item.id, item]));
+  const walletMap = new Map(wallets.map((item) => [item.id, item]));
 
   return (
     <section className="glass-panel p-4">
@@ -48,6 +52,7 @@ export default function TransactionList({
                 </p>
                 <p className="text-xs text-[var(--text-dimmed)]">
                   {formatDate(transaction.date, true)}
+                  {` - ${walletMap.get(transaction.walletId)?.name ?? "Tanpa dompet"}`}
                   {transaction.note ? ` - ${transaction.note}` : ""}
                 </p>
               </div>

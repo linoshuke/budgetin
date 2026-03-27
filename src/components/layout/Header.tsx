@@ -6,7 +6,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems: Array<{ label: string; href: Route }> = [
-  { label: "Dasbor", href: "/" },
+  { label: "Dashboard", href: "/" },
   { label: "Transaksi", href: "/transactions" },
   { label: "Kategori", href: "/categories" },
   { label: "Laporan", href: "/reports" },
@@ -25,7 +25,7 @@ export default function Header() {
 
   return (
     <header className="sticky top-0 z-30 border-b border-[var(--border-soft)] bg-[var(--bg-nav)]/90 backdrop-blur-md">
-      <div className="mx-auto flex w-full max-w-[1120px] items-center justify-between gap-4 px-4 py-3">
+      <div className="mx-auto flex w-full max-w-[1120px] flex-col gap-3 px-4 py-3 md:flex-row md:items-center md:justify-between">
         <Link href="/" className="flex items-center gap-3">
           <span className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-teal-500 to-blue-600 text-sm font-bold text-white">
             BG
@@ -36,13 +36,13 @@ export default function Header() {
           </div>
         </Link>
 
-        <nav className="hidden items-center gap-2 md:flex">
+        <nav className="no-scrollbar flex items-center gap-2 overflow-x-auto pb-1 md:pb-0">
           {navItems.map((item) => (
             <Link
               key={item.href}
               href={item.href}
               className={cn(
-                "rounded-full px-3 py-2 text-sm transition-colors",
+                "min-w-max rounded-full px-3 py-2 text-sm transition-colors",
                 isActive(pathname, item.href)
                   ? "bg-teal-500/15 text-teal-300"
                   : "text-[var(--text-dimmed)] hover:bg-black/5 hover:text-[var(--text-primary)] dark:hover:bg-white/5",

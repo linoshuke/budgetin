@@ -1,13 +1,12 @@
 import { formatCurrency } from "@/lib/utils";
 import type { Totals } from "@/lib/budget";
-import type { Category } from "@/types/category";
+import Link from "next/link";
 
 interface SidebarProps {
-  categories: Category[];
   totals: Totals;
 }
 
-export default function Sidebar({ categories, totals }: SidebarProps) {
+export default function Sidebar({ totals }: SidebarProps) {
   return (
     <aside className="glass-panel h-fit space-y-4 p-4">
       <div>
@@ -20,28 +19,12 @@ export default function Sidebar({ categories, totals }: SidebarProps) {
       </div>
 
       <div>
-        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Kategori Aktif</h2>
-        <ul className="mt-3 space-y-2">
-          {categories.slice(0, 6).map((category) => (
-            <li
-              key={category.id}
-              className="flex items-center justify-between rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-sm"
-            >
-              <span className="flex items-center gap-2 text-[var(--text-primary)]">
-                <span
-                  className="inline-flex min-w-10 justify-center rounded-md px-1 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-white"
-                  style={{ backgroundColor: category.color }}
-                >
-                  {category.icon}
-                </span>
-                {category.name}
-              </span>
-              <span className="text-xs text-[var(--text-dimmed)]">
-                {category.isDefault ? "Default" : "Custom"}
-              </span>
-            </li>
-          ))}
-        </ul>
+        <h2 className="text-sm font-semibold text-[var(--text-primary)]">Navigasi Cepat</h2>
+        <div className="mt-3 space-y-2 text-sm">
+          <QuickLink href="/transactions" label="Lihat dan catat transaksi" />
+          <QuickLink href="/categories" label="Kelola kategori" />
+          <QuickLink href="/reports" label="Buka laporan bulanan" />
+        </div>
       </div>
     </aside>
   );
@@ -61,5 +44,17 @@ function SummaryRow({
       <span className="text-[var(--text-dimmed)]">{label}</span>
       <span className={valueClass ?? "text-[var(--text-primary)]"}>{value}</span>
     </div>
+  );
+}
+
+function QuickLink({ href, label }: { href: string; label: string }) {
+  return (
+    <Link
+      href={href}
+      className="flex items-center justify-between rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-[var(--text-primary)] transition hover:border-[var(--border-strong)]"
+    >
+      <span>{label}</span>
+      <span className="text-xs text-[var(--text-dimmed)]">Buka</span>
+    </Link>
   );
 }

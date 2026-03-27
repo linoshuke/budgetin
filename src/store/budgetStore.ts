@@ -2,10 +2,12 @@ import { useSyncExternalStore } from "react";
 import type { Category } from "@/types/category";
 import type { UserProfile } from "@/types/profile";
 import type { Transaction } from "@/types/transaction";
+import type { Wallet } from "@/types/wallet";
 
 export interface BudgetState {
   transactions: Transaction[];
   categories: Category[];
+  wallets: Wallet[];
   profile: UserProfile;
   loading: boolean;
 }
@@ -13,6 +15,7 @@ export interface BudgetState {
 const initialState: BudgetState = {
   transactions: [],
   categories: [],
+  wallets: [],
   profile: {
     name: "",
     email: "",
@@ -66,7 +69,14 @@ export const budgetActions = {
         apiFetch<UserProfile>("/api/profiles"),
       ]);
 
-      setState(() => ({ transactions, categories, profile, loading: false }));
+      let wallets: Wallet[] = [];
+      try {
+        wallets = await apiFetch<Wallet[]>("/api/wallets");
+      } catch (walletError) {
+        console.warn("Wallet data is not available yet:", walletError);
+      }
+
+      setState(() => ({ transactions, categories, wallets, profile, loading: false }));
     } catch (err) {
       console.error("Failed to load data from API:", err);
       setState((c) => ({ ...c, loading: false }));
@@ -118,6 +128,20 @@ export const budgetActions = {
       ...c,
       categories: [...c.categories, created],
     }));
+  },
+
+  async addWallet(payload: Omit<Wallet, "id" | "isDefault">) {
+    const created = await apiFetch<Wallet>("/api/wallets", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    setState((c) => ({
+      ...c,
+      wallets: [...c.wallets, created],
+    }));
+
+    return created;
   },
 
   async updateProfile(payload: Partial<Omit<UserProfile, "theme">>) {

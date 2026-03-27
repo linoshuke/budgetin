@@ -51,7 +51,7 @@ Pastikan tools berikut sudah terinstall di komputer masing-masing:
 ### 1. Clone Repository
 
 ```bash
-git clone https://github.com/noshuke/budgetin.git
+git clone https://github.com/linoshuke/budgetin.git
 cd budgetin
 ```
 
