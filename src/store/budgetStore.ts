@@ -7,67 +7,18 @@ export interface BudgetState {
   transactions: Transaction[];
   categories: Category[];
   profile: UserProfile;
+  loading: boolean;
 }
 
-const defaultCategories: Category[] = [
-  { id: "food", name: "Makanan", icon: "FOOD", color: "#f97316", type: "expense", isDefault: true },
-  { id: "transport", name: "Transportasi", icon: "MOVE", color: "#06b6d4", type: "expense", isDefault: true },
-  { id: "bills", name: "Tagihan", icon: "BILL", color: "#f43f5e", type: "expense", isDefault: true },
-  { id: "salary", name: "Gaji", icon: "PAY", color: "#22c55e", type: "income", isDefault: true },
-  { id: "bonus", name: "Bonus", icon: "PLUS", color: "#6366f1", type: "income", isDefault: true },
-];
-
-const seedTransactions: Transaction[] = [
-  {
-    id: "tx-1",
-    type: "income",
-    amount: 8500000,
-    categoryId: "salary",
-    date: "2026-03-01",
-    note: "Gaji bulanan",
-  },
-  {
-    id: "tx-2",
-    type: "expense",
-    amount: 240000,
-    categoryId: "food",
-    date: "2026-03-02",
-    note: "Belanja mingguan",
-  },
-  {
-    id: "tx-3",
-    type: "expense",
-    amount: 180000,
-    categoryId: "transport",
-    date: "2026-03-02",
-    note: "Bahan bakar",
-  },
-  {
-    id: "tx-4",
-    type: "expense",
-    amount: 520000,
-    categoryId: "bills",
-    date: "2026-03-03",
-    note: "Internet dan listrik",
-  },
-  {
-    id: "tx-5",
-    type: "income",
-    amount: 1250000,
-    categoryId: "bonus",
-    date: "2026-02-22",
-    note: "Bonus proyek",
-  },
-];
-
 const initialState: BudgetState = {
-  transactions: seedTransactions,
-  categories: defaultCategories,
+  transactions: [],
+  categories: [],
   profile: {
-    name: "Rafi Budgetin",
-    email: "rafi@budgetin.id",
+    name: "",
+    email: "",
     theme: "dark",
   },
+  loading: true,
 };
 
 let state: BudgetState = initialState;
@@ -87,56 +38,114 @@ function setState(updater: (current: BudgetState) => BudgetState) {
   emitChange();
 }
 
-function createId(prefix: string) {
-  const randomId = typeof crypto !== "undefined" && crypto.randomUUID
-    ? crypto.randomUUID()
-    : Math.random().toString(36).slice(2);
-  return `${prefix}-${randomId}`;
+// ─── API helpers ──────────────────────────────────────────────
+
+async function apiFetch<T>(url: string, options?: RequestInit): Promise<T> {
+  const res = await fetch(url, {
+    headers: { "Content-Type": "application/json" },
+    ...options,
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error((err as { error?: string }).error ?? `HTTP ${res.status}`);
+  }
+  return res.json() as Promise<T>;
 }
 
+// ─── Actions ──────────────────────────────────────────────────
+
 export const budgetActions = {
-  addTransaction(payload: Omit<Transaction, "id">) {
-    setState((current) => ({
-      ...current,
-      transactions: [{ id: createId("tx"), ...payload }, ...current.transactions],
+  /** Load semua data dari API (dipanggil sekali saat app mount) */
+  async loadFromApi() {
+    setState((c) => ({ ...c, loading: true }));
+
+    try {
+      const [transactions, categories, profile] = await Promise.all([
+        apiFetch<Transaction[]>("/api/transactions"),
+        apiFetch<Category[]>("/api/categories"),
+        apiFetch<UserProfile>("/api/profiles"),
+      ]);
+
+      setState(() => ({ transactions, categories, profile, loading: false }));
+    } catch (err) {
+      console.error("Failed to load data from API:", err);
+      setState((c) => ({ ...c, loading: false }));
+    }
+  },
+
+  async addTransaction(payload: Omit<Transaction, "id">) {
+    const created = await apiFetch<Transaction>("/api/transactions", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    setState((c) => ({
+      ...c,
+      transactions: [created, ...c.transactions],
     }));
   },
-  updateTransaction(id: string, payload: Omit<Transaction, "id">) {
-    setState((current) => ({
-      ...current,
-      transactions: current.transactions.map((item) => (
-        item.id === id ? { ...item, ...payload } : item
-      )),
+
+  async updateTransaction(id: string, payload: Omit<Transaction, "id">) {
+    const updated = await apiFetch<Transaction>(`/api/transactions/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    setState((c) => ({
+      ...c,
+      transactions: c.transactions.map((item) =>
+        item.id === id ? updated : item
+      ),
     }));
   },
-  deleteTransaction(id: string) {
-    setState((current) => ({
-      ...current,
-      transactions: current.transactions.filter((item) => item.id !== id),
+
+  async deleteTransaction(id: string) {
+    await apiFetch(`/api/transactions/${id}`, { method: "DELETE" });
+
+    setState((c) => ({
+      ...c,
+      transactions: c.transactions.filter((item) => item.id !== id),
     }));
   },
-  addCategory(payload: Omit<Category, "id" | "isDefault">) {
-    setState((current) => ({
-      ...current,
-      categories: [
-        ...current.categories,
-        { id: createId("cat"), ...payload, isDefault: false },
-      ],
+
+  async addCategory(payload: Omit<Category, "id" | "isDefault">) {
+    const created = await apiFetch<Category>("/api/categories", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
+
+    setState((c) => ({
+      ...c,
+      categories: [...c.categories, created],
     }));
   },
-  updateProfile(payload: Partial<Omit<UserProfile, "theme">>) {
-    setState((current) => ({
-      ...current,
-      profile: { ...current.profile, ...payload },
+
+  async updateProfile(payload: Partial<Omit<UserProfile, "theme">>) {
+    const updated = await apiFetch<UserProfile>("/api/profiles", {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    setState((c) => ({
+      ...c,
+      profile: updated,
     }));
   },
-  setTheme(theme: UserProfile["theme"]) {
-    setState((current) => ({
-      ...current,
-      profile: { ...current.profile, theme },
+
+  async setTheme(theme: UserProfile["theme"]) {
+    const updated = await apiFetch<UserProfile>("/api/profiles", {
+      method: "PUT",
+      body: JSON.stringify({ theme }),
+    });
+
+    setState((c) => ({
+      ...c,
+      profile: updated,
     }));
   },
 };
+
+// ─── Hook ─────────────────────────────────────────────────────
 
 export function useBudgetStore<T>(selector: (current: BudgetState) => T): T {
   return useSyncExternalStore(

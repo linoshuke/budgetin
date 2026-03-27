@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import DataLoader from "@/components/shared/DataLoader";
 import ThemeSync from "@/components/shared/ThemeSync";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -29,6 +30,7 @@ export default function RootLayout({
     <html lang="id">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeSync />
+        <DataLoader />
         {children}
       </body>
     </html>

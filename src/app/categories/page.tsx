@@ -24,21 +24,25 @@ export default function CategoriesPage() {
     return counts;
   }, [transactions]);
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     if (!name.trim()) return;
 
-    budgetActions.addCategory({
-      name: name.trim(),
-      icon: icon.trim() || "NEW",
-      color,
-      type,
-    });
+    try {
+      await budgetActions.addCategory({
+        name: name.trim(),
+        icon: icon.trim() || "NEW",
+        color,
+        type,
+      });
 
-    setName("");
-    setIcon("");
-    setColor("#0ea5e9");
-    setType("expense");
+      setName("");
+      setIcon("");
+      setColor("#0ea5e9");
+      setType("expense");
+    } catch (err) {
+      console.error("Gagal menambah kategori:", err);
+    }
   };
 
   return (

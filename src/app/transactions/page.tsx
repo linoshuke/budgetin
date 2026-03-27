@@ -22,13 +22,17 @@ export default function TransactionsPage() {
     [transactions, editingId],
   );
 
-  const handleSubmit = (payload: Omit<Transaction, "id">) => {
-    if (editingId) {
-      budgetActions.updateTransaction(editingId, payload);
-      setEditingId(null);
-      return;
+  const handleSubmit = async (payload: Omit<Transaction, "id">) => {
+    try {
+      if (editingId) {
+        await budgetActions.updateTransaction(editingId, payload);
+        setEditingId(null);
+        return;
+      }
+      await budgetActions.addTransaction(payload);
+    } catch (err) {
+      console.error("Gagal menyimpan transaksi:", err);
     }
-    budgetActions.addTransaction(payload);
   };
 
   return (
@@ -58,10 +62,14 @@ export default function TransactionsPage() {
           transactions={sortedTransactions}
           categories={categories}
           onEdit={setEditingId}
-          onDelete={(id) => {
-            budgetActions.deleteTransaction(id);
-            if (editingId === id) {
-              setEditingId(null);
+          onDelete={async (id) => {
+            try {
+              await budgetActions.deleteTransaction(id);
+              if (editingId === id) {
+                setEditingId(null);
+              }
+            } catch (err) {
+              console.error("Gagal menghapus transaksi:", err);
             }
           }}
         />
