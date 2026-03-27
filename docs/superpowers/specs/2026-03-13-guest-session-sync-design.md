@@ -37,7 +37,7 @@ Enable Budgetin to be used without login. Guest data is stored in `sessionStorag
   - `transactions`
   - `categories`
   - `wallets`
-  - `profile` (limited to `name`, `email`, `theme` if needed)
+  - `profile` (not synced; guest profile is ignored after login)
   - `meta` (timestamps and version)
 - On app load:
   - If user is authenticated: load from API.
@@ -55,7 +55,8 @@ Enable Budgetin to be used without login. Guest data is stored in `sessionStorag
 
 - Wallets and categories:
   - Normalize name: `trim`, `toLowerCase`, collapse whitespace.
-  - If normalized name matches an existing wallet/category in Supabase, reuse that ID.
+  - Categories match by `(normalized name, type)` to keep income vs expense distinct.
+  - If normalized name (and type for categories) matches an existing record, reuse that ID.
   - Otherwise, create a new wallet/category in Supabase.
 - Transactions:
   - Always inserted as new entries.
@@ -63,7 +64,7 @@ Enable Budgetin to be used without login. Guest data is stored in `sessionStorag
 
 ## Idempotency
 
-- Add `client_id` on transactions (and optionally on categories/wallets).
+- Add `client_id` on transactions, categories, and wallets.
 - Store a UUID created on the client to prevent duplicate inserts on repeated syncs.
 - Enforce uniqueness with a composite unique index (`user_id`, `client_id`).
 
@@ -75,15 +76,16 @@ Enable Budgetin to be used without login. Guest data is stored in `sessionStorag
 
 # Data Model Changes (Supabase)
 
-Recommended:
+Required:
+
 - `transactions.client_id UUID NULL`
-- Optional:
-  - `categories.client_id UUID NULL`
-  - `wallets.client_id UUID NULL`
+- `categories.client_id UUID NULL`
+- `wallets.client_id UUID NULL`
 
 Add unique indexes:
 - `transactions (user_id, client_id)`
-- Optional similar indexes for categories/wallets.
+- `categories (user_id, client_id)`
+- `wallets (user_id, client_id)`
 
 # API Changes
 
@@ -111,7 +113,7 @@ Request body:
 Server responsibilities:
 - Validate auth (must be logged in).
 - Fetch existing wallets/categories for the user.
-- Build name-based mapping with normalization.
+- Build name-based mapping with normalization (and category type).
 - Upsert wallets/categories as needed.
 - Insert transactions with mapped IDs.
 - Respect `client_id` uniqueness to prevent duplicates.
@@ -165,3 +167,7 @@ Response:
 
 - "Similar name" matching is strict normalization, not fuzzy. If fuzzy matching is needed, define rules and thresholds.
 - Browser `beforeunload` message is not customizable in most modern browsers.
+
+
+
+
