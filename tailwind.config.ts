@@ -6,14 +6,18 @@ const config: Config = {
   ],
   theme: {
     extend: {
+      screens: {
+        tablet: "768px",
+        desktop: "1024px",
+      },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "Inter", "system-ui", "sans-serif"],
+        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
         mono: ["var(--font-geist-mono)", "SFMono-Regular", "monospace"],
       },
       colors: {
         brand: {
-          primary: "#6E59F5",
-          secondary: "#111827",
+          primary: "#4f46e5",
+          secondary: "#0f172a",
           accent: "#22d3ee",
         },
       },

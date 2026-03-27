@@ -6,7 +6,7 @@ import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, Suspense, useEffect, useMemo, useState } from "react";
 
 /** Sanitasi redirect path untuk mencegah open redirect attack. */
 function sanitizeRedirect(path: string | null): string {
@@ -15,7 +15,7 @@ function sanitizeRedirect(path: string | null): string {
   return path;
 }
 
-export default function RegisterPage() {
+function RegisterContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const nextPath = useMemo(() => sanitizeRedirect(searchParams.get("next")), [searchParams]);
@@ -284,5 +284,20 @@ export default function RegisterPage() {
         </aside>
       </div>
     </div>
+  );
+}
+export default function RegisterPage() {
+  return (
+    <Suspense
+      fallback={(
+        <div className="min-h-screen bg-[var(--bg-base)]">
+          <div className="grid min-h-screen grid-cols-1 lg:grid-cols-12">
+            <div className="lg:col-span-5" />
+          </div>
+        </div>
+      )}
+    >
+      <RegisterContent />
+    </Suspense>
   );
 }

@@ -9,24 +9,27 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import PasswordResetDialog from "@/components/modals/PasswordResetDialog";
-import { Dialog, DialogContent } from "@/components/ui/Dialog";
-import WebViewScreen from "@/components/WebViewScreen";
 import { supabase } from "@/lib/supabase/client";
 import { useUIStore } from "@/stores/uiStore";
 
-const schema = z.object({
-  email: z.string().email(),
-  password: z.string().min(6),
-});
+const schema = z
+  .object({
+    username: z.string().min(3, "Username minimal 3 karakter"),
+    email: z.string().email(),
+    password: z.string().min(6, "Password minimal 6 karakter"),
+    confirmPassword: z.string().min(6),
+  })
+  .refine((data) => data.password === data.confirmPassword, {
+    message: "Password tidak sama",
+    path: ["confirmPassword"],
+  });
 
 type FormValues = z.infer<typeof schema>;
 
-export default function LoginPage() {
+export default function SignupPage() {
   const router = useRouter();
   const pushToast = useUIStore((state) => state.pushToast);
   const [showPassword, setShowPassword] = useState(false);
-  const [webview, setWebview] = useState<{ title: string; url: string } | null>(null);
   const {
     register,
     handleSubmit,
@@ -34,41 +37,47 @@ export default function LoginPage() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (values: FormValues) => {
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signUp({
       email: values.email,
       password: values.password,
+      options: {
+        data: {
+          username: values.username,
+          display_name: values.username,
+        },
+      },
     });
 
     if (error) {
-      pushToast({ title: "Gagal masuk", description: error.message, variant: "error" });
+      pushToast({ title: "Gagal daftar", description: error.message, variant: "error" });
       return;
     }
 
-    pushToast({ title: "Berhasil masuk", description: "Selamat datang kembali!", variant: "success" });
-    router.push("/beranda");
-  };
-
-  const handleGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
-    if (error) {
-      pushToast({ title: "Gagal login Google", description: error.message, variant: "error" });
-    }
+    const email = data.user?.email ?? values.email;
+    router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   };
 
   return (
     <div className="flex min-h-screen items-center justify-center px-4">
       <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[var(--bg-card)] p-8 shadow-2xl">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-indigo-500/15">
-            <WalletCards className="text-indigo-300" size={64} />
+          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/15">
+            <WalletCards className="text-indigo-300" size={36} />
           </div>
-          <h1 className="text-2xl font-semibold">Selamat Datang!</h1>
+          <h1 className="text-2xl font-semibold">Buat Akun Budgetin</h1>
           <p className="text-sm text-[var(--text-dimmed)]">
-            Kelola cashflow harian dan pantau dompet Anda.
+            Mulai pantau pemasukan & pengeluaran tanpa ribet.
           </p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+          <div>
+            <label className="text-xs text-[var(--text-dimmed)]">Username</label>
+            <Input placeholder="budgetinhero" {...register("username")} />
+            {errors.username ? (
+              <p className="mt-1 text-xs text-rose-300">{errors.username.message}</p>
+            ) : null}
+          </div>
           <div>
             <label className="text-xs text-[var(--text-dimmed)]">Email</label>
             <Input placeholder="nama@email.com" type="email" {...register("email")} />
@@ -96,44 +105,25 @@ export default function LoginPage() {
               <p className="mt-1 text-xs text-rose-300">{errors.password.message}</p>
             ) : null}
           </div>
+          <div>
+            <label className="text-xs text-[var(--text-dimmed)]">Konfirmasi Password</label>
+            <Input placeholder="Ulangi password" type="password" {...register("confirmPassword")} />
+            {errors.confirmPassword ? (
+              <p className="mt-1 text-xs text-rose-300">{errors.confirmPassword.message}</p>
+            ) : null}
+          </div>
           <Button type="submit" disabled={isSubmitting} className="w-full">
-            {isSubmitting ? "Memproses..." : "Masuk"}
-          </Button>
-          <Button type="button" variant="outline" className="w-full" onClick={handleGoogle}>
-            Masuk dengan Google
+            {isSubmitting ? "Memproses..." : "Daftar"}
           </Button>
         </form>
 
-        <div className="mt-4 flex items-center justify-between text-xs text-[var(--text-dimmed)]">
-          <PasswordResetDialog />
-          <Link href="/signup" className="text-indigo-300">
-            Belum punya akun? Daftar
+        <div className="mt-4 text-center text-xs text-[var(--text-dimmed)]">
+          Sudah punya akun?
+          <Link href="/login" className="ml-1 text-indigo-300">
+            Masuk
           </Link>
         </div>
-
-        <p className="mt-6 text-center text-[11px] text-[var(--text-dimmed)]">
-          Dengan masuk, Anda menyetujui
-          <button
-            className="mx-1 text-indigo-300"
-            onClick={() => setWebview({ title: "Syarat & Ketentuan", url: "https://example.com/terms" })}
-          >
-            Syarat
-          </button>
-          dan
-          <button
-            className="mx-1 text-indigo-300"
-            onClick={() => setWebview({ title: "Kebijakan Privasi", url: "https://example.com/privacy" })}
-          >
-            Kebijakan Privasi
-          </button>
-        </p>
       </div>
-
-      <Dialog open={Boolean(webview)} onOpenChange={() => setWebview(null)}>
-        <DialogContent className="max-w-3xl">
-          {webview ? <WebViewScreen url={webview.url} title={webview.title} /> : null}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }

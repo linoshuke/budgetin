@@ -5,6 +5,7 @@ import MobileAppBar from "@/app/_components/mobile/MobileAppBar";
 import MobileBottomNav from "@/app/_components/mobile/MobileBottomNav";
 import AuthGate from "@/components/shared/AuthGate";
 import Link from "next/link";
+import type { Route } from "next";
 
 const quickLinks = [
   {
@@ -27,7 +28,7 @@ const quickLinks = [
     href: "/transactions",
     description: "Filter transaksi berdasarkan periode dan dompet.",
   },
-];
+] satisfies Array<{ label: string; href: Route; description: string }>;
 
 export default function MorePage() {
   return (
@@ -61,7 +62,7 @@ export default function MorePage() {
                   <p className="mt-1 text-sm text-[var(--text-dimmed)]">{item.description}</p>
                 </div>
                 <span className="text-xs text-[var(--text-dimmed)] group-hover:text-[var(--text-primary)]">
-                  Buka →
+                  Buka &gt;
                 </span>
               </Link>
             ))}

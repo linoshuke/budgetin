@@ -1,0 +1,41 @@
+import Link from "next/link";
+import { MoreVertical } from "lucide-react";
+import Badge from "@/components/ui/Badge";
+import DeleteWalletDialog from "@/components/wallets/DeleteWalletDialog";
+import { formatCurrency } from "@/utils/format";
+import type { Wallet } from "@/types";
+
+interface WalletCardProps {
+  wallet: Wallet;
+}
+
+export default function WalletCard({ wallet }: WalletCardProps) {
+  return (
+    <div className="relative flex h-[200px] flex-col justify-between overflow-hidden rounded-[20px] border border-white/10 bg-gradient-to-br from-blue-500/20 via-indigo-500/20 to-slate-900/20 p-5 shadow-xl">
+      <div className="flex items-start justify-between">
+        <div>
+          <p className="text-xs text-[var(--text-dimmed)]">{wallet.category}</p>
+          <h3 className="text-lg font-semibold text-[var(--text-primary)]">{wallet.name}</h3>
+        </div>
+        <div className="flex items-center gap-2">
+          <DeleteWalletDialog walletId={wallet.id} walletName={wallet.name} />
+          <button className="text-[var(--text-dimmed)]" aria-label="Menu">
+            <MoreVertical size={18} />
+          </button>
+        </div>
+      </div>
+      <div>
+        <p className="text-xs uppercase text-[var(--text-dimmed)]">Saldo</p>
+        <p className="text-2xl font-semibold text-white">{formatCurrency(wallet.balance)}</p>
+        {wallet.location ? (
+          <div className="mt-3">
+            <Badge>{wallet.location}</Badge>
+          </div>
+        ) : null}
+      </div>
+      <Link href={`/dompet/${wallet.id}`} className="text-sm font-semibold text-indigo-200">
+        Lihat detail
+      </Link>
+    </div>
+  );
+}

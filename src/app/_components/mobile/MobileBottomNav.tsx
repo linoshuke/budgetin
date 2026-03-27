@@ -126,7 +126,7 @@ export default function MobileBottomNav() {
           return (
             <Link
               key={item.label}
-              href={item.href}
+              href={item.href as any}
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-1 px-2 py-1 text-[11px] transition-all duration-[250ms] ease-in-out",
                 active ? "-translate-y-3 text-indigo-600" : "text-[var(--text-dimmed)]",

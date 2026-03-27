@@ -1,8 +1,7 @@
 import type { Metadata } from "next";
 import localFont from "next/font/local";
-import DataLoader from "@/components/shared/DataLoader";
-import LazyGuestSyncBanner from "@/components/shared/LazyGuestSyncBanner";
-import ThemeSync from "@/components/shared/ThemeSync";
+import { Suspense } from "react";
+import Providers from "./providers";
 import "./globals.css";
 
 const geistSans = localFont({
@@ -19,7 +18,7 @@ const geistMono = localFont({
 
 export const metadata: Metadata = {
   title: "Budgetin",
-  description: "Rancangan kasar aplikasi budget tracker Budgetin.",
+  description: "Budget tracker modern dengan Supabase + Realtime.",
   icons: {
     icon: "/Budgetin.svg",
   },
@@ -33,10 +32,15 @@ export default function RootLayout({
   return (
     <html lang="id" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <ThemeSync />
-        <DataLoader />
-        <LazyGuestSyncBanner />
-        {children}
+        <Suspense
+          fallback={
+            <div className="flex min-h-screen items-center justify-center text-sm text-[var(--text-dimmed)]">
+              Memuat Budgetin...
+            </div>
+          }
+        >
+          <Providers>{children}</Providers>
+        </Suspense>
       </body>
     </html>
   );
