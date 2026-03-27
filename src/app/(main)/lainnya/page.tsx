@@ -36,7 +36,7 @@ export default function MorePage() {
               className="flex items-center justify-between rounded-2xl border border-white/10 bg-[var(--bg-card)] p-4 text-left transition hover:border-white/20"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-300">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-indigo)]/10 text-[var(--accent-indigo)]">
                   <Icon size={18} />
                 </div>
                 <div>

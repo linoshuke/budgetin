@@ -38,30 +38,49 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-6">
-      <div className="glass-panel flex flex-col gap-4 p-6">
-        <div className="flex items-center gap-4">
+      <div className="glass-panel p-6">
+        <div className="flex flex-col gap-4 sm:flex-row sm:items-center">
           <div className="relative">
-            <div className="h-24 w-24 rounded-full bg-indigo-500/20" />
+            <div className="h-24 w-24 rounded-full bg-[var(--bg-card-muted)]" />
             <button
-              className="absolute bottom-1 right-1 flex h-8 w-8 items-center justify-center rounded-full bg-indigo-500 text-white"
+              className="absolute bottom-1 right-1 flex h-9 w-9 items-center justify-center rounded-full bg-[var(--accent-indigo)] text-white"
               onClick={() => openModal("editName")}
             >
               <Camera size={16} />
             </button>
           </div>
-          <div>
-            <p className="text-sm text-[var(--text-dimmed)]">Nama</p>
-            <p className="text-lg font-semibold">{displayName}</p>
+          <div className="flex-1 space-y-2">
+            <div>
+              <p className="text-xs text-[var(--text-dimmed)]">Nama</p>
+              <p className="font-display text-xl font-semibold text-[var(--text-primary)]">{displayName}</p>
+            </div>
+            <Button variant="outline" onClick={() => openModal("editName")}>
+              Ubah Nama
+            </Button>
           </div>
         </div>
       </div>
 
       <div className="glass-panel space-y-3 p-6">
         <h3 className="text-sm font-semibold text-[var(--text-primary)]">Account Management</h3>
-        <div className="flex flex-wrap gap-2">
-          <Button variant="outline" icon={<Link2 size={16} />}>Link Google</Button>
-          <Button variant="outline" icon={<KeyRound size={16} />}>Tambah Password</Button>
-          <Button variant="danger" icon={<LogOut size={16} />} onClick={handleLogout}>Logout</Button>
+        <div className="grid gap-3">
+          <button className="flex items-center justify-between rounded-2xl border border-white/10 bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]">
+            <span className="flex items-center gap-3">
+              <Link2 size={18} className="text-[var(--accent-primary)]" />
+              Link Google
+            </span>
+            <span className="text-xs text-[var(--text-dimmed)]">Opsional</span>
+          </button>
+          <button className="flex items-center justify-between rounded-2xl border border-white/10 bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]">
+            <span className="flex items-center gap-3">
+              <KeyRound size={18} className="text-[var(--accent-indigo)]" />
+              Tambah Password
+            </span>
+            <span className="text-xs text-[var(--text-dimmed)]">Keamanan</span>
+          </button>
+          <Button variant="danger" icon={<LogOut size={16} />} onClick={handleLogout}>
+            Logout
+          </Button>
         </div>
       </div>
 
@@ -79,7 +98,7 @@ export default function SettingsPage() {
           <div className="space-y-3">
             <p className="text-sm text-[var(--text-dimmed)]">Masukkan password untuk menghapus akun.</p>
             <Input type="password" value={password} onChange={(event) => setPassword(event.target.value)} />
-            <button className="text-xs text-indigo-300">Lupa Password?</button>
+            <button className="text-xs text-[var(--accent-indigo)]">Lupa Password?</button>
           </div>
         )}
         <Button

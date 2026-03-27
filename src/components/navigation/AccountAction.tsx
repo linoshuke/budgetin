@@ -22,7 +22,7 @@ export default function AccountAction() {
         aria-label="Masuk"
         className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[var(--bg-card)] text-[var(--text-primary)] transition hover:border-white/20"
       >
-        <LogIn size={18} />
+        <LogIn size={22} />
       </button>
     );
   }
@@ -37,7 +37,7 @@ export default function AccountAction() {
     <button
       onClick={() => router.push("/pengaturan")}
       aria-label="Pengaturan akun"
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[var(--bg-card)] text-sm font-semibold text-[var(--text-primary)] transition hover:border-white/20"
+      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-white/10 bg-[var(--bg-card)] text-xs font-semibold text-[var(--text-primary)] transition hover:border-white/20"
       title={displayName}
     >
       {avatarUrl ? (

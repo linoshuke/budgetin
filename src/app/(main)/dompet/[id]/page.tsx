@@ -48,6 +48,14 @@ export default function WalletDetailPage() {
     currentMonth.year > now.getFullYear() ||
     (currentMonth.year === now.getFullYear() && currentMonth.month >= now.getMonth() + 1);
 
+  if (isGuest) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <LockWidget message="Masuk untuk melihat transaksi dompet." />
+      </div>
+    );
+  }
+
   if (!wallet) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 p-6 text-sm text-[var(--text-dimmed)]">
@@ -59,7 +67,7 @@ export default function WalletDetailPage() {
   return (
     <div className="grid gap-6 desktop:grid-cols-[360px_1fr]">
       <div className="space-y-4">
-        <div className="rounded-2xl bg-gradient-to-br from-indigo-500 via-blue-500 to-slate-900 p-6 text-white">
+        <div className="rounded-2xl bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 p-6 text-white">
           <p className="text-xs text-white/70">Saldo Dompet</p>
           <p className="text-3xl font-semibold">{formatCurrency(wallet.balance)}</p>
           <div className="mt-4 flex gap-2">
@@ -93,8 +101,6 @@ export default function WalletDetailPage() {
             </Button>
           </div>
         ) : null}
-
-        {isGuest ? <LockWidget /> : null}
       </div>
 
       <div className="space-y-4">
@@ -107,7 +113,7 @@ export default function WalletDetailPage() {
       </div>
 
       <button
-        className="fixed bottom-20 right-6 flex items-center gap-2 rounded-full bg-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-2xl tablet:bottom-24 desktop:bottom-8"
+        className="fixed bottom-20 right-6 flex items-center gap-2 rounded-full bg-[var(--accent-indigo)] px-4 py-3 text-sm font-semibold text-white shadow-2xl tablet:bottom-24 desktop:bottom-8"
         onClick={() => openModal("addTransaction")}
       >
         <Plus size={18} />

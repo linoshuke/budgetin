@@ -60,12 +60,12 @@ export default function VerifyEmailPage() {
   return (
     <div className="flex min-h-screen items-center justify-center px-6 tablet:px-8">
       <div className="w-full max-w-[520px] rounded-3xl border border-white/10 bg-[var(--bg-card)] p-8 text-center shadow-2xl">
-        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-indigo-500/15">
-          <Mail size={80} className="text-indigo-300" />
+        <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-[var(--accent-indigo)]/15">
+          <Mail size={80} className="text-[var(--accent-indigo)]" />
         </div>
-        <h1 className="text-2xl font-semibold">Cek Email Anda</h1>
+        <h1 className="font-display text-2xl font-semibold">Cek Email Anda</h1>
         <p className="mt-2 text-sm text-[var(--text-dimmed)]">
-          Verifikasi email dikirim ke <span className="text-indigo-200">{email || "alamat Anda"}</span>.
+          Verifikasi email dikirim ke <span className="text-[var(--accent-indigo)]">{email || "alamat Anda"}</span>.
         </p>
         <Button
           className="mt-6 w-full"

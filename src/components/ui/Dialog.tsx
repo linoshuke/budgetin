@@ -22,7 +22,7 @@ export function Dialog({ open, onOpenChange, children }: DialogProps) {
   return createPortal(
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <button
-        className="absolute inset-0 bg-black/40 backdrop-blur-sm"
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
         onClick={() => onOpenChange(false)}
         aria-label="Tutup dialog"
       />
@@ -42,7 +42,7 @@ export function DialogContent({
   return (
     <div
       className={cn(
-        "rounded-3xl border border-[var(--border-soft)] bg-[var(--bg-card)] p-6 shadow-2xl",
+        "rounded-[28px] border border-[var(--border-soft)] bg-[var(--bg-card)] p-6 shadow-2xl",
         className,
       )}
     >

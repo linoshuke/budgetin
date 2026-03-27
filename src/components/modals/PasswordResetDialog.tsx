@@ -33,7 +33,7 @@ export default function PasswordResetDialog() {
     <>
       <button
         onClick={() => openModal("passwordReset")}
-        className="text-indigo-300"
+        className="text-[var(--accent-indigo)]"
       >
         Lupa Password?
       </button>

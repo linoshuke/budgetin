@@ -11,7 +11,7 @@ export default function PageIndicator({ count, activeIndex }: PageIndicatorProps
           key={index}
           className={
             "h-2 rounded-full transition-all " +
-            (index === activeIndex ? "w-6 bg-indigo-400" : "w-2 bg-white/20")
+            (index === activeIndex ? "w-6 bg-[var(--accent-indigo)]" : "w-2 bg-white/20")
           }
         />
       ))}

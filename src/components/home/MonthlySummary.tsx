@@ -20,7 +20,7 @@ export default function MonthlySummary() {
 
   return (
     <div className="glass-panel space-y-4 p-5">
-      <h3 className="text-lg font-semibold text-[var(--text-primary)]">Ringkasan Bulan Ini</h3>
+      <h3 className="font-display text-lg font-semibold text-[var(--text-primary)]">Ringkasan Bulan Ini</h3>
       <div className="grid gap-4 tablet:grid-cols-3">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-full bg-emerald-500/15 text-emerald-300">

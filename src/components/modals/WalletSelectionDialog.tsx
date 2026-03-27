@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
 import Checkbox from "@/components/ui/Checkbox";
 import Button from "@/components/ui/Button";
@@ -10,12 +11,29 @@ import { useWallets } from "@/hooks/useWallets";
 export default function WalletSelectionDialog() {
   const { wallets } = useWallets();
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
-  const toggleWallet = useWalletStore((state) => state.toggleWallet);
   const setSelectedWalletIds = useWalletStore((state) => state.setSelectedWalletIds);
   const open = useUIStore((state) => state.modals.walletSelection);
   const closeModal = useUIStore((state) => state.closeModal);
+  const [tempSelected, setTempSelected] = useState<string[]>([]);
 
-  const reset = () => setSelectedWalletIds([]);
+  useEffect(() => {
+    if (open) {
+      setTempSelected(selectedWalletIds);
+    }
+  }, [open, selectedWalletIds]);
+
+  const toggle = (id: string) => {
+    setTempSelected((prev) =>
+      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id],
+    );
+  };
+
+  const reset = () => setTempSelected([]);
+
+  const apply = () => {
+    setSelectedWalletIds(tempSelected);
+    closeModal("walletSelection");
+  };
 
   return (
     <Dialog open={open} onOpenChange={() => closeModal("walletSelection")}>
@@ -26,10 +44,7 @@ export default function WalletSelectionDialog() {
         <div className="space-y-3">
           {wallets.map((wallet) => (
             <label key={wallet.id} className="flex items-center gap-3 text-sm">
-              <Checkbox
-                checked={selectedWalletIds.includes(wallet.id)}
-                onChange={() => toggleWallet(wallet.id)}
-              />
+              <Checkbox checked={tempSelected.includes(wallet.id)} onChange={() => toggle(wallet.id)} />
               <span className="text-[var(--text-primary)]">{wallet.name}</span>
             </label>
           ))}
@@ -38,7 +53,7 @@ export default function WalletSelectionDialog() {
           <Button variant="ghost" onClick={reset}>
             Reset
           </Button>
-          <Button onClick={() => closeModal("walletSelection")}>Simpan</Button>
+          <Button onClick={apply}>Terapkan</Button>
         </div>
       </DialogContent>
     </Dialog>

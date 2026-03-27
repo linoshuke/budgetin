@@ -71,10 +71,10 @@ export default function SignupPage() {
     <div className="flex min-h-screen items-center justify-center px-6 tablet:px-8">
       <div className="w-full max-w-[520px] rounded-3xl border border-white/10 bg-[var(--bg-card)] p-8 shadow-2xl">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-indigo-500/15">
-            <UserPlus className="text-indigo-300" size={64} />
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-[var(--accent-indigo)]/15">
+            <UserPlus className="text-[var(--accent-indigo)]" size={64} />
           </div>
-          <h1 className="text-2xl font-semibold">Buat Akun Budgetin</h1>
+          <h1 className="font-display text-2xl font-semibold">Buat Akun Budgetin</h1>
           <p className="text-sm text-[var(--text-dimmed)]">
             Mulai pantau pemasukan & pengeluaran tanpa ribet.
           </p>
@@ -137,7 +137,7 @@ export default function SignupPage() {
 
         <div className="mt-4 text-center text-xs text-[var(--text-dimmed)]">
           Sudah punya akun?
-          <Link href="/login" className="ml-1 text-indigo-300">
+          <Link href="/login" className="ml-1 text-[var(--accent-indigo)]">
             Masuk
           </Link>
         </div>
@@ -145,14 +145,14 @@ export default function SignupPage() {
         <p className="mt-6 text-center text-[11px] text-[var(--text-dimmed)]">
           Dengan daftar, Anda menyetujui
           <button
-            className="mx-1 text-indigo-300"
+            className="mx-1 text-[var(--accent-indigo)]"
             onClick={() => setWebview({ title: "Syarat & Ketentuan", url: "https://example.com/terms" })}
           >
             Syarat
           </button>
           dan
           <button
-            className="mx-1 text-indigo-300"
+            className="mx-1 text-[var(--accent-indigo)]"
             onClick={() => setWebview({ title: "Kebijakan Privasi", url: "https://example.com/privacy" })}
           >
             Kebijakan Privasi

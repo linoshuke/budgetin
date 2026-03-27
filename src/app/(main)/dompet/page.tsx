@@ -11,10 +11,16 @@ export default function WalletsPage() {
   const { wallets, isGuest } = useWallets();
   const openModal = useUIStore((state) => state.openModal);
 
+  if (isGuest) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <LockWidget message="Masuk untuk mengelola dompet." />
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
-      {isGuest ? <LockWidget message="Masuk untuk mengelola dompet." /> : null}
-
       {wallets.length ? (
         <div className="grid gap-4 tablet:grid-cols-2 desktop:grid-cols-3">
           {wallets.map((wallet) => (
@@ -23,12 +29,12 @@ export default function WalletsPage() {
         </div>
       ) : (
         <div className="flex flex-col items-center gap-3 rounded-2xl border border-dashed border-white/10 p-8 text-center text-sm text-[var(--text-dimmed)]">
-          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-300">
+          <div className="flex h-20 w-20 items-center justify-center rounded-full bg-[var(--accent-indigo)]/10 text-[var(--accent-indigo)]">
             <Wallet size={32} />
           </div>
           <p>Belum ada dompet yang ditambahkan.</p>
           <button
-            className="text-indigo-300"
+            className="text-[var(--accent-indigo)]"
             onClick={() => openModal("addWallet")}
           >
             Tambah dompet pertama
@@ -37,7 +43,7 @@ export default function WalletsPage() {
       )}
 
       <button
-        className="fixed bottom-20 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-500 text-white shadow-2xl tablet:bottom-24 desktop:bottom-8"
+        className="fixed bottom-20 right-6 flex h-14 w-14 items-center justify-center rounded-full bg-[var(--accent-indigo)] text-white shadow-2xl tablet:bottom-24 desktop:bottom-8"
         onClick={() => openModal("addWallet")}
         aria-label="Tambah dompet"
       >

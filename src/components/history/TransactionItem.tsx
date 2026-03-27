@@ -12,7 +12,12 @@ export default function TransactionItem({ transaction }: TransactionItemProps) {
   return (
     <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-[var(--bg-card)] p-4">
       <div className="flex items-center gap-3">
-        <div className={"flex h-10 w-10 items-center justify-center rounded-full " + (isExpense ? "bg-rose-500/20 text-rose-300" : "bg-emerald-500/20 text-emerald-300")}>
+        <div
+          className={
+            "flex h-10 w-10 items-center justify-center rounded-full " +
+            (isExpense ? "bg-rose-500/15 text-rose-300" : "bg-emerald-500/15 text-emerald-300")
+          }
+        >
           {isExpense ? <ArrowDownRight size={18} /> : <ArrowUpRight size={18} />}
         </div>
         <div>

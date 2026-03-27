@@ -16,13 +16,13 @@ export default function NavItem({ label, active, icon, variant, onClick }: NavIt
         onClick={onClick}
         className={cn(
           "flex flex-1 flex-col items-center justify-center gap-1 text-xs transition-all",
-          active ? "font-semibold text-indigo-400" : "text-[var(--text-dimmed)]",
+          active ? "font-semibold text-[var(--accent-indigo)]" : "text-[var(--text-dimmed)]",
         )}
       >
         <span
           className={cn(
-            "flex h-8 w-8 items-center justify-center rounded-full transition-transform",
-            active && "-translate-y-3 bg-indigo-500/10",
+            "flex h-8 w-8 items-center justify-center rounded-full transition-all",
+            active && "-translate-y-3 bg-[var(--accent-indigo)]/12",
           )}
         >
           {icon}
@@ -36,9 +36,9 @@ export default function NavItem({ label, active, icon, variant, onClick }: NavIt
     <button
       onClick={onClick}
       className={cn(
-        "flex w-full items-center gap-3 rounded-xl px-4 py-3 text-sm transition-all",
+        "flex w-full items-center gap-3 rounded-2xl px-4 py-3 text-sm transition-all",
         active
-          ? "border-l-4 border-indigo-500 bg-indigo-500/10 text-indigo-200"
+          ? "border border-[var(--accent-indigo)]/40 bg-[var(--accent-indigo)]/10 text-white"
           : "text-[var(--text-dimmed)] hover:bg-white/5",
       )}
     >

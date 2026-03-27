@@ -21,10 +21,10 @@ export default function Sidebar() {
   const activeIndex = navItems.findIndex((item) => pathname.startsWith(item.href));
 
   return (
-    <aside className="sticky top-0 hidden h-screen w-[240px] flex-col border-r border-white/10 bg-[var(--bg-nav)] px-4 py-6 desktop:flex">
-      <div className="mb-8">
-        <p className="text-lg font-semibold tracking-wide text-white">Budgetin</p>
-        <p className="text-xs text-[var(--text-dimmed)]">Kelola arus kas harian</p>
+    <aside className="sticky top-0 hidden h-screen w-[240px] flex-col border-r border-white/10 bg-[var(--bg-nav)] px-4 py-6 backdrop-blur desktop:flex">
+      <div className="mb-8 space-y-1">
+        <p className="font-display text-lg font-semibold text-white">Budgetin</p>
+        <p className="text-xs text-[var(--text-dimmed)]">Ringkas, tegas, selalu terkendali</p>
       </div>
       <div className="flex flex-1 flex-col gap-1">
         {navItems.map((item, index) => {
@@ -35,7 +35,7 @@ export default function Sidebar() {
               key={item.href}
               label={item.label}
               active={active}
-              icon={<Icon size={24} />}
+              icon={<Icon size={22} />}
               variant="sidebar"
               onClick={() => {
                 setActiveTab(index);
@@ -44,6 +44,9 @@ export default function Sidebar() {
             />
           );
         })}
+      </div>
+      <div className="rounded-2xl border border-white/10 bg-[var(--bg-card)] p-4 text-xs text-[var(--text-dimmed)]">
+        Fokuskan rencana keuangan mingguan Anda dan lihat tren cashflow.
       </div>
     </aside>
   );

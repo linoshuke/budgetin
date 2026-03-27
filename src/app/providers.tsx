@@ -36,7 +36,9 @@ function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
-  const emailVerified = Boolean(user?.email_confirmed_at ?? user?.confirmed_at);
+  const emailVerified = Boolean(
+    user?.email_confirmed_at ?? (user as { confirmed_at?: string | null } | null)?.confirmed_at,
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -50,7 +52,7 @@ function AuthGate({ children }: { children: ReactNode }) {
   if (loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-300/30 border-t-indigo-400" />
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-indigo)]/30 border-t-[var(--accent-indigo)]" />
       </div>
     );
   }
@@ -58,7 +60,7 @@ function AuthGate({ children }: { children: ReactNode }) {
   if (user && !emailVerified && !pathname.startsWith("/verify-email")) {
     return (
       <div className="flex min-h-screen items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-300/30 border-t-indigo-400" />
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-indigo)]/30 border-t-[var(--accent-indigo)]" />
       </div>
     );
   }

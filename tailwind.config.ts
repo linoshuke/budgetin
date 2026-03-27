@@ -11,8 +11,9 @@ const config: Config = {
         desktop: "1024px",
       },
       fontFamily: {
-        sans: ["var(--font-geist-sans)", "system-ui", "sans-serif"],
-        mono: ["var(--font-geist-mono)", "SFMono-Regular", "monospace"],
+        sans: ["var(--font-body)", "system-ui", "sans-serif"],
+        display: ["var(--font-display)", "system-ui", "sans-serif"],
+        mono: ["SFMono-Regular", "monospace"],
       },
       colors: {
         brand: {

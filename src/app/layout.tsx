@@ -1,18 +1,20 @@
 import type { Metadata } from "next";
-import localFont from "next/font/local";
+import { Onest, Unbounded } from "next/font/google";
 import { Suspense } from "react";
 import Providers from "./providers";
 import "./globals.css";
 
-const geistSans = localFont({
-  src: "../fonts/GeistVF.woff2",
-  variable: "--font-geist-sans",
+const displayFont = Unbounded({
+  subsets: ["latin"],
+  variable: "--font-display",
+  weight: ["400", "600", "700"],
   display: "swap",
 });
 
-const geistMono = localFont({
-  src: "../fonts/GeistMonoVF.woff2",
-  variable: "--font-geist-mono",
+const bodyFont = Onest({
+  subsets: ["latin"],
+  variable: "--font-body",
+  weight: ["400", "500", "600", "700"],
   display: "swap",
 });
 
@@ -31,11 +33,11 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="id" suppressHydrationWarning>
-      <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
+      <body className={`${displayFont.variable} ${bodyFont.variable} antialiased`}>
         <Suspense
           fallback={
             <div className="flex min-h-screen items-center justify-center">
-              <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-300/30 border-t-indigo-400" />
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-indigo)]/30 border-t-[var(--accent-indigo)]" />
             </div>
           }
         >

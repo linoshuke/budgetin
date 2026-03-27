@@ -26,11 +26,18 @@ export default function HistoryPage() {
     }
   }, [query.error, pushToast]);
 
+  if (isGuest) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <LockWidget message="Masuk untuk melihat riwayat lengkap." />
+      </div>
+    );
+  }
+
   return (
     <div className="grid gap-6 desktop:grid-cols-[280px_1fr]">
       <div className="space-y-4 desktop:sticky desktop:top-24">
         <FilterSection />
-        {isGuest ? <LockWidget message="Masuk untuk melihat riwayat lengkap." /> : null}
       </div>
       <div>
         <TransactionList

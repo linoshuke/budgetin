@@ -46,7 +46,7 @@ export default function DeleteWalletDialog({ walletId, walletName }: DeleteWalle
             <DialogTitle>Hapus Dompet</DialogTitle>
           </DialogHeader>
           <p className="text-sm text-[var(--text-dimmed)]">
-            Ketik nama dompet <span className="font-semibold text-indigo-200">{walletName}</span> untuk konfirmasi.
+            Ketik nama dompet <span className="font-semibold text-[var(--accent-indigo)]">{walletName}</span> untuk konfirmasi.
           </p>
           <Input value={confirmText} onChange={(event) => setConfirmText(event.target.value)} />
           <div className="mt-4 flex justify-end gap-2">

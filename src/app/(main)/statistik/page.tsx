@@ -78,6 +78,14 @@ export default function StatisticsPage() {
   const showTabs = walletCards.length > 2;
   const activeWallet = walletCards.find((wallet) => wallet.id === activeWalletId) ?? walletCards[0];
 
+  if (isGuest) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <LockWidget message="Masuk untuk melihat statistik lengkap." />
+      </div>
+    );
+  }
+
   if (!walletCards.length) {
     return (
       <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-[var(--text-dimmed)]">
@@ -88,8 +96,6 @@ export default function StatisticsPage() {
 
   return (
     <div className="space-y-6">
-      {isGuest ? <LockWidget message="Masuk untuk melihat statistik lengkap." /> : null}
-
       <div className="tablet:hidden">
         <div
           className="flex snap-x snap-mandatory gap-4 overflow-x-auto pb-4"

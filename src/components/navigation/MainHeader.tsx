@@ -22,9 +22,12 @@ export default function MainHeader() {
   const title = resolveTitle(pathname);
 
   return (
-    <header className="sticky top-0 z-30 border-b border-white/10 bg-[var(--bg-nav)]/95 backdrop-blur">
+    <header className="sticky top-0 z-30 border-b border-white/10 bg-[var(--bg-nav)] backdrop-blur">
       <div className="mx-auto flex w-full max-w-[720px] items-center justify-between px-4 py-3 tablet:max-w-[960px] tablet:px-6 desktop:max-w-[1320px] desktop:px-8">
-        <h1 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h1>
+        <div>
+          <p className="text-[10px] uppercase tracking-[0.35em] text-[var(--text-dimmed)]">Budgetin</p>
+          <h1 className="font-display text-lg font-semibold text-[var(--text-primary)]">{title}</h1>
+        </div>
         <AccountAction />
       </div>
     </header>
