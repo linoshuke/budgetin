@@ -7,6 +7,7 @@ import { z } from "zod";
 import { WalletCards, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import PasswordResetDialog from "@/components/modals/PasswordResetDialog";
@@ -14,6 +15,7 @@ import { Dialog, DialogContent } from "@/components/ui/Dialog";
 import WebViewScreen from "@/components/WebViewScreen";
 import { supabase } from "@/lib/supabase/client";
 import { useUIStore } from "@/stores/uiStore";
+import type { UIState } from "@/stores/uiStore";
 
 const schema = z.object({
   email: z.string().email(),
@@ -24,7 +26,7 @@ type FormValues = z.infer<typeof schema>;
 
 export default function LoginPage() {
   const router = useRouter();
-  const pushToast = useUIStore((state) => state.pushToast);
+  const pushToast = useUIStore((state: UIState) => state.pushToast);
   const [showPassword, setShowPassword] = useState(false);
   const [webview, setWebview] = useState<{ title: string; url: string } | null>(null);
   const {
@@ -45,7 +47,7 @@ export default function LoginPage() {
     }
 
     pushToast({ title: "Berhasil masuk", description: "Selamat datang kembali!", variant: "success" });
-    router.push("/beranda");
+    router.push("/beranda" as Route);
   };
 
   const handleGoogle = async () => {
@@ -56,8 +58,8 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[var(--bg-card)] p-8 shadow-2xl">
+    <div className="flex min-h-screen items-center justify-center px-6 tablet:px-8">
+      <div className="w-full max-w-[520px] rounded-3xl border border-white/10 bg-[var(--bg-card)] p-8 shadow-2xl">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
           <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-indigo-500/15">
             <WalletCards className="text-indigo-300" size={64} />
@@ -99,6 +101,11 @@ export default function LoginPage() {
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? "Memproses..." : "Masuk"}
           </Button>
+          <div className="flex items-center gap-3 text-[11px] text-[var(--text-dimmed)]">
+            <span className="h-px flex-1 bg-white/10" />
+            ATAU
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
           <Button type="button" variant="outline" className="w-full" onClick={handleGoogle}>
             Masuk dengan Google
           </Button>
@@ -106,7 +113,7 @@ export default function LoginPage() {
 
         <div className="mt-4 flex items-center justify-between text-xs text-[var(--text-dimmed)]">
           <PasswordResetDialog />
-          <Link href="/signup" className="text-indigo-300">
+          <Link href={"/signup" as Route} className="text-indigo-300">
             Belum punya akun? Daftar
           </Link>
         </div>

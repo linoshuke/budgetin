@@ -21,7 +21,7 @@ export default function BottomNav() {
   const activeIndex = navItems.findIndex((item) => pathname.startsWith(item.href));
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[60px] items-center border-t border-white/10 bg-[var(--bg-nav)] backdrop-blur desktop:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-40 flex h-[60px] items-center border-t border-white/10 bg-[var(--bg-nav)] backdrop-blur tablet:h-[68px] desktop:hidden">
       {navItems.map((item, index) => {
         const Icon = item.icon;
         const active = index === activeIndex;

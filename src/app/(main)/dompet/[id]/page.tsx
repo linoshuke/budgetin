@@ -66,12 +66,14 @@ export default function WalletDetailPage() {
             <Button
               variant={dateRange === "daily" ? "primary" : "outline"}
               onClick={() => setDateRange("daily")}
+              className="flex-1"
             >
               Harian
             </Button>
             <Button
               variant={dateRange === "monthly" ? "primary" : "outline"}
               onClick={() => setDateRange("monthly")}
+              className="flex-1"
             >
               Bulanan
             </Button>
@@ -105,7 +107,7 @@ export default function WalletDetailPage() {
       </div>
 
       <button
-        className="fixed bottom-20 right-6 flex items-center gap-2 rounded-full bg-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-2xl tablet:bottom-8"
+        className="fixed bottom-20 right-6 flex items-center gap-2 rounded-full bg-indigo-500 px-4 py-3 text-sm font-semibold text-white shadow-2xl tablet:bottom-24 desktop:bottom-8"
         onClick={() => openModal("addTransaction")}
       >
         <Plus size={18} />

@@ -52,9 +52,14 @@ export default function VerifyEmailPage() {
     setCooldown(60);
   };
 
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[var(--bg-card)] p-8 text-center shadow-2xl">
+    <div className="flex min-h-screen items-center justify-center px-6 tablet:px-8">
+      <div className="w-full max-w-[520px] rounded-3xl border border-white/10 bg-[var(--bg-card)] p-8 text-center shadow-2xl">
         <div className="mx-auto mb-6 flex h-24 w-24 items-center justify-center rounded-3xl bg-indigo-500/15">
           <Mail size={80} className="text-indigo-300" />
         </div>
@@ -68,6 +73,9 @@ export default function VerifyEmailPage() {
           disabled={cooldown > 0}
         >
           {cooldown > 0 ? `Kirim ulang dalam ${cooldown}s` : "Kirim Ulang Email"}
+        </Button>
+        <Button variant="ghost" className="mt-4 w-full" onClick={handleLogout}>
+          Batal & Logout
         </Button>
       </div>
     </div>

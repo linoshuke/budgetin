@@ -8,7 +8,7 @@ export function formatFullDateTime(dateValue: string) {
     hour: "2-digit",
     minute: "2-digit",
   }).format(date);
-  return `${weekday}, ${day} ${month} ${year} • ${time}`;
+  return `${weekday}, ${day} ${month} ${year} â€¢ ${time}`;
 }
 
 export function getMonthLabel(year: number, month: number) {

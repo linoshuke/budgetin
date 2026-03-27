@@ -4,11 +4,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { WalletCards, Eye, EyeOff } from "lucide-react";
+import { UserPlus, Eye, EyeOff } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
+import { Dialog, DialogContent } from "@/components/ui/Dialog";
+import WebViewScreen from "@/components/WebViewScreen";
 import { supabase } from "@/lib/supabase/client";
 import { useUIStore } from "@/stores/uiStore";
 
@@ -30,6 +32,7 @@ export default function SignupPage() {
   const router = useRouter();
   const pushToast = useUIStore((state) => state.pushToast);
   const [showPassword, setShowPassword] = useState(false);
+  const [webview, setWebview] = useState<{ title: string; url: string } | null>(null);
   const {
     register,
     handleSubmit,
@@ -57,12 +60,19 @@ export default function SignupPage() {
     router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   };
 
+  const handleGoogle = async () => {
+    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+    if (error) {
+      pushToast({ title: "Gagal daftar Google", description: error.message, variant: "error" });
+    }
+  };
+
   return (
-    <div className="flex min-h-screen items-center justify-center px-4">
-      <div className="w-full max-w-md rounded-3xl border border-white/10 bg-[var(--bg-card)] p-8 shadow-2xl">
+    <div className="flex min-h-screen items-center justify-center px-6 tablet:px-8">
+      <div className="w-full max-w-[520px] rounded-3xl border border-white/10 bg-[var(--bg-card)] p-8 shadow-2xl">
         <div className="mb-6 flex flex-col items-center gap-3 text-center">
-          <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-500/15">
-            <WalletCards className="text-indigo-300" size={36} />
+          <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-indigo-500/15">
+            <UserPlus className="text-indigo-300" size={64} />
           </div>
           <h1 className="text-2xl font-semibold">Buat Akun Budgetin</h1>
           <p className="text-sm text-[var(--text-dimmed)]">
@@ -115,6 +125,14 @@ export default function SignupPage() {
           <Button type="submit" disabled={isSubmitting} className="w-full">
             {isSubmitting ? "Memproses..." : "Daftar"}
           </Button>
+          <div className="flex items-center gap-3 text-[11px] text-[var(--text-dimmed)]">
+            <span className="h-px flex-1 bg-white/10" />
+            ATAU
+            <span className="h-px flex-1 bg-white/10" />
+          </div>
+          <Button type="button" variant="outline" className="w-full" onClick={handleGoogle}>
+            Daftar dengan Google
+          </Button>
         </form>
 
         <div className="mt-4 text-center text-xs text-[var(--text-dimmed)]">
@@ -123,7 +141,30 @@ export default function SignupPage() {
             Masuk
           </Link>
         </div>
+
+        <p className="mt-6 text-center text-[11px] text-[var(--text-dimmed)]">
+          Dengan daftar, Anda menyetujui
+          <button
+            className="mx-1 text-indigo-300"
+            onClick={() => setWebview({ title: "Syarat & Ketentuan", url: "https://example.com/terms" })}
+          >
+            Syarat
+          </button>
+          dan
+          <button
+            className="mx-1 text-indigo-300"
+            onClick={() => setWebview({ title: "Kebijakan Privasi", url: "https://example.com/privacy" })}
+          >
+            Kebijakan Privasi
+          </button>
+        </p>
       </div>
+
+      <Dialog open={Boolean(webview)} onOpenChange={() => setWebview(null)}>
+        <DialogContent className="max-w-3xl">
+          {webview ? <WebViewScreen url={webview.url} title={webview.title} /> : null}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

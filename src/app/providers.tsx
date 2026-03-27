@@ -2,7 +2,7 @@
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ToastHost from "@/components/ui/ToastHost";
 import { supabase } from "@/lib/supabase/client";
@@ -18,16 +18,52 @@ function AnimatedSwitcher({ children }: { children: ReactNode }) {
     <AnimatePresence mode="wait">
       <motion.div
         key={group}
-        initial={{ opacity: 0, y: 6 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -6 }}
-        transition={{ duration: 0.28, ease: "easeOut" }}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        transition={{ duration: 0.3, ease: "easeOut" }}
         className="min-h-screen"
       >
         {children}
       </motion.div>
     </AnimatePresence>
   );
+}
+
+function AuthGate({ children }: { children: ReactNode }) {
+  const loading = useAuthStore((state) => state.loading);
+  const user = useAuthStore((state) => state.user);
+  const pathname = usePathname();
+  const router = useRouter();
+
+  const emailVerified = Boolean(user?.email_confirmed_at ?? user?.confirmed_at);
+
+  useEffect(() => {
+    if (loading) return;
+    if (!user) return;
+    if (emailVerified) return;
+    if (pathname.startsWith("/verify-email")) return;
+    const email = user.email ?? "";
+    router.replace(`/verify-email?email=${encodeURIComponent(email)}`);
+  }, [emailVerified, loading, pathname, router, user]);
+
+  if (loading) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-300/30 border-t-indigo-400" />
+      </div>
+    );
+  }
+
+  if (user && !emailVerified && !pathname.startsWith("/verify-email")) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-300/30 border-t-indigo-400" />
+      </div>
+    );
+  }
+
+  return <>{children}</>;
 }
 
 function SupabaseProvider({ children }: { children: ReactNode }) {
@@ -76,7 +112,9 @@ export default function Providers({ children }: { children: ReactNode }) {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <SupabaseProvider>{content}</SupabaseProvider>
+      <SupabaseProvider>
+        <AuthGate>{content}</AuthGate>
+      </SupabaseProvider>
       <ToastHost />
     </QueryClientProvider>
   );

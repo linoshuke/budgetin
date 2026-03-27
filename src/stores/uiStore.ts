@@ -15,7 +15,7 @@ interface ToastItem {
   variant?: "error" | "success" | "info";
 }
 
-interface UIState {
+export interface UIState {
   activeTab: number;
   modals: Record<ModalKey, boolean>;
   toasts: ToastItem[];

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { usePathname } from "next/navigation";
 import BottomNav from "@/components/navigation/BottomNav";
 import Sidebar from "@/components/navigation/Sidebar";
+import MainHeader from "@/components/navigation/MainHeader";
 import { useUIStore } from "@/stores/uiStore";
 
 const tabPaths = ["/beranda", "/riwayat", "/dompet", "/statistik", "/lainnya"];
@@ -46,9 +47,12 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="flex min-h-screen">
       <Sidebar />
-      <main className="flex-1">
-        <div className="page-shell pt-6">{content}</div>
-      </main>
+      <div className="flex min-h-screen flex-1 flex-col">
+        <MainHeader />
+        <main className="flex-1">
+          <div className="page-shell">{content}</div>
+        </main>
+      </div>
       <BottomNav />
     </div>
   );

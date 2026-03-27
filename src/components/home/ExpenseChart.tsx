@@ -18,9 +18,9 @@ export default function ExpenseChart() {
   const chartData = data?.length ? data : [{ name: "Belum ada data", value: 1 }];
 
   return (
-    <div className="glass-panel h-[280px] p-4">
+    <div className="glass-panel h-[240px] p-4">
       <h3 className="text-sm font-semibold text-[var(--text-primary)]">Pengeluaran per Kategori</h3>
-      <div className="mt-2 h-[220px]">
+      <div className="mt-2 h-[180px]">
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie data={chartData} dataKey="value" nameKey="name" innerRadius={50} outerRadius={80}>

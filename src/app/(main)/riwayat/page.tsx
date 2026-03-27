@@ -28,7 +28,7 @@ export default function HistoryPage() {
 
   return (
     <div className="grid gap-6 desktop:grid-cols-[280px_1fr]">
-      <div className="space-y-4 desktop:sticky desktop:top-6">
+      <div className="space-y-4 desktop:sticky desktop:top-24">
         <FilterSection />
         {isGuest ? <LockWidget message="Masuk untuk melihat riwayat lengkap." /> : null}
       </div>

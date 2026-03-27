@@ -27,12 +27,14 @@ export default function FilterSection() {
         <Button
           variant={dateRange === "daily" ? "primary" : "outline"}
           onClick={() => setDateRange("daily")}
+          className="flex-1"
         >
           Harian
         </Button>
         <Button
           variant={dateRange === "monthly" ? "primary" : "outline"}
           onClick={() => setDateRange("monthly")}
+          className="flex-1"
         >
           Bulanan
         </Button>

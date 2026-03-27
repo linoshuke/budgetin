@@ -27,7 +27,7 @@ export default function TotalBalanceCard() {
         </div>
         <Button
           variant="ghost"
-          className="w-fit border border-white/40 text-white hover:bg-white/10"
+          className="w-fit border border-white/40 text-xs text-white hover:bg-white/10"
           onClick={() => openModal("walletSelection")}
         >
           Pilih Dompet

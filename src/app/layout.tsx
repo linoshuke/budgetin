@@ -34,8 +34,8 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <Suspense
           fallback={
-            <div className="flex min-h-screen items-center justify-center text-sm text-[var(--text-dimmed)]">
-              Memuat Budgetin...
+            <div className="flex min-h-screen items-center justify-center">
+              <div className="h-10 w-10 animate-spin rounded-full border-2 border-indigo-300/30 border-t-indigo-400" />
             </div>
           }
         >
