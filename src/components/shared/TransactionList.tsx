@@ -1,57 +1,82 @@
+import Button from "@/components/ui/Button";
 import { formatCurrency, formatDate } from "@/lib/utils";
+import type { Category } from "@/types/category";
 import type { Transaction } from "@/types/transaction";
 
-interface Props {
+interface TransactionListProps {
   transactions: Transaction[];
+  categories: Category[];
+  title?: string;
+  subtitle?: string;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
 }
 
-export default function TransactionList({ transactions, onEdit, onDelete }: Props) {
+export default function TransactionList({
+  transactions,
+  categories,
+  title = "Transaksi Terakhir",
+  subtitle,
+  onEdit,
+  onDelete,
+}: TransactionListProps) {
+  const categoryMap = new Map(categories.map((item) => [item.id, item]));
+
   return (
     <section className="glass-panel p-4">
-      <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-white">Transaksi Terbaru</h2>
-        <p className="text-xs text-slate-400">{transactions.length} transaksi terakhir</p>
+      <div className="flex items-center justify-between gap-3">
+        <h2 className="text-lg font-semibold text-[var(--text-primary)]">{title}</h2>
+        <span className="text-xs text-[var(--text-dimmed)]">
+          {subtitle ?? `${transactions.length} transaksi`}
+        </span>
       </div>
 
-      <div className="mt-4 divide-y divide-white/5">
-        {transactions.map((tx) => (
-          <article key={tx.id} className="flex items-center justify-between py-3">
-            <div>
-              <p className="text-sm font-medium text-white">{tx.category}</p>
-              <p className="text-xs text-slate-400">
-                {formatDate(tx.date)} {tx.note ? `· ${tx.note}` : ""}
-              </p>
-            </div>
-            <div className="flex items-center gap-3">
-              <span
-                className={`text-sm font-semibold ${
-                  tx.type === "income" ? "text-emerald-300" : "text-rose-300"
-                }`}
-              >
-                {tx.type === "income" ? "+" : "-"}
-                {formatCurrency(tx.amount)}
-              </span>
-              {onEdit && (
-                <button
-                  onClick={() => onEdit(tx.id)}
-                  className="rounded-lg px-2 py-1 text-xs text-slate-300 transition hover:bg-white/5"
+      {transactions.length === 0 ? (
+        <p className="mt-4 text-sm text-[var(--text-dimmed)]">
+          Belum ada transaksi. Tambahkan transaksi baru dari menu Transaksi.
+        </p>
+      ) : null}
+
+      <div className="mt-4 divide-y divide-[var(--border-soft)]">
+        {transactions.map((transaction) => {
+          const category = categoryMap.get(transaction.categoryId);
+          return (
+            <article key={transaction.id} className="flex flex-wrap items-center justify-between gap-3 py-3">
+              <div>
+                <p className="text-sm font-semibold text-[var(--text-primary)]">
+                  {category?.name ?? "Tanpa kategori"}
+                </p>
+                <p className="text-xs text-[var(--text-dimmed)]">
+                  {formatDate(transaction.date, true)}
+                  {transaction.note ? ` - ${transaction.note}` : ""}
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span
+                  className={`text-sm font-semibold ${
+                    transaction.type === "income" ? "text-emerald-400" : "text-rose-400"
+                  }`}
                 >
-                  Edit
-                </button>
-              )}
-              {onDelete && (
-                <button
-                  onClick={() => onDelete(tx.id)}
-                  className="rounded-lg px-2 py-1 text-xs text-rose-300 transition hover:bg-white/5"
-                >
-                  Hapus
-                </button>
-              )}
-            </div>
-          </article>
-        ))}
+                  {transaction.type === "income" ? "+" : "-"}
+                  {formatCurrency(transaction.amount)}
+                </span>
+
+                {onEdit ? (
+                  <Button variant="ghost" onClick={() => onEdit(transaction.id)}>
+                    Edit
+                  </Button>
+                ) : null}
+
+                {onDelete ? (
+                  <Button variant="ghost" className="text-rose-400" onClick={() => onDelete(transaction.id)}>
+                    Hapus
+                  </Button>
+                ) : null}
+              </div>
+            </article>
+          );
+        })}
       </div>
     </section>
   );

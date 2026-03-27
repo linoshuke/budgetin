@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import ThemeSync from "@/components/shared/ThemeSync";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
@@ -16,7 +17,7 @@ const geistMono = Geist_Mono({
 
 export const metadata: Metadata = {
   title: "Budgetin",
-  description: "Dasbor dan pencatatan keuangan pribadi.",
+  description: "Rancangan kasar aplikasi budget tracker Budgetin.",
 };
 
 export default function RootLayout({
@@ -27,9 +28,8 @@ export default function RootLayout({
   return (
     <html lang="id">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <div className="min-h-screen text-slate-50">
-          {children}
-        </div>
+        <ThemeSync />
+        {children}
       </body>
     </html>
   );

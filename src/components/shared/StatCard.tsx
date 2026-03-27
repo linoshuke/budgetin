@@ -1,12 +1,11 @@
 import { cn } from "@/lib/utils";
 
-type Accent = "primary" | "emerald" | "rose";
+type Accent = "teal" | "emerald" | "rose";
 
 interface Props {
   title: string;
   value: string;
   helper?: string;
-  trend?: "positif" | "negatif";
   accent?: Accent;
 }
 
@@ -14,34 +13,21 @@ export default function StatCard({
   title,
   value,
   helper,
-  trend,
-  accent = "primary",
+  accent = "teal",
 }: Props) {
-  const accentClasses: Record<Accent, string> = {
-    primary: "from-[#6e59f5]/40 to-[#22d3ee]/30",
-    emerald: "from-emerald-500/30 to-emerald-400/10",
-    rose: "from-rose-500/30 to-rose-400/10",
+  const accentClass: Record<Accent, string> = {
+    teal: "from-teal-500/20 to-blue-500/20",
+    emerald: "from-emerald-500/20 to-emerald-400/10",
+    rose: "from-rose-500/20 to-rose-400/10",
   };
 
   return (
     <article className="glass-panel relative overflow-hidden p-4">
-      <div className={cn("absolute inset-0 blur-3xl", `bg-gradient-to-br ${accentClasses[accent]}`)} />
-      <div className="relative space-y-2">
-        <p className="text-sm text-slate-300">{title}</p>
-        <p className="text-2xl font-semibold text-white">{value}</p>
-        {helper && <p className="text-xs text-slate-400">{helper}</p>}
-        {trend && (
-          <span
-            className={cn(
-              "inline-flex items-center rounded-full px-2 py-1 text-[11px] font-medium",
-              trend === "positif"
-                ? "bg-emerald-500/10 text-emerald-300"
-                : "bg-rose-500/10 text-rose-300",
-            )}
-          >
-            {trend === "positif" ? "Stabil" : "Perhatikan pengeluaran"}
-          </span>
-        )}
+      <div className={cn("absolute inset-0 bg-gradient-to-br blur-2xl", accentClass[accent])} />
+      <div className="relative space-y-1">
+        <p className="text-sm text-[var(--text-dimmed)]">{title}</p>
+        <p className="text-2xl font-semibold text-[var(--text-primary)]">{value}</p>
+        {helper ? <p className="text-xs text-[var(--text-dimmed)]">{helper}</p> : null}
       </div>
     </article>
   );
