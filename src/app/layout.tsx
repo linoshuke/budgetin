@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import DataLoader from "@/components/shared/DataLoader";
+import GuestSyncBanner from "@/components/shared/GuestSyncBanner";
 import ThemeSync from "@/components/shared/ThemeSync";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
@@ -27,10 +28,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="id">
+    <html lang="id" suppressHydrationWarning>
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeSync />
         <DataLoader />
+        <GuestSyncBanner />
         {children}
       </body>
     </html>

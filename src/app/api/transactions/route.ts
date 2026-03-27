@@ -1,37 +1,31 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/service-error";
 import { getAuthUser } from "@/lib/auth";
-import { updateTransaction, deleteTransaction } from "@/app/api/transactions/service/transaction.service";
-import { UpdateTransactionSchema } from "@/lib/validators";
+import { getAllTransactions, createTransaction } from "@/app/api/transactions/service/transaction.service";
+import { CreateTransactionSchema } from "@/lib/validators";
 
-interface RouteContext {
-  params: Promise<{ id: string }>;
-}
-
-export async function PUT(request: Request, context: RouteContext) {
+export async function GET() {
   try {
     const { user, supabase } = await getAuthUser();
-    const { id } = await context.params;
-    const raw = await request.json();
-    const dto = UpdateTransactionSchema.parse(raw);
-    const transaction = await updateTransaction(supabase, user.id, id, dto);
-    return NextResponse.json(transaction);
+    const transactions = await getAllTransactions(supabase, user.id);
+    return NextResponse.json(transactions);
   } catch (error) {
-    if (error instanceof Error && error.name === "ZodError") {
-      return NextResponse.json({ error: (error as import("zod").ZodError).issues.map(i => i.message).join(", ") }, { status: 400 });
-    }
     const { body, status } = handleServiceError(error);
     return NextResponse.json(body, { status });
   }
 }
 
-export async function DELETE(_request: Request, context: RouteContext) {
+export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
-    const { id } = await context.params;
-    await deleteTransaction(supabase, user.id, id);
-    return NextResponse.json({ ok: true });
+    const raw = await request.json();
+    const dto = CreateTransactionSchema.parse(raw);
+    const transaction = await createTransaction(supabase, user.id, dto);
+    return NextResponse.json(transaction, { status: 201 });
   } catch (error) {
+    if (error instanceof Error && error.name === "ZodError") {
+      return NextResponse.json({ error: (error as import("zod").ZodError).issues.map(i => i.message).join(", ") }, { status: 400 });
+    }
     const { body, status } = handleServiceError(error);
     return NextResponse.json(body, { status });
   }

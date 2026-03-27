@@ -16,6 +16,7 @@ export default function DashboardPage() {
   const transactions = useBudgetStore((state) => state.transactions);
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
+  const syncLoading = useBudgetStore((state) => state.syncLoading);
 
   const totals = useMemo(() => calculateTotals(transactions), [transactions]);
   const activeMonth = monthKey(new Date());
@@ -63,13 +64,14 @@ export default function DashboardPage() {
                 transactions={recent}
                 categories={categories}
                 wallets={wallets}
+                disabled={syncLoading}
               />
             </div>
             <Sidebar totals={totals} />
           </section>
         </main>
 
-        <AddTransactionFab />
+        <AddTransactionFab disabled={syncLoading} />
       </div>
     </AuthGate>
   );

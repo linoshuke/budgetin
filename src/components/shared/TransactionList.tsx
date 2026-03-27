@@ -12,6 +12,7 @@ interface TransactionListProps {
   subtitle?: string;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
+  disabled?: boolean;
 }
 
 export default function TransactionList({
@@ -22,6 +23,7 @@ export default function TransactionList({
   subtitle,
   onEdit,
   onDelete,
+  disabled = false,
 }: TransactionListProps) {
   const categoryMap = new Map(categories.map((item) => [item.id, item]));
   const walletMap = new Map(wallets.map((item) => [item.id, item]));
@@ -68,13 +70,13 @@ export default function TransactionList({
                 </span>
 
                 {onEdit ? (
-                  <Button variant="ghost" onClick={() => onEdit(transaction.id)}>
+                  <Button variant="ghost" onClick={() => onEdit(transaction.id)} disabled={disabled}>
                     Edit
                   </Button>
                 ) : null}
 
                 {onDelete ? (
-                  <Button variant="ghost" className="text-rose-400" onClick={() => onDelete(transaction.id)}>
+                  <Button variant="ghost" className="text-rose-400" onClick={() => onDelete(transaction.id)} disabled={disabled}>
                     Hapus
                   </Button>
                 ) : null}

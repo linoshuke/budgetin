@@ -203,7 +203,7 @@ export default function ProfilePage() {
   };
 
   return (
-    <AuthGate>
+    <AuthGate requireAuth>
       <div className="min-h-screen">
         <Header />
 

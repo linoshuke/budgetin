@@ -5,10 +5,16 @@ import { usePathname, useRouter } from "next/navigation";
 import type { Route } from "next";
 import { useEffect, useMemo, useState } from "react";
 
-export default function AuthGate({ children }: { children: React.ReactNode }) {
+export default function AuthGate({
+  children,
+  requireAuth = false,
+}: {
+  children: React.ReactNode;
+  requireAuth?: boolean;
+}) {
   const router = useRouter();
   const pathname = usePathname();
-  const [checking, setChecking] = useState(true);
+  const [checking, setChecking] = useState(requireAuth);
 
   const loginTarget = useMemo(() => {
     const next = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
@@ -16,6 +22,11 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
   }, [pathname]);
 
   useEffect(() => {
+    if (!requireAuth) {
+      setChecking(false);
+      return;
+    }
+
     let active = true;
 
     const checkSession = async () => {
@@ -44,7 +55,7 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       active = false;
       listener.subscription.unsubscribe();
     };
-  }, [loginTarget, router]);
+  }, [loginTarget, router, requireAuth]);
 
   if (checking) {
     return (
@@ -59,3 +70,4 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
 
   return <>{children}</>;
 }
+
