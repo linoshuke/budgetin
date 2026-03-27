@@ -1,25 +1,28 @@
 import type { Metadata } from "next";
+import localFont from "next/font/local";
 import DataLoader from "@/components/shared/DataLoader";
-import GuestSyncBanner from "@/components/shared/GuestSyncBanner";
+import LazyGuestSyncBanner from "@/components/shared/LazyGuestSyncBanner";
 import ThemeSync from "@/components/shared/ThemeSync";
-import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
+const geistSans = localFont({
+  src: "../fonts/GeistVF.woff2",
   variable: "--font-geist-sans",
-  subsets: ["latin"],
   display: "swap",
 });
 
-const geistMono = Geist_Mono({
+const geistMono = localFont({
+  src: "../fonts/GeistMonoVF.woff2",
   variable: "--font-geist-mono",
-  subsets: ["latin"],
   display: "swap",
 });
 
 export const metadata: Metadata = {
   title: "Budgetin",
   description: "Rancangan kasar aplikasi budget tracker Budgetin.",
+  icons: {
+    icon: "/Budgetin.svg",
+  },
 };
 
 export default function RootLayout({
@@ -32,7 +35,7 @@ export default function RootLayout({
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
         <ThemeSync />
         <DataLoader />
-        <GuestSyncBanner />
+        <LazyGuestSyncBanner />
         {children}
       </body>
     </html>

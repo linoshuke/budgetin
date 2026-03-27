@@ -33,7 +33,9 @@ export default function DataLoader() {
           return;
         }
 
-        budgetActions.setGuestPending(false);\n        await budgetActions.loadFromApi();\n        return;
+        budgetActions.setGuestPending(false);
+        await budgetActions.loadFromApi();
+        return;
       }
 
       budgetActions.loadFromGuest();
