@@ -5,6 +5,7 @@ import LoginForm from "@/app/(auth)/login/_components/LoginForm";
 import ResetPasswordForm from "@/app/(auth)/login/_components/ResetPasswordForm";
 import { supabase } from "@/lib/supabase";
 import type { Route } from "next";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { useEffect, useMemo, useState } from "react";
 
@@ -105,10 +106,19 @@ export default function LoginPage() {
   }, [mode, nextPath]);
 
   return (
-    <div className="min-h-screen bg-[var(--bg-base)]">
-      <div className="grid min-h-screen grid-cols-1 lg:grid-cols-12">
-        <section className="lg:col-span-5 lg:border-r lg:border-[var(--border-soft)]">
-          <header className="sticky top-0 z-10 bg-transparent px-5 py-4 lg:static lg:z-auto lg:px-8 lg:pt-10">
+    <div className="flex min-h-screen items-center justify-center bg-[var(--bg-base)] px-4">
+      <div className="w-full max-w-md">
+        <section className="w-full sm:rounded-3xl sm:border sm:border-[var(--border-soft)] sm:shadow-sm sm:bg-[var(--bg-base)]">
+          <header className="sticky top-0 z-10 flex items-center gap-3 bg-transparent px-5 py-4 lg:static lg:z-auto lg:px-8 lg:pt-10">
+            <Link
+              href="/"
+              className="group flex h-8 w-8 items-center justify-center rounded-full text-[var(--text-dimmed)] transition-colors hover:bg-[var(--bg-subtle)] hover:text-[var(--text-primary)]"
+              aria-label="Kembali ke Beranda"
+            >
+              <svg viewBox="0 0 24 24" width={20} height={20} fill="none" stroke="currentColor" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round" className="transition-transform group-hover:-translate-x-0.5">
+                <path d="M19 12H5M12 19l-7-7 7-7" />
+              </svg>
+            </Link>
             <h1 className="text-base font-semibold text-[var(--text-primary)]">
               {mode === "login" ? "Masuk" : mode === "forgot" ? "Lupa Password" : "Reset Password"}
             </h1>
@@ -146,16 +156,6 @@ export default function LoginPage() {
           </main>
         </section>
 
-        <aside className="relative hidden lg:col-span-7 lg:flex lg:items-center lg:justify-center">
-          <div className="absolute inset-0 bg-gradient-to-br from-teal-500/10 via-blue-600/10 to-indigo-600/10" />
-          <div className="relative z-10 max-w-md space-y-4 px-8 text-center">
-            <p className="text-xs uppercase tracking-[0.22em] text-[var(--text-dimmed)]">Budgetin</p>
-            <h2 className="text-3xl font-semibold text-[var(--text-primary)]">Kelola uang dengan fokus.</h2>
-            <p className="text-sm text-[var(--text-dimmed)]">
-              Dashboard responsif, laporan jelas, dan catat transaksi dalam hitungan detik.
-            </p>
-          </div>
-        </aside>
       </div>
     </div>
   );
