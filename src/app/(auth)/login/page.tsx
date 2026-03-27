@@ -5,6 +5,7 @@ import Input from "@/components/ui/Input";
 import { supabase } from "@/lib/supabase";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
+import type { Route } from "next";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type AuthMode = "login" | "forgot" | "reset";
@@ -15,11 +16,19 @@ function toMode(raw: string | null): AuthMode {
   return "login";
 }
 
+/** Sanitasi redirect path untuk mencegah open redirect attack. */
+function sanitizeRedirect(path: string | null): string {
+  if (!path || !path.startsWith("/") || path.startsWith("//")) return "/";
+  // Tolak URL absolut yang tersembunyi (misal /\evil.com)
+  if (/^\/\\/.test(path)) return "/";
+  return path;
+}
+
 export default function LoginPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
 
-  const nextPath = useMemo(() => searchParams.get("next") || "/", [searchParams]);
+  const nextPath = useMemo(() => sanitizeRedirect(searchParams.get("next")), [searchParams]);
   const [mode, setMode] = useState<AuthMode>(toMode(searchParams.get("mode")));
 
   const [email, setEmail] = useState("");
@@ -65,14 +74,14 @@ export default function LoginPage() {
           return;
         }
 
-        router.replace(nextPath);
+        router.replace(nextPath as Route);
         return;
       }
 
       const { data } = await supabase.auth.getSession();
       if (!active) return;
       if (data.session && mode !== "reset") {
-        router.replace(nextPath);
+        router.replace(nextPath as Route);
       }
     };
 
@@ -92,7 +101,7 @@ export default function LoginPage() {
       }
 
       if (session && mode !== "reset") {
-        router.replace(nextPath);
+        router.replace(nextPath as Route);
       }
     });
 
@@ -116,7 +125,7 @@ export default function LoginPage() {
       return;
     }
 
-    router.replace(nextPath);
+    router.replace(nextPath as Route);
   };
 
   const handleGoogle = async () => {
@@ -181,7 +190,7 @@ export default function LoginPage() {
     }
 
     setNotice("Kata sandi berhasil diperbarui. Anda akan diarahkan ke dashboard.");
-    router.replace(nextPath);
+    router.replace(nextPath as Route);
   };
 
   return (

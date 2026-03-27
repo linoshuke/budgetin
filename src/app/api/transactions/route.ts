@@ -1,71 +1,32 @@
-import { supabase } from "@/lib/supabase";
 import { NextResponse } from "next/server";
+import { handleServiceError } from "@/lib/service-error";
+import { getAuthUser } from "@/lib/auth";
+import { getAllTransactions, createTransaction } from "@/services/transaction.service";
+import { CreateTransactionSchema } from "@/lib/validators";
 
-// GET /api/transactions - ambil semua transaksi
 export async function GET() {
-  const { data, error } = await supabase
-    .from("transactions")
-    .select("*")
-    .order("date", { ascending: false });
-
-  if (error) {
-    const missingColumn = error.code === "42703";
-    if (missingColumn) {
-      return NextResponse.json(
-        { error: "Kolom wallet_id belum tersedia. Jalankan schema terbaru di Supabase." },
-        { status: 500 },
-      );
-    }
-    return NextResponse.json({ error: error.message }, { status: 500 });
+  try {
+    const { user, supabase } = await getAuthUser();
+    const transactions = await getAllTransactions(supabase, user.id);
+    return NextResponse.json(transactions);
+  } catch (error) {
+    const { body, status } = handleServiceError(error);
+    return NextResponse.json(body, { status });
   }
-
-  const transactions = (data ?? []).map((row) => ({
-    id: row.id,
-    type: row.type,
-    amount: Number(row.amount),
-    categoryId: row.category_id,
-    walletId: row.wallet_id ?? "",
-    date: row.date,
-    note: row.note ?? "",
-  }));
-
-  return NextResponse.json(transactions);
 }
 
-// POST /api/transactions - tambah transaksi baru
 export async function POST(request: Request) {
-  const body = await request.json();
-
-  if (!body.walletId) {
-    return NextResponse.json({ error: "Dompet wajib dipilih." }, { status: 400 });
+  try {
+    const { user, supabase } = await getAuthUser();
+    const raw = await request.json();
+    const dto = CreateTransactionSchema.parse(raw);
+    const transaction = await createTransaction(supabase, user.id, dto);
+    return NextResponse.json(transaction, { status: 201 });
+  } catch (error) {
+    if (error instanceof Error && error.name === "ZodError") {
+      return NextResponse.json({ error: (error as import("zod").ZodError).issues.map(i => i.message).join(", ") }, { status: 400 });
+    }
+    const { body, status } = handleServiceError(error);
+    return NextResponse.json(body, { status });
   }
-
-  const { data, error } = await supabase
-    .from("transactions")
-    .insert({
-      type: body.type,
-      amount: body.amount,
-      category_id: body.categoryId,
-      wallet_id: body.walletId,
-      date: body.date,
-      note: body.note ?? "",
-    })
-    .select()
-    .single();
-
-  if (error) {
-    return NextResponse.json({ error: error.message }, { status: 500 });
-  }
-
-  const transaction = {
-    id: data.id,
-    type: data.type,
-    amount: Number(data.amount),
-    categoryId: data.category_id,
-    walletId: data.wallet_id ?? "",
-    date: data.date,
-    note: data.note ?? "",
-  };
-
-  return NextResponse.json(transaction, { status: 201 });
 }
