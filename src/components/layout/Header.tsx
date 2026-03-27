@@ -6,11 +6,12 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 
 const navItems: Array<{ label: string; href: Route }> = [
-  { label: "Dashboard", href: "/" },
-  { label: "Wallet", href: "/transactions" },
-  { label: "Kategori", href: "/categories" },
-  { label: "Laporan", href: "/reports" },
-  { label: "Profil", href: "/profile" },
+  { label: "Dashboard", href: "/" as Route },
+  { label: "Transaksi", href: "/transactions" as Route },
+  { label: "Wallet", href: "/wallets" as Route },
+  { label: "Kategori", href: "/categories" as Route },
+  { label: "Laporan", href: "/reports" as Route },
+  { label: "Profil", href: "/profile" as Route },
 ];
 
 function isActive(pathname: string, href: Route) {

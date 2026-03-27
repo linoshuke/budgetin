@@ -10,6 +10,7 @@ interface TransactionListProps {
   wallets: Wallet[];
   title?: string;
   subtitle?: string;
+  emptyMessage?: string;
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   disabled?: boolean;
@@ -21,6 +22,7 @@ export default function TransactionList({
   wallets,
   title = "Transaksi Terakhir",
   subtitle,
+  emptyMessage = "Belum ada transaksi. Catat transaksi baru lewat tombol + Catat di dashboard.",
   onEdit,
   onDelete,
   disabled = false,
@@ -38,9 +40,7 @@ export default function TransactionList({
       </div>
 
       {transactions.length === 0 ? (
-        <p className="mt-4 text-sm text-[var(--text-dimmed)]">
-          Belum ada transaksi. Catat transaksi baru lewat tombol + Catat di dashboard.
-        </p>
+        <p className="mt-4 text-sm text-[var(--text-dimmed)]">{emptyMessage}</p>
       ) : null}
 
       <div className="mt-4 divide-y divide-[var(--border-soft)]">

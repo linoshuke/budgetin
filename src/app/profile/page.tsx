@@ -1,6 +1,8 @@
 "use client";
 
 import Header from "@/components/layout/Header";
+import MobileAppBar from "@/app/_components/mobile/MobileAppBar";
+import MobileBottomNav from "@/app/_components/mobile/MobileBottomNav";
 import AuthGate from "@/components/shared/AuthGate";
 import Modal from "@/components/shared/Modal";
 import Button from "@/components/ui/Button";
@@ -211,111 +213,120 @@ export default function ProfilePage() {
   return (
     <AuthGate requireAuth>
       <div className="min-h-screen">
-        <Header />
+        <div className="hidden md:block">
+          <Header />
+        </div>
+        <div className="md:hidden">
+          <MobileAppBar title="Profil" />
+        </div>
 
-        <main className="page-shell space-y-6">
-          <section className="glass-panel space-y-4 p-4">
-            <div className="flex items-center gap-4">
-              <div className="relative">
-                {avatarUrl ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={avatarUrl}
-                    alt="Foto profil"
-                    className="h-20 w-20 rounded-3xl border border-[var(--border-soft)] object-cover"
-                  />
-                ) : (
-                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-teal-500 to-blue-600 text-lg font-semibold text-white">
-                    {getInitials(name, email)}
-                  </div>
-                )}
-                <button
-                  type="button"
-                  className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-soft)] bg-[var(--bg-card)] text-xs text-[var(--text-dimmed)]"
-                  onClick={() => alert("Upload avatar belum tersedia.")}
-                >
-                  ??
-                </button>
+        <main className="page-shell">
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <section className="glass-panel space-y-4 p-4 lg:col-span-5 lg:sticky lg:top-24">
+              <div className="flex items-center gap-4">
+                <div className="relative">
+                  {avatarUrl ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={avatarUrl}
+                      alt="Foto profil"
+                      className="h-20 w-20 rounded-3xl border border-[var(--border-soft)] object-cover"
+                    />
+                  ) : (
+                    <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-teal-500 to-blue-600 text-lg font-semibold text-white">
+                      {getInitials(name, email)}
+                    </div>
+                  )}
+                  <button
+                    type="button"
+                    className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-soft)] bg-[var(--bg-card)] text-xs text-[var(--text-dimmed)]"
+                    onClick={() => alert("Upload avatar belum tersedia.")}
+                  >
+                    ??
+                  </button>
+                </div>
+                <div>
+                  <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-dimmed)]">Profil</p>
+                  <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
+                    {name.trim() || "Pengguna Budgetin"}
+                  </h1>
+                  <p className="text-sm text-[var(--text-dimmed)]">{email || "-"}</p>
+                </div>
               </div>
-              <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-dimmed)]">Profil</p>
-                <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
-                  {name.trim() || "Pengguna Budgetin"}
-                </h1>
-                <p className="text-sm text-[var(--text-dimmed)]">{email || "-"}</p>
+
+              <div className="flex flex-wrap gap-2 text-xs text-[var(--text-dimmed)]">
+                <span className="rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-1">
+                  Provider: {provider}
+                </span>
+                <span className="rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-1">
+                  Verifikasi: {isVerified ? "Terverifikasi" : "Belum terverifikasi"}
+                </span>
+                <span className="rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-1">
+                  Bergabung: {createdDate}
+                </span>
               </div>
-            </div>
 
-            <div className="flex flex-wrap gap-2 text-xs text-[var(--text-dimmed)]">
-              <span className="rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-1">
-                Provider: {provider}
-              </span>
-              <span className="rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-1">
-                Verifikasi: {isVerified ? "Terverifikasi" : "Belum terverifikasi"}
-              </span>
-              <span className="rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-1">
-                Bergabung: {createdDate}
-              </span>
-            </div>
+              <Button onClick={() => setShowEditName(true)} disabled={loadingUser}>
+                Ubah Nama
+              </Button>
+            </section>
 
-            <Button onClick={() => setShowEditName(true)} disabled={loadingUser}>
-              Ubah Nama
-            </Button>
-          </section>
+            <div className="space-y-6 lg:col-span-7">
+              <section className="glass-panel p-4">
+                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Account Management</h2>
+                <div className="mt-4 space-y-2">
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]"
+                    onClick={() => alert("Link Google belum tersedia.")}
+                  >
+                    Link Google
+                    <span className="text-[var(--text-dimmed)]">â€º</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]"
+                    onClick={() => setShowPasswordModal(true)}
+                  >
+                    Tambah Password
+                    <span className="text-[var(--text-dimmed)]">â€º</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]"
+                    onClick={exportCsv}
+                  >
+                    Ekspor Data
+                    <span className="text-[var(--text-dimmed)]">â€º</span>
+                  </button>
+                  <button
+                    type="button"
+                    className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-rose-300"
+                    onClick={async () => {
+                      await supabase.auth.signOut();
+                      router.replace("/login");
+                    }}
+                  >
+                    Logout
+                    <span>â€º</span>
+                  </button>
+                </div>
+              </section>
 
-          <section className="glass-panel p-4">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Account Management</h2>
-            <div className="mt-4 space-y-2">
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]"
-                onClick={() => alert("Link Google belum tersedia.")}
-              >
-                Link Google
-                <span className="text-[var(--text-dimmed)]">�</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]"
-                onClick={() => setShowPasswordModal(true)}
-              >
-                Tambah Password
-                <span className="text-[var(--text-dimmed)]">�</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]"
-                onClick={exportCsv}
-              >
-                Ekspor Data
-                <span className="text-[var(--text-dimmed)]">�</span>
-              </button>
-              <button
-                type="button"
-                className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-rose-300"
-                onClick={async () => {
-                  await supabase.auth.signOut();
-                  router.replace("/login");
-                }}
-              >
-                Logout
-                <span>�</span>
-              </button>
+              <section className="glass-panel p-4">
+                <h2 className="text-lg font-semibold text-rose-300">Danger Zone</h2>
+                <div className="mt-4">
+                  <button
+                    type="button"
+                    className="w-full rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-300"
+                    onClick={() => alert("Hapus akun belum tersedia.")}
+                  >
+                    Hapus Akun
+                  </button>
+                </div>
+              </section>
             </div>
-          </section>
-
-          <section className="glass-panel p-4">
-            <h2 className="text-lg font-semibold text-rose-300">Danger Zone</h2>
-            <div className="mt-4">
-              <button
-                type="button"
-                className="w-full rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-300"
-                onClick={() => alert("Hapus akun belum tersedia.")}
-              >
-                Hapus Akun
-              </button>
-            </div>
-          </section>
+          </div>
         </main>
 
         <Modal
@@ -400,6 +411,10 @@ export default function ProfilePage() {
             </div>
           </div>
         </Modal>
+
+        <div className="md:hidden">
+          <MobileBottomNav />
+        </div>
       </div>
     </AuthGate>
   );

@@ -22,9 +22,9 @@ export default function Sidebar({ totals }: SidebarProps) {
       <div>
         <h2 className="text-sm font-semibold text-[var(--text-primary)]">Navigasi Cepat</h2>
         <div className="mt-3 space-y-2 text-sm">
-          <QuickLink href="/transactions" label="Kelola wallet" />
-          <QuickLink href="/categories" label="Kelola kategori" />
-          <QuickLink href="/reports" label="Buka laporan bulanan" />
+          <QuickLink href={"/wallets" as Route} label="Kelola wallet" />
+          <QuickLink href={"/categories" as Route} label="Kelola kategori" />
+          <QuickLink href={"/reports" as Route} label="Buka laporan bulanan" />
         </div>
       </div>
     </aside>

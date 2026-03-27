@@ -1,13 +1,20 @@
+"use client";
+
+import React from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
 type NavItem = {
   label: string;
-  icon: () => JSX.Element;
+  href: string;
+  icon: () => React.ReactElement;
 };
 
 const items: NavItem[] = [
   {
     label: "Beranda",
+    href: "/",
     icon: () => (
       <svg viewBox="0 0 24 24" width={26} height={26} aria-hidden="true">
         <path
@@ -30,7 +37,8 @@ const items: NavItem[] = [
     ),
   },
   {
-    label: "Riwayat",
+    label: "Transaksi",
+    href: "/transactions",
     icon: () => (
       <svg viewBox="0 0 24 24" width={26} height={26} aria-hidden="true">
         <circle cx="12" cy="12" r="8.5" fill="none" stroke="currentColor" strokeWidth="1.8" />
@@ -47,6 +55,7 @@ const items: NavItem[] = [
   },
   {
     label: "Dompet",
+    href: "/wallets",
     icon: () => (
       <svg viewBox="0 0 24 24" width={26} height={26} aria-hidden="true">
         <rect
@@ -71,7 +80,8 @@ const items: NavItem[] = [
     ),
   },
   {
-    label: "Statistik",
+    label: "Analitik",
+    href: "/reports",
     icon: () => (
       <svg viewBox="0 0 24 24" width={26} height={26} aria-hidden="true">
         <path
@@ -89,6 +99,7 @@ const items: NavItem[] = [
   },
   {
     label: "Lainnya",
+    href: "/more",
     icon: () => (
       <svg viewBox="0 0 24 24" width={26} height={26} aria-hidden="true">
         <circle cx="6" cy="12" r="1.8" fill="currentColor" />
@@ -99,31 +110,31 @@ const items: NavItem[] = [
   },
 ];
 
-export default function MobileBottomNav({
-  activeIndex,
-  onSelect,
-}: {
-  activeIndex: number;
-  onSelect: (index: number) => void;
-}) {
+function isActive(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname.startsWith(href);
+}
+
+export default function MobileBottomNav() {
+  const pathname = usePathname();
+
   return (
     <div className="fixed bottom-0 left-0 right-0 z-40 border-t border-[var(--border-soft)] bg-[var(--bg-nav)]/95 backdrop-blur-md">
       <div className="mx-auto flex h-[60px] max-w-lg items-center">
-        {items.map((item, index) => {
-          const active = index === activeIndex;
+        {items.map((item) => {
+          const active = isActive(pathname, item.href);
           return (
-            <button
+            <Link
               key={item.label}
-              type="button"
-              onClick={() => onSelect(index)}
+              href={item.href}
               className={cn(
-                "flex flex-1 flex-col items-center justify-center gap-1 px-2 py-1 text-[12px] transition-all duration-[250ms] ease-in-out",
+                "flex flex-1 flex-col items-center justify-center gap-1 px-2 py-1 text-[11px] transition-all duration-[250ms] ease-in-out",
                 active ? "-translate-y-3 text-indigo-600" : "text-[var(--text-dimmed)]",
               )}
             >
               {item.icon()}
               <span className={active ? "font-bold" : "font-medium"}>{item.label}</span>
-            </button>
+            </Link>
           );
         })}
       </div>

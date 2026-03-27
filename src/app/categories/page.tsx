@@ -1,6 +1,8 @@
 "use client";
 
 import Header from "@/components/layout/Header";
+import MobileAppBar from "@/app/_components/mobile/MobileAppBar";
+import MobileBottomNav from "@/app/_components/mobile/MobileBottomNav";
 import AuthGate from "@/components/shared/AuthGate";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
@@ -50,7 +52,12 @@ export default function CategoriesPage() {
   return (
     <AuthGate>
       <div className="min-h-screen">
-        <Header />
+        <div className="hidden md:block">
+          <Header />
+        </div>
+        <div className="md:hidden">
+          <MobileAppBar title="Kategori" />
+        </div>
 
         <main className="page-shell space-y-6">
           <section className="space-y-2">
@@ -60,84 +67,92 @@ export default function CategoriesPage() {
             </p>
           </section>
 
-          <form className="glass-panel grid gap-4 p-4 sm:grid-cols-2" onSubmit={handleSubmit}>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--text-dimmed)]">Nama kategori</label>
-              <Input
-                value={name}
-                onChange={(event) => setName(event.target.value)}
-                placeholder="Contoh: Investasi"
-                required
-                disabled={syncLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--text-dimmed)]">Kode ikon (teks pendek)</label>
-              <Input
-                value={icon}
-                onChange={(event) => setIcon(event.target.value.toUpperCase().slice(0, 5))}
-                placeholder="Contoh: FUND"
-                disabled={syncLoading}
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--text-dimmed)]">Tipe kategori</label>
-              <select
-                value={type}
-                onChange={(event) => setType(event.target.value as CategoryType)}
-                className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-sm text-[var(--text-primary)]"
-                disabled={syncLoading}
-              >
-                <option value="expense">Pengeluaran</option>
-                <option value="income">Pemasukan</option>
-                <option value="both">Keduanya</option>
-              </select>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--text-dimmed)]">Warna kategori</label>
-              <Input type="color" value={color} onChange={(event) => setColor(event.target.value)} disabled={syncLoading} />
-            </div>
+          <div className="grid grid-cols-1 gap-6 lg:grid-cols-12">
+            <section className="space-y-4 lg:col-span-5">
+              <form className="glass-panel grid gap-4 p-4 sm:grid-cols-2" onSubmit={handleSubmit}>
+                <div className="space-y-2">
+                  <label className="text-sm text-[var(--text-dimmed)]">Nama kategori</label>
+                  <Input
+                    value={name}
+                    onChange={(event) => setName(event.target.value)}
+                    placeholder="Contoh: Investasi"
+                    required
+                    disabled={syncLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-[var(--text-dimmed)]">Kode ikon (teks pendek)</label>
+                  <Input
+                    value={icon}
+                    onChange={(event) => setIcon(event.target.value.toUpperCase().slice(0, 5))}
+                    placeholder="Contoh: FUND"
+                    disabled={syncLoading}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-[var(--text-dimmed)]">Tipe kategori</label>
+                  <select
+                    value={type}
+                    onChange={(event) => setType(event.target.value as CategoryType)}
+                    className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                    disabled={syncLoading}
+                  >
+                    <option value="expense">Pengeluaran</option>
+                    <option value="income">Pemasukan</option>
+                    <option value="both">Keduanya</option>
+                  </select>
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-[var(--text-dimmed)]">Warna kategori</label>
+                  <Input type="color" value={color} onChange={(event) => setColor(event.target.value)} disabled={syncLoading} />
+                </div>
 
-            <div className="sm:col-span-2">
-              <Button type="submit" disabled={syncLoading}>Tambah Kategori Kustom</Button>
-            </div>
-          </form>
+                <div className="sm:col-span-2">
+                  <Button type="submit" disabled={syncLoading}>Tambah Kategori Kustom</Button>
+                </div>
+              </form>
+            </section>
 
-          <section className="glass-panel p-4">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Daftar Kategori</h2>
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {categories.map((category) => (
-                <article
-                  key={category.id}
-                  className="rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] p-3"
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <span
-                        className="inline-flex min-w-10 justify-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"
-                        style={{ backgroundColor: category.color }}
-                      >
-                        {category.icon}
-                      </span>
-                      <div>
-                        <p className="text-sm font-semibold text-[var(--text-primary)]">{category.name}</p>
-                        <p className="text-xs text-[var(--text-dimmed)]">
-                          {category.type === "income" ? "Pemasukan" : category.type === "expense" ? "Pengeluaran" : "Keduanya"}
-                        </p>
+            <section className="glass-panel p-4 lg:col-span-7">
+              <h2 className="text-lg font-semibold text-[var(--text-primary)]">Daftar Kategori</h2>
+              <div className="mt-4 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+                {categories.map((category) => (
+                  <article
+                    key={category.id}
+                    className="rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] p-3"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <span
+                          className="inline-flex min-w-10 justify-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"
+                          style={{ backgroundColor: category.color }}
+                        >
+                          {category.icon}
+                        </span>
+                        <div>
+                          <p className="text-sm font-semibold text-[var(--text-primary)]">{category.name}</p>
+                          <p className="text-xs text-[var(--text-dimmed)]">
+                            {category.type === "income" ? "Pemasukan" : category.type === "expense" ? "Pengeluaran" : "Keduanya"}
+                          </p>
+                        </div>
                       </div>
+                      <span className="text-xs text-[var(--text-dimmed)]">
+                        {category.isDefault ? "Default" : "Custom"}
+                      </span>
                     </div>
-                    <span className="text-xs text-[var(--text-dimmed)]">
-                      {category.isDefault ? "Default" : "Custom"}
-                    </span>
-                  </div>
-                  <p className="mt-2 text-xs text-[var(--text-dimmed)]">
-                    Dipakai di {usageCount.get(category.id) ?? 0} transaksi.
-                  </p>
-                </article>
-              ))}
-            </div>
-          </section>
+                    <p className="mt-2 text-xs text-[var(--text-dimmed)]">
+                      Dipakai di {usageCount.get(category.id) ?? 0} transaksi.
+                    </p>
+                  </article>
+                ))}
+              </div>
+            </section>
+          </div>
         </main>
+
+        <div className="md:hidden">
+          <MobileBottomNav />
+        </div>
       </div>
     </AuthGate>
   );
