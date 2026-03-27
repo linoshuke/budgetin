@@ -1,0 +1,27 @@
+:root {
+  --bg-base: #0b1224;
+  --bg-elevated: #0f1a33;
+  --bg-card: #111a2f;
+  --text-primary: #e5e7eb;
+  --text-dimmed: #9ca3af;
+  --brand-purple: #6e59f5;
+  --brand-teal: #22d3ee;
+  --brand-rose: #fb7185;
+  --brand-emerald: #34d399;
+  --border-soft: rgba(255, 255, 255, 0.08);
+}
+
+.glass-panel {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.04), rgba(255, 255, 255, 0.01));
+  border: 1px solid var(--border-soft);
+  border-radius: 18px;
+  box-shadow:
+    0 20px 60px rgba(0, 0, 0, 0.35),
+    0 1px 0 rgba(255, 255, 255, 0.04) inset;
+}
+
+.card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
