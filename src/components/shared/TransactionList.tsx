@@ -39,7 +39,7 @@ export default function TransactionList({
 
       {transactions.length === 0 ? (
         <p className="mt-4 text-sm text-[var(--text-dimmed)]">
-          Belum ada transaksi. Tambahkan transaksi baru dari menu Transaksi.
+          Belum ada transaksi. Catat transaksi baru lewat tombol + Catat di dashboard.
         </p>
       ) : null}
 

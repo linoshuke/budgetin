@@ -355,6 +355,53 @@ export const budgetActions = {
     return created;
   },
 
+  async updateWallet(id: string, payload: Pick<Wallet, "name">) {
+    if (!state.isAuthenticated) {
+      const next = {
+        ...state,
+        wallets: state.wallets.map((item) =>
+          item.id === id ? { ...item, ...payload } : item,
+        ),
+      };
+      const guestPending = hasGuestDataFromState(next);
+      setState(() => ({ ...next, guestPending }));
+      persistGuestSnapshot(next);
+      return;
+    }
+
+    const updated = await apiFetch<Wallet>(`/api/wallets/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(payload),
+    });
+
+    setState((c) => ({
+      ...c,
+      wallets: c.wallets.map((item) =>
+        item.id === id ? updated : item,
+      ),
+    }));
+  },
+
+  async deleteWallet(id: string) {
+    if (!state.isAuthenticated) {
+      const next = {
+        ...state,
+        wallets: state.wallets.filter((item) => item.id !== id),
+      };
+      const guestPending = hasGuestDataFromState(next);
+      setState(() => ({ ...next, guestPending }));
+      persistGuestSnapshot(next);
+      return;
+    }
+
+    await apiFetch(`/api/wallets/${id}`, { method: "DELETE" });
+
+    setState((c) => ({
+      ...c,
+      wallets: c.wallets.filter((item) => item.id !== id),
+    }));
+  },
+
   async updateProfile(payload: Partial<Omit<UserProfile, "theme">>) {
     if (!state.isAuthenticated) {
       const next = {

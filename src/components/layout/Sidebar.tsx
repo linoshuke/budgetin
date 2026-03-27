@@ -22,7 +22,7 @@ export default function Sidebar({ totals }: SidebarProps) {
       <div>
         <h2 className="text-sm font-semibold text-[var(--text-primary)]">Navigasi Cepat</h2>
         <div className="mt-3 space-y-2 text-sm">
-          <QuickLink href="/transactions" label="Lihat dan catat transaksi" />
+          <QuickLink href="/transactions" label="Kelola wallet" />
           <QuickLink href="/categories" label="Kelola kategori" />
           <QuickLink href="/reports" label="Buka laporan bulanan" />
         </div>

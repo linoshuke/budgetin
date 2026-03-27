@@ -26,6 +26,8 @@ export const CreateWalletSchema = z.object({
     name: z.string().min(1, "Nama dompet wajib diisi.").max(100, "Nama dompet maksimal 100 karakter."),
 });
 
+export const UpdateWalletSchema = CreateWalletSchema;
+
 export const UpdateProfileSchema = z.object({
     name: z.string().min(1, "Nama tidak boleh kosong.").max(100, "Nama maksimal 100 karakter.").optional(),
     email: z.string().email("Format email tidak valid.").optional(),

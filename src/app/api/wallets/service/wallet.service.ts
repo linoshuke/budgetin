@@ -2,6 +2,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import type { Wallet } from "@/types/wallet";
 import {
     type CreateWalletDTO,
+    type UpdateWalletDTO,
     mapRowToWallet,
     mapRowsToWallets,
     mapDTOToInsertRow,
@@ -76,6 +77,45 @@ export async function createWallet(
             throw new ServiceError("Nama dompet sudah digunakan.", 409);
         }
         throw new ServiceError(error.message);
+    }
+
+    return mapRowToWallet(data);
+}
+
+export async function updateWallet(
+    supabase: SupabaseClient,
+    userId: string,
+    id: string,
+    dto: UpdateWalletDTO,
+): Promise<Wallet> {
+    const name = dto.name?.trim();
+    if (!name) {
+        throw new ServiceError("Nama dompet wajib diisi.", 400);
+    }
+
+    const { data, error } = await supabase
+        .from("wallets")
+        .update({ name })
+        .eq("id", id)
+        .eq("user_id", userId)
+        .select()
+        .single();
+
+    if (error) {
+        const normalized = error.message.toLowerCase();
+        const isDuplicate = normalized.includes("duplicate") || normalized.includes("unique");
+        if (isDuplicate) {
+            throw new ServiceError("Nama dompet sudah digunakan.", 409);
+        }
+        const notFound = error.code === "PGRST116";
+        throw new ServiceError(
+            notFound ? "Dompet tidak ditemukan." : error.message,
+            notFound ? 404 : 500,
+        );
+    }
+
+    if (!data) {
+        throw new ServiceError("Dompet tidak ditemukan.", 404);
     }
 
     return mapRowToWallet(data);

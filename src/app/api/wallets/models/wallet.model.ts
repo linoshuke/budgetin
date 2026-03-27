@@ -12,6 +12,10 @@ export interface CreateWalletDTO {
     name: string;
 }
 
+export interface UpdateWalletDTO {
+    name: string;
+}
+
 export function mapRowToWallet(row: WalletRow): Wallet {
     return {
         id: row.id,

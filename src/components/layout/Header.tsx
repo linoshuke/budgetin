@@ -7,7 +7,7 @@ import { usePathname } from "next/navigation";
 
 const navItems: Array<{ label: string; href: Route }> = [
   { label: "Dashboard", href: "/" },
-  { label: "Transaksi", href: "/transactions" },
+  { label: "Wallet", href: "/transactions" },
   { label: "Kategori", href: "/categories" },
   { label: "Laporan", href: "/reports" },
   { label: "Profil", href: "/profile" },

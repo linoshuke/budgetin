@@ -4,19 +4,24 @@ import Header from "@/components/layout/Header";
 import Sidebar from "@/components/layout/Sidebar";
 import AddTransactionFab from "@/components/shared/AddTransactionFab";
 import AuthGate from "@/components/shared/AuthGate";
+import Modal from "@/components/shared/Modal";
 import MonthlySummary from "@/components/shared/MonthlySummary";
 import StatCard from "@/components/shared/StatCard";
+import TransactionForm from "@/components/shared/TransactionForm";
 import TransactionList from "@/components/shared/TransactionList";
 import { calculateTotals, filterTransactionsByMonth, getRecentTransactions } from "@/lib/budget";
 import { formatCurrency, monthKey } from "@/lib/utils";
-import { useBudgetStore } from "@/store/budgetStore";
-import { useMemo } from "react";
+import { budgetActions, useBudgetStore } from "@/store/budgetStore";
+import type { Transaction } from "@/types/transaction";
+import { useMemo, useState } from "react";
 
 export default function DashboardPage() {
   const transactions = useBudgetStore((state) => state.transactions);
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
   const syncLoading = useBudgetStore((state) => state.syncLoading);
+  const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [savingTransaction, setSavingTransaction] = useState(false);
 
   const totals = useMemo(() => calculateTotals(transactions), [transactions]);
   const activeMonth = monthKey(new Date());
@@ -26,6 +31,20 @@ export default function DashboardPage() {
   );
   const monthTotals = useMemo(() => calculateTotals(monthTransactions), [monthTransactions]);
   const recent = useMemo(() => getRecentTransactions(transactions, 8), [transactions]);
+
+  const handleSubmit = async (payload: Omit<Transaction, "id">) => {
+    try {
+      setSavingTransaction(true);
+      await budgetActions.addTransaction(payload);
+      setShowTransactionModal(false);
+    } catch (err) {
+      console.error("Gagal menyimpan transaksi:", err);
+    } finally {
+      setSavingTransaction(false);
+    }
+  };
+
+  const formDisabled = syncLoading || savingTransaction;
 
   return (
     <AuthGate>
@@ -71,7 +90,24 @@ export default function DashboardPage() {
           </section>
         </main>
 
-        <AddTransactionFab disabled={syncLoading} />
+        <AddTransactionFab disabled={syncLoading} onClick={() => setShowTransactionModal(true)} />
+        <Modal
+          open={showTransactionModal}
+          title="Catat Transaksi"
+          onClose={() => setShowTransactionModal(false)}
+          sizeClassName="max-w-4xl"
+        >
+          <TransactionForm
+            key={showTransactionModal ? "transaction-modal" : "transaction-hidden"}
+            categories={categories}
+            wallets={wallets}
+            onSubmit={handleSubmit}
+            onCreateWallet={(payload) => budgetActions.addWallet(payload)}
+            submitLabel="Simpan Transaksi"
+            onCancel={() => setShowTransactionModal(false)}
+            disabled={formDisabled}
+          />
+        </Modal>
       </div>
     </AuthGate>
   );
