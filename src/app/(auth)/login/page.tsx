@@ -379,11 +379,11 @@ export default function LoginPage() {
 
           <p className="text-center text-xs text-[var(--text-dimmed)]">
             Dengan masuk, Anda menyetujui{" "}
-            <Link href="/privacy" className="underline">
+            <Link href={"/privacy" as Route} className="underline">
               Kebijakan Privasi
             </Link>{" "}
             dan{" "}
-            <Link href="/terms" className="underline">
+            <Link href={"/terms" as Route} className="underline">
               Ketentuan Layanan
             </Link>
             .

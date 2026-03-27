@@ -1,10 +1,4 @@
--- ============================================
--- Budgetin — Security Migration
--- Jalankan script ini di Supabase Dashboard -> SQL Editor
--- SETELAH deploy code baru
--- ============================================
 
--- ─── 1. Tambah kolom user_id ke tabel-tabel utama ─────────
 
 -- Categories
 ALTER TABLE categories
@@ -18,24 +12,14 @@ ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCAD
 ALTER TABLE transactions
 ADD COLUMN IF NOT EXISTS user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE;
 
--- ─── 2. Bersihkan data seed lama yang tidak terhubung ke auth.users ──
-
--- Hapus transaksi yang tidak punya user_id (data lama)
 DELETE FROM transactions WHERE user_id IS NULL;
 
--- Hapus kategori seed lama yang tidak punya user_id
 DELETE FROM categories WHERE user_id IS NULL;
 
--- Hapus wallet seed lama yang tidak punya user_id
 DELETE FROM wallets WHERE user_id IS NULL;
 
--- Hapus profil seed lama yang tidak ada di auth.users
 DELETE FROM profiles WHERE id NOT IN (SELECT id FROM auth.users);
 
--- ─── 3. Update profiles: id is FK to auth.users ──────────
-
--- Profiles sudah pakai UUID sebagai PK.
--- Kita pastikan constraint FK ada.
 DO $$
 BEGIN
   IF NOT EXISTS (
@@ -48,14 +32,10 @@ BEGIN
 END
 $$;
 
--- ─── 3. Enable RLS pada semua tabel ──────────────────────
-
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 ALTER TABLE categories ENABLE ROW LEVEL SECURITY;
 ALTER TABLE wallets ENABLE ROW LEVEL SECURITY;
 ALTER TABLE transactions ENABLE ROW LEVEL SECURITY;
-
--- ─── 4. Create RLS Policies ─────────────────────────────
 
 -- Profiles: user hanya bisa akses profil miliknya sendiri
 DROP POLICY IF EXISTS "Users can view own profile" ON profiles;
@@ -140,9 +120,6 @@ CREATE POLICY "Users can delete own transactions"
   ON transactions FOR DELETE
   USING (user_id = auth.uid());
 
--- ─── 5. Trigger: auto-create profile + seed data untuk user baru ─
-
--- Function: saat user baru registrasi, buat profil + default categories + default wallet
 CREATE OR REPLACE FUNCTION public.handle_new_user()
 RETURNS TRIGGER AS $$
 DECLARE
@@ -181,9 +158,3 @@ DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
 CREATE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
-
--- ─── 6. (Opsional) Assign data lama ke user tertentu ────
--- Uncomment dan ganti UUID di bawah jika ingin assign data existing ke satu user.
--- UPDATE categories SET user_id = 'YOUR-USER-UUID' WHERE user_id IS NULL;
--- UPDATE wallets SET user_id = 'YOUR-USER-UUID' WHERE user_id IS NULL;
--- UPDATE transactions SET user_id = 'YOUR-USER-UUID' WHERE user_id IS NULL;
