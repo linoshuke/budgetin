@@ -24,9 +24,15 @@ export const CreateCategorySchema = z.object({
 
 export const CreateWalletSchema = z.object({
     name: z.string().min(1, "Nama dompet wajib diisi.").max(100, "Nama dompet maksimal 100 karakter."),
+    category: z.string().min(1, "Kategori dompet wajib diisi.").max(50, "Kategori dompet maksimal 50 karakter."),
+    location: z.string().min(1, "Lokasi dompet wajib diisi.").max(50, "Lokasi dompet maksimal 50 karakter."),
 });
 
-export const UpdateWalletSchema = CreateWalletSchema;
+export const UpdateWalletSchema = z.object({
+    name: z.string().min(1, "Nama dompet wajib diisi.").max(100, "Nama dompet maksimal 100 karakter."),
+    category: z.string().min(1, "Kategori dompet wajib diisi.").max(50, "Kategori dompet maksimal 50 karakter.").optional(),
+    location: z.string().min(1, "Lokasi dompet wajib diisi.").max(50, "Lokasi dompet maksimal 50 karakter.").optional(),
+});
 
 export const UpdateProfileSchema = z.object({
     name: z.string().min(1, "Nama tidak boleh kosong.").max(100, "Nama maksimal 100 karakter.").optional(),
@@ -50,6 +56,8 @@ export const SyncGuestSchema = z.object({
         z.object({
             clientId: z.string().uuid("Client ID dompet harus UUID."),
             name: z.string().min(1, "Nama dompet wajib diisi.").max(100),
+            category: z.string().min(1).max(50).optional().default("Umum"),
+            location: z.string().min(1).max(50).optional().default("Lokal"),
         }),
     ).default([]),
     transactions: z.array(

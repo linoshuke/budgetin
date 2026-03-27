@@ -2,6 +2,7 @@
 
 import Header from "@/components/layout/Header";
 import AuthGate from "@/components/shared/AuthGate";
+import Modal from "@/components/shared/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { supabase } from "@/lib/supabase";
@@ -59,6 +60,9 @@ export default function ProfilePage() {
   const [savingPassword, setSavingPassword] = useState(false);
   const [passwordNotice, setPasswordNotice] = useState("");
   const [passwordError, setPasswordError] = useState("");
+
+  const [showEditName, setShowEditName] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   const categoryMap = useMemo(
     () => new Map(categories.map((item) => [item.id, item.name])),
@@ -165,6 +169,7 @@ export default function ProfilePage() {
       setAuthUser(data.user ?? null);
       setName(getDisplayName(data.user ?? null));
       setEmail(data.user?.email ?? nextEmail);
+      setShowEditName(false);
     } catch (error) {
       setAccountError(error instanceof Error ? error.message : "Gagal memperbarui akun.");
     } finally {
@@ -200,6 +205,7 @@ export default function ProfilePage() {
     setNewPassword("");
     setConfirmPassword("");
     setPasswordNotice("Kata sandi berhasil diubah.");
+    setShowPasswordModal(false);
   };
 
   return (
@@ -208,22 +214,31 @@ export default function ProfilePage() {
         <Header />
 
         <main className="page-shell space-y-6">
-          <section className="glass-panel flex flex-col gap-4 p-5 sm:flex-row sm:items-center sm:justify-between">
+          <section className="glass-panel space-y-4 p-4">
             <div className="flex items-center gap-4">
-              {avatarUrl ? (
-                // eslint-disable-next-line @next/next/no-img-element
-                <img
-                  src={avatarUrl}
-                  alt="Foto profil user"
-                  className="h-16 w-16 rounded-2xl border border-[var(--border-soft)] object-cover"
-                />
-              ) : (
-                <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-teal-500 to-blue-600 text-lg font-semibold text-white">
-                  {getInitials(name, email)}
-                </div>
-              )}
+              <div className="relative">
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt="Foto profil"
+                    className="h-20 w-20 rounded-3xl border border-[var(--border-soft)] object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-teal-500 to-blue-600 text-lg font-semibold text-white">
+                    {getInitials(name, email)}
+                  </div>
+                )}
+                <button
+                  type="button"
+                  className="absolute -bottom-1 -right-1 flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-soft)] bg-[var(--bg-card)] text-xs text-[var(--text-dimmed)]"
+                  onClick={() => alert("Upload avatar belum tersedia.")}
+                >
+                  ??
+                </button>
+              </div>
               <div>
-                <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-dimmed)]">Akun Budgetin</p>
+                <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-dimmed)]">Profil</p>
                 <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
                   {name.trim() || "Pengguna Budgetin"}
                 </h1>
@@ -231,7 +246,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            <div className="grid gap-2 text-xs text-[var(--text-dimmed)]">
+            <div className="flex flex-wrap gap-2 text-xs text-[var(--text-dimmed)]">
               <span className="rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-1">
                 Provider: {provider}
               </span>
@@ -242,11 +257,74 @@ export default function ProfilePage() {
                 Bergabung: {createdDate}
               </span>
             </div>
+
+            <Button onClick={() => setShowEditName(true)} disabled={loadingUser}>
+              Ubah Nama
+            </Button>
           </section>
 
-          <section className="glass-panel space-y-4 p-4">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Kelola Informasi Akun</h2>
+          <section className="glass-panel p-4">
+            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Account Management</h2>
+            <div className="mt-4 space-y-2">
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]"
+                onClick={() => alert("Link Google belum tersedia.")}
+              >
+                Link Google
+                <span className="text-[var(--text-dimmed)]">›</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]"
+                onClick={() => setShowPasswordModal(true)}
+              >
+                Tambah Password
+                <span className="text-[var(--text-dimmed)]">›</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-[var(--text-primary)]"
+                onClick={exportCsv}
+              >
+                Ekspor Data
+                <span className="text-[var(--text-dimmed)]">›</span>
+              </button>
+              <button
+                type="button"
+                className="flex w-full items-center justify-between rounded-xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-4 py-3 text-sm text-rose-300"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  router.replace("/login");
+                }}
+              >
+                Logout
+                <span>›</span>
+              </button>
+            </div>
+          </section>
 
+          <section className="glass-panel p-4">
+            <h2 className="text-lg font-semibold text-rose-300">Danger Zone</h2>
+            <div className="mt-4">
+              <button
+                type="button"
+                className="w-full rounded-xl border border-rose-500/40 bg-rose-500/10 px-4 py-3 text-sm font-semibold text-rose-300"
+                onClick={() => alert("Hapus akun belum tersedia.")}
+              >
+                Hapus Akun
+              </button>
+            </div>
+          </section>
+        </main>
+
+        <Modal
+          open={showEditName}
+          title="Ubah Nama"
+          onClose={() => setShowEditName(false)}
+          sizeClassName="max-w-md"
+        >
+          <div className="space-y-4">
             {accountError ? (
               <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
                 {accountError}
@@ -257,37 +335,33 @@ export default function ProfilePage() {
                 {accountNotice}
               </p>
             ) : null}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm text-[var(--text-dimmed)]">Nama tampilan</label>
-                <Input
-                  value={name}
-                  onChange={(event) => setName(event.target.value)}
-                  placeholder="Nama lengkap"
-                  disabled={loadingUser}
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm text-[var(--text-dimmed)]">Email</label>
-                <Input
-                  type="email"
-                  value={email}
-                  onChange={(event) => setEmail(event.target.value)}
-                  placeholder="nama@email.com"
-                  disabled={loadingUser}
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--text-dimmed)]">Nama tampilan</label>
+              <Input
+                value={name}
+                onChange={(event) => setName(event.target.value)}
+                placeholder="Nama lengkap"
+                disabled={loadingUser}
+              />
             </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleSaveAccount} disabled={savingAccount || loadingUser}>
+                {savingAccount ? "Menyimpan..." : "Simpan"}
+              </Button>
+              <Button variant="outline" onClick={() => setShowEditName(false)} disabled={savingAccount}>
+                Batal
+              </Button>
+            </div>
+          </div>
+        </Modal>
 
-            <Button onClick={handleSaveAccount} disabled={savingAccount || loadingUser}>
-              {savingAccount ? "Menyimpan..." : "Simpan Perubahan Akun"}
-            </Button>
-          </section>
-
-          <section className="glass-panel space-y-4 p-4">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Keamanan Akun</h2>
-
+        <Modal
+          open={showPasswordModal}
+          title="Tambah Password"
+          onClose={() => setShowPasswordModal(false)}
+          sizeClassName="max-w-md"
+        >
+          <div className="space-y-4">
             {passwordError ? (
               <p className="rounded-lg border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
                 {passwordError}
@@ -298,59 +372,34 @@ export default function ProfilePage() {
                 {passwordNotice}
               </p>
             ) : null}
-
-            <div className="grid gap-4 sm:grid-cols-2">
-              <div className="space-y-2">
-                <label className="text-sm text-[var(--text-dimmed)]">Kata sandi baru</label>
-                <Input
-                  type="password"
-                  value={newPassword}
-                  onChange={(event) => setNewPassword(event.target.value)}
-                  placeholder="Minimal 8 karakter"
-                />
-              </div>
-              <div className="space-y-2">
-                <label className="text-sm text-[var(--text-dimmed)]">Konfirmasi kata sandi baru</label>
-                <Input
-                  type="password"
-                  value={confirmPassword}
-                  onChange={(event) => setConfirmPassword(event.target.value)}
-                  placeholder="Ulangi kata sandi"
-                />
-              </div>
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--text-dimmed)]">Kata sandi baru</label>
+              <Input
+                type="password"
+                value={newPassword}
+                onChange={(event) => setNewPassword(event.target.value)}
+                placeholder="Minimal 8 karakter"
+              />
             </div>
-
-            <Button variant="outline" onClick={handleChangePassword} disabled={savingPassword}>
-              {savingPassword ? "Menyimpan..." : "Ubah Kata Sandi"}
-            </Button>
-          </section>
-
-          <section className="glass-panel space-y-3 p-4">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Export Data</h2>
-            <p className="text-sm text-[var(--text-dimmed)]">
-              Download riwayat transaksi ke file CSV untuk analisis lanjutan.
-            </p>
-            <Button variant="outline" onClick={exportCsv}>
-              Export ke CSV
-            </Button>
-          </section>
-
-          <section className="glass-panel space-y-3 p-4">
-            <h2 className="text-lg font-semibold text-[var(--text-primary)]">Sesi Akun</h2>
-            <p className="text-sm text-[var(--text-dimmed)]">
-              Keluar dari akun ini untuk login dengan akun lain.
-            </p>
-            <Button
-              variant="danger"
-              onClick={async () => {
-                await supabase.auth.signOut();
-                router.replace("/login");
-              }}
-            >
-              Logout
-            </Button>
-          </section>
-        </main>
+            <div className="space-y-2">
+              <label className="text-sm text-[var(--text-dimmed)]">Konfirmasi kata sandi</label>
+              <Input
+                type="password"
+                value={confirmPassword}
+                onChange={(event) => setConfirmPassword(event.target.value)}
+                placeholder="Ulangi kata sandi"
+              />
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={handleChangePassword} disabled={savingPassword}>
+                {savingPassword ? "Menyimpan..." : "Simpan"}
+              </Button>
+              <Button variant="outline" onClick={() => setShowPasswordModal(false)} disabled={savingPassword}>
+                Batal
+              </Button>
+            </div>
+          </div>
+        </Modal>
       </div>
     </AuthGate>
   );

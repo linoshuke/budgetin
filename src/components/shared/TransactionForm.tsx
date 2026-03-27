@@ -67,7 +67,7 @@ export default function TransactionForm({
     try {
       setSavingWallet(true);
       setWalletError("");
-      const created = await onCreateWallet({ name });
+      const created = await onCreateWallet({ name, category: "Umum", location: "Lokal" });
       setWalletId(created.id);
       setNewWalletName("");
       setShowWalletInput(false);

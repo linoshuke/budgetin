@@ -28,6 +28,8 @@ export default function TransactionsPage() {
   // State untuk modal Tambah Dompet
   const [showAddModal, setShowAddModal] = useState(false);
   const [addWalletName, setAddWalletName] = useState("");
+  const [addWalletCategory, setAddWalletCategory] = useState("Umum");
+  const [addWalletLocation, setAddWalletLocation] = useState("Lokal");
   const [addWalletError, setAddWalletError] = useState("");
   const [addWalletLoading, setAddWalletLoading] = useState(false);
 
@@ -61,6 +63,8 @@ export default function TransactionsPage() {
   useEffect(() => {
     if (showAddModal) {
       setAddWalletName("");
+      setAddWalletCategory("Umum");
+      setAddWalletLocation("Lokal");
       setAddWalletError("");
     }
   }, [showAddModal]);
@@ -120,7 +124,11 @@ export default function TransactionsPage() {
     try {
       setAddWalletLoading(true);
       setAddWalletError("");
-      await budgetActions.addWallet({ name });
+      await budgetActions.addWallet({
+        name,
+        category: addWalletCategory,
+        location: addWalletLocation,
+      });
       setShowAddModal(false);
     } catch (error) {
       setAddWalletError(error instanceof Error ? error.message : "Gagal menambahkan dompet.");
@@ -192,6 +200,31 @@ export default function TransactionsPage() {
                 }}
               />
               {addWalletError ? <p className="text-xs text-rose-400">{addWalletError}</p> : null}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <label className="space-y-2 text-sm text-[var(--text-dimmed)]">
+                Kategori
+                <select
+                  className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                  value={addWalletCategory}
+                  onChange={(event) => setAddWalletCategory(event.target.value)}
+                >
+                  <option>Umum</option>
+                  <option>Bank</option>
+                  <option>e-Wallet</option>
+                </select>
+              </label>
+              <label className="space-y-2 text-sm text-[var(--text-dimmed)]">
+                Lokasi
+                <select
+                  className="w-full rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-sm text-[var(--text-primary)]"
+                  value={addWalletLocation}
+                  onChange={(event) => setAddWalletLocation(event.target.value)}
+                >
+                  <option>Lokal</option>
+                  <option>Internasional</option>
+                </select>
+              </label>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <Button

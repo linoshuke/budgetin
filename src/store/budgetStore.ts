@@ -144,7 +144,11 @@ export const budgetActions = {
       ...c,
       transactions: snapshot.transactions,
       categories: snapshot.categories,
-      wallets: snapshot.wallets,
+      wallets: snapshot.wallets.map((wallet) => ({
+        ...wallet,
+        category: wallet.category ?? "Umum",
+        location: wallet.location ?? "Lokal",
+      })),
       profile: snapshot.profile,
       loading: false,
       guestPending: hasGuestData(snapshot),
@@ -186,6 +190,8 @@ export const budgetActions = {
         wallets: snapshot.wallets.map((item) => ({
           clientId: item.id,
           name: item.name,
+          category: item.category ?? "Umum",
+          location: item.location ?? "Lokal",
         })),
         transactions: snapshot.transactions.map((item) => {
           const category = categoryMap.get(item.categoryId);
@@ -326,11 +332,16 @@ export const budgetActions = {
   },
 
   async addWallet(payload: Omit<Wallet, "id" | "isDefault">) {
+    const normalizedPayload = {
+      ...payload,
+      category: payload.category ?? "Umum",
+      location: payload.location ?? "Lokal",
+    };
     if (!state.isAuthenticated) {
       const created: Wallet = {
         id: generateClientId(),
         isDefault: false,
-        ...payload,
+        ...normalizedPayload,
       };
       const next = {
         ...state,
@@ -344,7 +355,7 @@ export const budgetActions = {
 
     const created = await apiFetch<Wallet>("/api/wallets", {
       method: "POST",
-      body: JSON.stringify(payload),
+      body: JSON.stringify(normalizedPayload),
     });
 
     setState((c) => ({
@@ -355,7 +366,7 @@ export const budgetActions = {
     return created;
   },
 
-  async updateWallet(id: string, payload: Pick<Wallet, "name">) {
+  async updateWallet(id: string, payload: Pick<Wallet, "name"> & Partial<Pick<Wallet, "category" | "location">>) {
     if (!state.isAuthenticated) {
       const next = {
         ...state,

@@ -27,6 +27,8 @@ CREATE TABLE IF NOT EXISTS categories (
 CREATE TABLE IF NOT EXISTS wallets (
   id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
   name       TEXT NOT NULL UNIQUE,
+  category   TEXT NOT NULL DEFAULT 'Umum',
+  location   TEXT NOT NULL DEFAULT 'Lokal',
   is_default BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );

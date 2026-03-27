@@ -38,6 +38,9 @@ export default function LoginPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showNewPassword, setShowNewPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const switchMode = (nextMode: AuthMode) => {
     setMode(nextMode);
@@ -194,83 +197,45 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="relative flex min-h-screen items-center justify-center overflow-hidden px-4 py-8">
-      <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_15%_15%,rgba(20,184,166,0.23),transparent_35%),radial-gradient(circle_at_80%_8%,rgba(37,99,235,0.2),transparent_36%)]" />
+    <div className="min-h-screen bg-[var(--bg-base)]">
+      <header className="sticky top-0 z-10 bg-transparent px-5 py-4">
+        <h1 className="text-base font-semibold text-[var(--text-primary)]">Masuk</h1>
+      </header>
 
-      <div className="glass-panel relative z-10 w-full max-w-md space-y-6 p-6 sm:p-7">
-        <header className="space-y-1">
-          <p className="text-xs uppercase tracking-[0.14em] text-[var(--text-dimmed)]">Budgetin Auth</p>
-          <h1 className="text-2xl font-semibold text-[var(--text-primary)]">
-            {mode === "forgot" ? "Lupa Kata Sandi" : mode === "reset" ? "Atur Ulang Kata Sandi" : "Masuk ke Budgetin"}
-          </h1>
-          <p className="text-sm text-[var(--text-dimmed)]">
-            {mode === "forgot"
-              ? "Masukkan email akun untuk menerima tautan reset password."
-              : mode === "reset"
-                ? "Gunakan kata sandi baru untuk melanjutkan."
-                : "Login dengan email atau lanjutkan menggunakan akun Google."}
-          </p>
-        </header>
-
-        {error ? (
-          <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
-            {error}
+      <main className="flex justify-center px-6 pb-10">
+        <div className="w-full max-w-md space-y-6">
+          <div className="flex flex-col items-center gap-3 text-center">
+            <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600/15 text-indigo-500">
+              <svg viewBox="0 0 24 24" width={40} height={40} aria-hidden="true">
+                <rect x="3.5" y="6.5" width="17" height="11" rx="2.5" fill="none" stroke="currentColor" strokeWidth="1.6" />
+                <path d="M16 10.5h4.5v3H16" fill="none" stroke="currentColor" strokeWidth="1.6" />
+              </svg>
+            </div>
+            <h2 className="text-2xl font-bold text-[var(--text-primary)]">
+              {mode === "forgot" ? "Lupa Password?" : mode === "reset" ? "Atur Ulang Kata Sandi" : "Selamat Datang!"}
+            </h2>
+            <p className="text-sm text-[var(--text-dimmed)]">
+              {mode === "forgot"
+                ? "Masukkan email akun untuk menerima tautan reset."
+                : mode === "reset"
+                  ? "Gunakan kata sandi baru untuk melanjutkan."
+                  : "Login dengan email atau lanjutkan dengan Google."}
+            </p>
           </div>
-        ) : null}
-        {notice ? (
-          <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
-            {notice}
-          </div>
-        ) : null}
 
-        {mode === "forgot" ? (
-          <form className="space-y-4" onSubmit={handleForgot}>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--text-dimmed)]">Email</label>
-              <Input
-                type="email"
-                placeholder="nama@email.com"
-                value={email}
-                onChange={(event) => setEmail(event.target.value)}
-                required
-              />
+          {error ? (
+            <div className="rounded-xl border border-rose-400/30 bg-rose-500/10 px-3 py-2 text-sm text-rose-300">
+              {error}
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Mengirim..." : "Kirim Tautan Reset"}
-            </Button>
-            <Button type="button" variant="ghost" className="w-full" onClick={() => switchMode("login")}>
-              Kembali ke Login
-            </Button>
-          </form>
-        ) : mode === "reset" ? (
-          <form className="space-y-4" onSubmit={handleReset}>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--text-dimmed)]">Kata sandi baru</label>
-              <Input
-                type="password"
-                placeholder="Minimal 8 karakter"
-                value={newPassword}
-                onChange={(event) => setNewPassword(event.target.value)}
-                required
-              />
+          ) : null}
+          {notice ? (
+            <div className="rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2 text-sm text-emerald-300">
+              {notice}
             </div>
-            <div className="space-y-2">
-              <label className="text-sm text-[var(--text-dimmed)]">Konfirmasi kata sandi</label>
-              <Input
-                type="password"
-                placeholder="Ulangi kata sandi baru"
-                value={confirmPassword}
-                onChange={(event) => setConfirmPassword(event.target.value)}
-                required
-              />
-            </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Menyimpan..." : "Simpan Kata Sandi Baru"}
-            </Button>
-          </form>
-        ) : (
-          <>
-            <form className="space-y-4" onSubmit={handleLogin}>
+          ) : null}
+
+          {mode === "forgot" ? (
+            <form className="space-y-4" onSubmit={handleForgot}>
               <div className="space-y-2">
                 <label className="text-sm text-[var(--text-dimmed)]">Email</label>
                 <Input
@@ -281,49 +246,150 @@ export default function LoginPage() {
                   required
                 />
               </div>
-              <div className="space-y-2">
-                <label className="text-sm text-[var(--text-dimmed)]">Kata sandi</label>
-                <Input
-                  type="password"
-                  placeholder="********"
-                  value={password}
-                  onChange={(event) => setPassword(event.target.value)}
-                  required
-                />
-              </div>
-
               <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? "Memproses..." : "Masuk"}
+                {loading ? "Mengirim..." : "Kirim Tautan Reset"}
+              </Button>
+              <Button type="button" variant="ghost" className="w-full" onClick={() => switchMode("login")}
+              >
+                Kembali ke Login
               </Button>
             </form>
+          ) : mode === "reset" ? (
+            <form className="space-y-4" onSubmit={handleReset}>
+              <div className="space-y-2">
+                <label className="text-sm text-[var(--text-dimmed)]">Kata sandi baru</label>
+                <div className="relative">
+                  <Input
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="Minimal 8 karakter"
+                    value={newPassword}
+                    onChange={(event) => setNewPassword(event.target.value)}
+                    required
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-dimmed)]"
+                    onClick={() => setShowNewPassword((prev) => !prev)}
+                  >
+                    {showNewPassword ? "Sembunyi" : "Lihat"}
+                  </button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <label className="text-sm text-[var(--text-dimmed)]">Konfirmasi kata sandi</label>
+                <div className="relative">
+                  <Input
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Ulangi kata sandi baru"
+                    value={confirmPassword}
+                    onChange={(event) => setConfirmPassword(event.target.value)}
+                    required
+                    className="pr-10"
+                  />
+                  <button
+                    type="button"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-dimmed)]"
+                    onClick={() => setShowConfirmPassword((prev) => !prev)}
+                  >
+                    {showConfirmPassword ? "Sembunyi" : "Lihat"}
+                  </button>
+                </div>
+              </div>
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Menyimpan..." : "Simpan Kata Sandi Baru"}
+              </Button>
+            </form>
+          ) : (
+            <>
+              <form className="space-y-4" onSubmit={handleLogin}>
+                <div className="space-y-2">
+                  <label className="text-sm text-[var(--text-dimmed)]">Email</label>
+                  <Input
+                    type="email"
+                    placeholder="nama@email.com"
+                    value={email}
+                    onChange={(event) => setEmail(event.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <label className="text-sm text-[var(--text-dimmed)]">Kata sandi</label>
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="********"
+                      value={password}
+                      onChange={(event) => setPassword(event.target.value)}
+                      required
+                      className="pr-10"
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[var(--text-dimmed)]"
+                      onClick={() => setShowPassword((prev) => !prev)}
+                    >
+                      {showPassword ? "Sembunyi" : "Lihat"}
+                    </button>
+                  </div>
+                </div>
 
-            <Button type="button" variant="outline" className="w-full flex items-center justify-center gap-2" onClick={handleGoogle} disabled={loading}>
-              <svg width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">
-                <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>
-                <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>
-                <path fill="#FBBC05" d="M10.53 28.59a14.5 14.5 0 0 1 0-9.18l-7.98-6.19a24.1 24.1 0 0 0 0 21.56l7.98-6.19z"/>
-                <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/>
-              </svg>
-              Lanjutkan dengan Google
-            </Button>
+                <button
+                  type="button"
+                  className="text-left text-sm text-indigo-400 hover:underline"
+                  onClick={() => switchMode("forgot")}
+                >
+                  Lupa Password?
+                </button>
 
-            <button
-              type="button"
-              className="w-full text-sm text-teal-300 hover:underline"
-              onClick={() => switchMode("forgot")}
+                <Button type="submit" className="w-full" disabled={loading}>
+                  {loading ? "Memproses..." : "Masuk"}
+                </Button>
+              </form>
+
+              <div className="flex items-center gap-3">
+                <div className="h-px flex-1 bg-[var(--border-soft)]" />
+                <span className="text-xs text-[var(--text-dimmed)]">ATAU</span>
+                <div className="h-px flex-1 bg-[var(--border-soft)]" />
+              </div>
+
+              <Button
+                type="button"
+                variant="outline"
+                className="w-full flex items-center justify-center gap-2"
+                onClick={handleGoogle}
+                disabled={loading}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img src="/google.png" alt="" className="h-5 w-5" />
+                Lanjutkan dengan Google
+              </Button>
+            </>
+          )}
+
+          <p className="text-center text-sm text-[var(--text-dimmed)]">
+            Belum punya akun?{" "}
+            <Link
+              href={nextPath && nextPath !== "/" ? `/register?next=${encodeURIComponent(nextPath)}` : "/register"}
+              className="font-semibold text-indigo-400 hover:underline"
             >
-              Lupa password?
-            </button>
-          </>
-        )}
+              Daftar sekarang
+            </Link>
+          </p>
 
-        <p className="text-center text-sm text-[var(--text-dimmed)]">
-          Belum punya akun?{" "}
-          <Link href={nextPath && nextPath !== "/" ? `/register?next=${encodeURIComponent(nextPath)}` : "/register"} className="text-teal-300 hover:underline">
-            Daftar sekarang
-          </Link>
-        </p>
-      </div>
+          <p className="text-center text-xs text-[var(--text-dimmed)]">
+            Dengan masuk, Anda menyetujui{" "}
+            <Link href="/privacy" className="underline">
+              Kebijakan Privasi
+            </Link>{" "}
+            dan{" "}
+            <Link href="/terms" className="underline">
+              Ketentuan Layanan
+            </Link>
+            .
+          </p>
+        </div>
+      </main>
     </div>
   );
 }

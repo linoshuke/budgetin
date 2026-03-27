@@ -55,12 +55,20 @@ export async function createWallet(
     dto: CreateWalletDTO,
 ): Promise<Wallet> {
     const name = dto.name?.trim();
+    const category = dto.category?.trim();
+    const location = dto.location?.trim();
     if (!name) {
         throw new ServiceError("Nama dompet wajib diisi.", 400);
     }
+    if (!category) {
+        throw new ServiceError("Kategori dompet wajib diisi.", 400);
+    }
+    if (!location) {
+        throw new ServiceError("Lokasi dompet wajib diisi.", 400);
+    }
 
     const insertRow = {
-        ...mapDTOToInsertRow({ name }),
+        ...mapDTOToInsertRow({ name, category, location }),
         user_id: userId,
     };
 
@@ -93,9 +101,25 @@ export async function updateWallet(
         throw new ServiceError("Nama dompet wajib diisi.", 400);
     }
 
+    const updates: { name: string; category?: string; location?: string } = { name };
+    if (dto.category !== undefined) {
+        const category = dto.category.trim();
+        if (!category) {
+            throw new ServiceError("Kategori dompet wajib diisi.", 400);
+        }
+        updates.category = category;
+    }
+    if (dto.location !== undefined) {
+        const location = dto.location.trim();
+        if (!location) {
+            throw new ServiceError("Lokasi dompet wajib diisi.", 400);
+        }
+        updates.location = location;
+    }
+
     const { data, error } = await supabase
         .from("wallets")
-        .update({ name })
+        .update(updates)
         .eq("id", id)
         .eq("user_id", userId)
         .select()

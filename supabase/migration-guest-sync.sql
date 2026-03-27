@@ -65,7 +65,9 @@ BEGIN
   WITH guest_wallets AS (
     SELECT
       (value->>'clientId')::uuid AS client_id,
-      value->>'name' AS name
+      value->>'name' AS name,
+      COALESCE(NULLIF(value->>'category', ''), 'Umum') AS category,
+      COALESCE(NULLIF(value->>'location', ''), 'Lokal') AS location
     FROM jsonb_array_elements(COALESCE(payload->'wallets', '[]'::jsonb)) AS value
   ),
   existing AS (
@@ -74,15 +76,15 @@ BEGIN
     WHERE user_id = v_user_id
   ),
   to_insert AS (
-    SELECT gw.client_id, gw.name
+    SELECT gw.client_id, gw.name, gw.category, gw.location
     FROM guest_wallets gw
     LEFT JOIN existing e
       ON e.nname = normalize_name(gw.name)
     WHERE e.id IS NULL
   ),
   inserted AS (
-    INSERT INTO wallets (name, is_default, user_id, client_id)
-    SELECT name, false, v_user_id, client_id
+    INSERT INTO wallets (name, category, location, is_default, user_id, client_id)
+    SELECT name, category, location, false, v_user_id, client_id
     FROM to_insert
     ON CONFLICT (user_id, client_id) DO NOTHING
     RETURNING id
