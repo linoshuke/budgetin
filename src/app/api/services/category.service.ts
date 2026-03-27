@@ -6,7 +6,7 @@ import {
     mapRowToCategory,
     mapRowsToCategories,
     mapDTOToInsertRow,
-} from "@/models/category.model";
+} from "@/app/api/categories/models/category.model";
 
 export async function getAllCategories(
     supabase: SupabaseClient,

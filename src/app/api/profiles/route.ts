@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/service-error";
 import { getAuthUser } from "@/lib/auth";
-import { getProfile, updateProfile } from "@/services/profile.service";
+import { getProfile, updateProfile } from "@/app/api/profiles/service/profile.service";
 import { UpdateProfileSchema } from "@/lib/validators";
 
 export async function GET() {

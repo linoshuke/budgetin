@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { handleServiceError } from "@/lib/service-error";
 import { getAuthUser } from "@/lib/auth";
-import { getAllWallets, createWallet } from "@/services/wallet.service";
+import { getAllWallets, createWallet } from "@/app/api/wallets/service/wallet.service";
 import { CreateWalletSchema } from "@/lib/validators";
 
 export async function GET() {
