@@ -7,7 +7,7 @@ import AuthGate from "@/components/shared/AuthGate";
 import Modal from "@/components/shared/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { formatDate, toCsvRow } from "@/lib/utils";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import type { User } from "@supabase/supabase-js";

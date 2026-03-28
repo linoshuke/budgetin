@@ -2,7 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import type { Route } from "next";
 import { FormEvent, useState } from "react";
@@ -36,7 +36,9 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
     setLoading(true);
     setError("");
 
-    const redirectTo = `${window.location.origin}/login${nextPath && nextPath !== "/" ? `?next=${encodeURIComponent(nextPath)}` : ""}`;
+    const redirectTo = `${window.location.origin}/auth/callback${
+      nextPath && nextPath !== "/" ? `?next=${encodeURIComponent(nextPath)}` : ""
+    }`;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },

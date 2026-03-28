@@ -2,7 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
@@ -107,7 +107,7 @@ export default function RegisterClient() {
     setError("");
     setNotice("");
 
-    const redirectTo = `${window.location.origin}/login${
+    const redirectTo = `${window.location.origin}/auth/callback${
       nextPath && nextPath !== "/" ? `?next=${encodeURIComponent(nextPath)}` : ""
     }`;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({

@@ -2,7 +2,7 @@
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { FormEvent, useState } from "react";
 
 interface ForgotPasswordFormProps {

@@ -61,7 +61,11 @@ export default function SignupPage() {
   };
 
   const handleGoogle = async () => {
-    const { error } = await supabase.auth.signInWithOAuth({ provider: "google" });
+    const redirectTo = `${window.location.origin}/auth/callback`;
+    const { error } = await supabase.auth.signInWithOAuth({
+      provider: "google",
+      options: { redirectTo },
+    });
     if (error) {
       pushToast({ title: "Gagal daftar Google", description: error.message, variant: "error" });
     }

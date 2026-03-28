@@ -1,6 +1,6 @@
 "use client";
 
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 import { GUEST_STORAGE_KEY, hasGuestData, readGuestSnapshot } from "@/lib/guest-storage";
 import { budgetActions, getBudgetState, useBudgetStore } from "@/store/budgetStore";
 import { usePathname } from "next/navigation";

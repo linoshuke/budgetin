@@ -7,7 +7,7 @@ import { KeyRound, MailCheck, ShieldCheck } from "lucide-react";
 import LoginForm from "./LoginForm";
 import ForgotPasswordForm from "./ForgotPasswordForm";
 import ResetPasswordForm from "./ResetPasswordForm";
-import { supabase } from "@/lib/supabase";
+import { supabase } from "@/lib/supabase/client";
 
 type Mode = "login" | "forgot" | "reset";
 
