@@ -7,7 +7,7 @@ import Sidebar from "@/components/navigation/Sidebar";
 import MainHeader from "@/components/navigation/MainHeader";
 import { useUIStore } from "@/stores/uiStore";
 
-const tabPaths = ["/beranda", "/riwayat", "/dompet", "/statistik", "/lainnya"];
+const tabPaths = ["/beranda", "/transactions", "/dompet", "/statistik", "/lainnya"];
 
 function resolveTabIndex(pathname: string) {
   const match = tabPaths.findIndex((path) => pathname.startsWith(path));
@@ -18,6 +18,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const activeTab = useUIStore((state) => state.activeTab);
   const setActiveTab = useUIStore((state) => state.setActiveTab);
+  const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const [cache, setCache] = useState<Record<string, ReactNode>>({});
 
   const isTabPage = tabPaths.includes(pathname);
@@ -45,14 +46,14 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   }, [activeTab, cache, children, isTabPage, pathname]);
 
   return (
-    <div className="flex min-h-screen">
+    <div className="min-h-screen bg-surface text-on-surface">
       <Sidebar />
-      <div className="flex min-h-screen flex-1 flex-col">
+      <main className={sidebarCollapsed ? "min-h-screen lg:ml-20" : "min-h-screen lg:ml-64"}>
         <MainHeader />
-        <main className="flex-1">
-          <div className="page-shell">{content}</div>
-        </main>
-      </div>
+        <div className="px-6 pb-12 pt-6">
+          <div className="w-full max-w-none">{content}</div>
+        </div>
+      </main>
       <BottomNav />
     </div>
   );

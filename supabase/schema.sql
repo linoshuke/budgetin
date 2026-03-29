@@ -41,6 +41,19 @@ CREATE TABLE IF NOT EXISTS transactions (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 5. Tabel: category_budgets
+CREATE TABLE IF NOT EXISTS category_budgets (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  category_id   UUID NOT NULL REFERENCES categories(id) ON DELETE CASCADE,
+  month_key     TEXT NOT NULL,
+  target_amount NUMERIC NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS category_budgets_unique
+  ON category_budgets (user_id, category_id, month_key);
+
 ALTER TABLE transactions
 ADD COLUMN IF NOT EXISTS wallet_id UUID;
 

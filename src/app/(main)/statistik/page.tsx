@@ -81,15 +81,15 @@ export default function StatisticsPage() {
   if (isGuest) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <LockWidget message="Masuk untuk melihat statistik lengkap." />
+        <LockWidget message="Masuk untuk melihat laporan lengkap." />
       </div>
     );
   }
 
   if (!walletCards.length) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/10 p-6 text-center text-sm text-[var(--text-dimmed)]">
-        Belum ada dompet untuk ditampilkan.
+      <div className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6 text-center text-sm text-on-surface-variant">
+        Belum ada dompet untuk ditampilkan pada laporan.
       </div>
     );
   }

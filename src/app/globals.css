@@ -15,37 +15,9 @@ body {
   min-height: 100vh;
   position: relative;
   isolation: isolate;
-  background:
-    radial-gradient(circle at 12% 18%, var(--bg-glow-a), transparent 38%),
-    radial-gradient(circle at 78% 6%, var(--bg-glow-b), transparent 40%),
-    radial-gradient(circle at 70% 75%, rgba(251, 113, 133, 0.08), transparent 42%),
-    var(--bg-base);
-  color: var(--text-primary);
+  background: #0e141d;
+  color: #dde2f1;
   font-family: var(--font-body), "Segoe UI", sans-serif;
-}
-
-body::before {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image:
-    linear-gradient(120deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(0deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px);
-  background-size: 120px 120px, 120px 120px;
-  opacity: 0.35;
-  pointer-events: none;
-  z-index: -1;
-}
-
-body::after {
-  content: "";
-  position: fixed;
-  inset: 0;
-  background-image: url("data:image/svg+xml,%3Csvg width='140' height='140' viewBox='0 0 140 140' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.08'/%3E%3C/svg%3E");
-  mix-blend-mode: soft-light;
-  opacity: 0.3;
-  pointer-events: none;
-  z-index: -1;
 }
 
 a {
@@ -56,32 +28,56 @@ a {
 .page-shell {
   margin: 0 auto;
   width: 100%;
-  max-width: 720px;
-  padding: 1rem;
+  max-width: 1200px;
+  padding: 1.5rem;
   padding-bottom: 5rem;
 }
 
 .font-display {
-  font-family: var(--font-display), "Segoe UI", sans-serif;
+  font-family: var(--font-headline), "Segoe UI", sans-serif;
   letter-spacing: -0.01em;
 }
 
 @media (min-width: 768px) {
   .page-shell {
-    max-width: 960px;
     padding-left: 1.5rem;
     padding-right: 1.5rem;
-    padding-bottom: 5rem;
+    padding-bottom: 4.5rem;
   }
 }
 
 @media (min-width: 1024px) {
   .page-shell {
-    max-width: 1320px;
-    padding-left: 2rem;
-    padding-right: 2rem;
-    padding-bottom: 3rem;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+    padding-bottom: 3.5rem;
   }
+}
+
+.material-symbols-outlined {
+  font-family: "Material Symbols Outlined";
+  font-variation-settings: "FILL" 0, "wght" 400, "GRAD" 0, "opsz" 24;
+}
+
+.tnum {
+  font-feature-settings: "tnum";
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: #0e141d;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #1a202a;
+  border-radius: 10px;
+}
+
+::selection {
+  background: rgba(124, 235, 255, 0.3);
 }
 
 .no-scrollbar {

@@ -31,6 +31,7 @@ export const guestTransactions: Transaction[] = [
     type: "expense",
     date: new Date().toISOString(),
     created_at: new Date().toISOString(),
+    category_id: "guest-cat-1",
   },
   {
     id: "trx-2",
@@ -41,6 +42,7 @@ export const guestTransactions: Transaction[] = [
     type: "income",
     date: new Date().toISOString(),
     created_at: new Date().toISOString(),
+    category_id: "guest-cat-4",
   },
   {
     id: "trx-3",
@@ -51,6 +53,7 @@ export const guestTransactions: Transaction[] = [
     type: "expense",
     date: new Date().toISOString(),
     created_at: new Date().toISOString(),
+    category_id: "guest-cat-3",
   },
 ];
 

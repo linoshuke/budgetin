@@ -17,9 +17,12 @@ interface ToastItem {
 
 export interface UIState {
   activeTab: number;
+  sidebarCollapsed: boolean;
   modals: Record<ModalKey, boolean>;
   toasts: ToastItem[];
   setActiveTab: (index: number) => void;
+  setSidebarCollapsed: (value: boolean) => void;
+  toggleSidebar: () => void;
   openModal: (key: ModalKey) => void;
   closeModal: (key: ModalKey) => void;
   pushToast: (toast: Omit<ToastItem, "id">) => void;
@@ -28,6 +31,7 @@ export interface UIState {
 
 export const useUIStore = create<UIState>((set) => ({
   activeTab: 0,
+  sidebarCollapsed: false,
   modals: {
     walletSelection: false,
     addWallet: false,
@@ -38,6 +42,8 @@ export const useUIStore = create<UIState>((set) => ({
   },
   toasts: [],
   setActiveTab: (index) => set({ activeTab: index }),
+  setSidebarCollapsed: (value) => set({ sidebarCollapsed: value }),
+  toggleSidebar: () => set((state) => ({ sidebarCollapsed: !state.sidebarCollapsed })),
   openModal: (key) =>
     set((state) => ({ modals: { ...state.modals, [key]: true } })),
   closeModal: (key) =>

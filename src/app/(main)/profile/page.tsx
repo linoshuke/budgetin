@@ -1,0 +1,446 @@
+﻿"use client";
+
+import { useEffect, useMemo, useState } from "react";
+import AuthGate from "@/components/shared/AuthGate";
+import Modal from "@/components/shared/Modal";
+import LockWidget from "@/components/LockWidget";
+import { supabase } from "@/lib/supabase/client";
+import { formatDate, toCsvRow } from "@/lib/utils";
+import { budgetActions, useBudgetStore } from "@/store/budgetStore";
+import type { User } from "@supabase/supabase-js";
+import { useRouter } from "next/navigation";
+
+function getProvider(user: User | null) {
+  const providers = user?.app_metadata?.providers as string[] | undefined;
+  return providers?.[0] ?? "email";
+}
+
+function getAvatarUrl(user: User | null) {
+  const provider = getProvider(user);
+  if (provider !== "google") return "";
+  const metadata = user?.user_metadata as Record<string, unknown> | undefined;
+  const avatar = metadata?.avatar_url ?? metadata?.picture;
+  return typeof avatar === "string" ? avatar : "";
+}
+
+function getDisplayName(user: User | null) {
+  const metadata = user?.user_metadata as Record<string, unknown> | undefined;
+  const fullName = metadata?.full_name ?? metadata?.name;
+  return typeof fullName === "string" ? fullName : "";
+}
+
+function getInitials(name: string, email: string) {
+  const source = name.trim() || email.trim() || "BU";
+  const parts = source.split(" ").filter(Boolean);
+  if (parts.length >= 2) {
+    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
+  }
+  return source.slice(0, 2).toUpperCase();
+}
+
+export default function ProfilePage() {
+  const router = useRouter();
+  const transactions = useBudgetStore((state) => state.transactions);
+  const categories = useBudgetStore((state) => state.categories);
+  const wallets = useBudgetStore((state) => state.wallets);
+  const isAuthenticated = useBudgetStore((state) => state.isAuthenticated);
+
+  const [authUser, setAuthUser] = useState<User | null>(null);
+  const [loadingUser, setLoadingUser] = useState(true);
+
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [savingAccount, setSavingAccount] = useState(false);
+  const [accountNotice, setAccountNotice] = useState("");
+  const [accountError, setAccountError] = useState("");
+
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [savingPassword, setSavingPassword] = useState(false);
+  const [passwordNotice, setPasswordNotice] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+
+  const [showEditName, setShowEditName] = useState(false);
+  const [showPasswordModal, setShowPasswordModal] = useState(false);
+
+  const categoryMap = useMemo(
+    () => new Map(categories.map((item) => [item.id, item.name])),
+    [categories],
+  );
+  const walletMap = useMemo(
+    () => new Map(wallets.map((item) => [item.id, item.name])),
+    [wallets],
+  );
+
+  useEffect(() => {
+    let active = true;
+
+    const hydrateUser = async () => {
+      const { data } = await supabase.auth.getUser();
+      if (!active) return;
+
+      const user = data.user ?? null;
+      setAuthUser(user);
+      setName(getDisplayName(user));
+      setEmail(user?.email ?? "");
+      setLoadingUser(false);
+    };
+
+    hydrateUser();
+
+    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
+      const user = session?.user ?? null;
+      setAuthUser(user);
+      setName(getDisplayName(user));
+      setEmail(user?.email ?? "");
+      setLoadingUser(false);
+    });
+
+    return () => {
+      active = false;
+      listener.subscription.unsubscribe();
+    };
+  }, []);
+
+  const avatarUrl = getAvatarUrl(authUser);
+  const provider = getProvider(authUser);
+  const isVerified = Boolean(authUser?.email_confirmed_at);
+  const createdDate = authUser?.created_at ? formatDate(authUser.created_at, true) : "-";
+
+  const exportCsv = () => {
+    const header = ["Tanggal", "Jenis", "Kategori", "Dompet", "Nominal", "Catatan"];
+    const rows = transactions.map((item) => [
+      formatDate(item.date, true),
+      item.type === "income" ? "Pemasukan" : "Pengeluaran",
+      categoryMap.get(item.categoryId) ?? "Tanpa kategori",
+      walletMap.get(item.walletId) ?? "Tanpa dompet",
+      item.amount,
+      item.note ?? "",
+    ]);
+
+    const csv = [toCsvRow(header), ...rows.map((row) => toCsvRow(row))].join("\n");
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+
+    const anchor = document.createElement("a");
+    anchor.href = url;
+    anchor.download = `budgetin-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+    document.body.appendChild(anchor);
+    anchor.click();
+    document.body.removeChild(anchor);
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSaveAccount = async () => {
+    if (!authUser) return;
+
+    setSavingAccount(true);
+    setAccountError("");
+    setAccountNotice("");
+
+    try {
+      const nextName = name.trim();
+      const nextEmail = email.trim();
+
+      const { error: metadataError } = await supabase.auth.updateUser({
+        data: {
+          name: nextName,
+          full_name: nextName,
+        },
+      });
+      if (metadataError) throw metadataError;
+
+      if (nextEmail && nextEmail !== authUser.email) {
+        const { error: emailError } = await supabase.auth.updateUser({ email: nextEmail });
+        if (emailError) throw emailError;
+        setAccountNotice("Perubahan email dikirim. Cek email baru Anda untuk konfirmasi.");
+      } else {
+        setAccountNotice("Informasi akun berhasil diperbarui.");
+      }
+
+      try {
+        await budgetActions.updateProfile({ name: nextName, email: nextEmail });
+      } catch (err) {
+        console.warn("Sinkronisasi profil lokal gagal:", err);
+      }
+
+      const { data } = await supabase.auth.getUser();
+      setAuthUser(data.user ?? null);
+      setName(getDisplayName(data.user ?? null));
+      setEmail(data.user?.email ?? nextEmail);
+      setShowEditName(false);
+    } catch (error) {
+      setAccountError(error instanceof Error ? error.message : "Gagal memperbarui akun.");
+    } finally {
+      setSavingAccount(false);
+    }
+  };
+
+  const handleChangePassword = async () => {
+    setSavingPassword(true);
+    setPasswordError("");
+    setPasswordNotice("");
+
+    if (newPassword.length < 8) {
+      setSavingPassword(false);
+      setPasswordError("Kata sandi baru minimal 8 karakter.");
+      return;
+    }
+
+    if (newPassword !== confirmPassword) {
+      setSavingPassword(false);
+      setPasswordError("Konfirmasi kata sandi tidak sama.");
+      return;
+    }
+
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    setSavingPassword(false);
+
+    if (error) {
+      setPasswordError(error.message);
+      return;
+    }
+
+    setNewPassword("");
+    setConfirmPassword("");
+    setPasswordNotice("Kata sandi berhasil diubah.");
+    setShowPasswordModal(false);
+  };
+
+  if (!isAuthenticated && !loadingUser) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <LockWidget message="Masuk untuk mengelola profil." />
+      </div>
+    );
+  }
+
+  return (
+    <AuthGate requireAuth>
+      <div className="space-y-8">
+        <header className="space-y-2">
+          <h1 className="font-headline text-3xl font-extrabold text-on-surface">Profil</h1>
+          <p className="text-sm text-on-surface-variant">Kelola informasi akun dan keamanan Anda.</p>
+        </header>
+
+        <div className="grid gap-6 lg:grid-cols-12">
+          <section className="rounded-2xl border border-outline-variant/5 bg-surface-container-low p-6 lg:col-span-4">
+            <div className="flex items-center gap-4">
+              <div className="relative">
+                {avatarUrl ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={avatarUrl}
+                    alt="Foto profil"
+                    className="h-20 w-20 rounded-3xl border border-outline-variant/20 object-cover"
+                  />
+                ) : (
+                  <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-secondary-container text-lg font-semibold text-on-primary">
+                    {getInitials(name, email)}
+                  </div>
+                )}
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">Profil</p>
+                <h2 className="text-xl font-semibold text-on-surface">
+                  {name.trim() || "Pengguna Budgetin"}
+                </h2>
+                <p className="text-sm text-on-surface-variant">{email || "-"}</p>
+              </div>
+            </div>
+
+            <div className="mt-4 flex flex-wrap gap-2 text-xs text-on-surface-variant">
+              <span className="rounded-full border border-outline-variant/20 bg-surface-container px-3 py-1">
+                Provider: {provider}
+              </span>
+              <span className="rounded-full border border-outline-variant/20 bg-surface-container px-3 py-1">
+                Verifikasi: {isVerified ? "Terverifikasi" : "Belum terverifikasi"}
+              </span>
+              <span className="rounded-full border border-outline-variant/20 bg-surface-container px-3 py-1">
+                Bergabung: {createdDate}
+              </span>
+            </div>
+
+            <button
+              type="button"
+              onClick={() => setShowEditName(true)}
+              disabled={loadingUser}
+              className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-sm font-bold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-60"
+            >
+              Ubah Nama
+            </button>
+          </section>
+
+          <section className="space-y-6 lg:col-span-8">
+            <div className="rounded-2xl border border-outline-variant/5 bg-surface-container-low p-6">
+              <h2 className="font-headline text-lg font-bold text-on-surface">Account Management</h2>
+              <div className="mt-4 grid gap-3">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high"
+                  onClick={() => alert("Link Google belum tersedia.")}
+                >
+                  Link Google
+                  <span className="text-on-surface-variant">&gt;</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high"
+                  onClick={() => setShowPasswordModal(true)}
+                >
+                  Ubah Password
+                  <span className="text-on-surface-variant">&gt;</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high"
+                  onClick={exportCsv}
+                >
+                  Ekspor Data
+                  <span className="text-on-surface-variant">&gt;</span>
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error transition-colors hover:bg-error/20"
+                  onClick={async () => {
+                    await supabase.auth.signOut();
+                    router.replace("/login");
+                  }}
+                >
+                  Logout
+                  <span>&gt;</span>
+                </button>
+              </div>
+            </div>
+
+            <div className="rounded-2xl border border-error/30 bg-error/10 p-6">
+              <h2 className="font-headline text-lg font-bold text-error">Danger Zone</h2>
+              <p className="mt-2 text-sm text-error/80">
+                Hapus akun akan menghapus semua data permanen. Aksi ini belum tersedia.
+              </p>
+              <button
+                type="button"
+                className="mt-4 w-full rounded-xl border border-error/40 px-4 py-3 text-sm font-semibold text-error"
+                onClick={() => alert("Hapus akun belum tersedia.")}
+              >
+                Hapus Akun
+              </button>
+            </div>
+          </section>
+        </div>
+      </div>
+
+      <Modal
+        open={showEditName}
+        title="Ubah Nama"
+        onClose={() => setShowEditName(false)}
+        sizeClassName="max-w-md"
+      >
+        <div className="space-y-4">
+          {accountError ? (
+            <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+              {accountError}
+            </p>
+          ) : null}
+          {accountNotice ? (
+            <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+              {accountNotice}
+            </p>
+          ) : null}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+              Nama Tampilan
+            </label>
+            <input
+              value={name}
+              onChange={(event) => setName(event.target.value)}
+              placeholder="Nama lengkap"
+              className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              disabled={loadingUser}
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleSaveAccount}
+              disabled={savingAccount || loadingUser}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-60"
+            >
+              {savingAccount ? "Menyimpan..." : "Simpan"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowEditName(false)}
+              className="rounded-lg border border-outline-variant/30 px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface"
+              disabled={savingAccount}
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showPasswordModal}
+        title="Ubah Password"
+        onClose={() => setShowPasswordModal(false)}
+        sizeClassName="max-w-md"
+      >
+        <div className="space-y-4">
+          {passwordError ? (
+            <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+              {passwordError}
+            </p>
+          ) : null}
+          {passwordNotice ? (
+            <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+              {passwordNotice}
+            </p>
+          ) : null}
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+              Kata Sandi Baru
+            </label>
+            <input
+              type="password"
+              value={newPassword}
+              onChange={(event) => setNewPassword(event.target.value)}
+              placeholder="Minimal 8 karakter"
+              className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+            />
+          </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+              Konfirmasi Kata Sandi
+            </label>
+            <input
+              type="password"
+              value={confirmPassword}
+              onChange={(event) => setConfirmPassword(event.target.value)}
+              placeholder="Ulangi kata sandi"
+              className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+            />
+          </div>
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handleChangePassword}
+              disabled={savingPassword}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-60"
+            >
+              {savingPassword ? "Menyimpan..." : "Simpan"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPasswordModal(false)}
+              className="rounded-lg border border-outline-variant/30 px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface"
+              disabled={savingPassword}
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </AuthGate>
+  );
+}
