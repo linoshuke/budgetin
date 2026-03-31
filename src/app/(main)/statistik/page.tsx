@@ -9,9 +9,7 @@ import Button from "@/components/ui/Button";
 import { useWallets } from "@/hooks/useWallets";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactionStore } from "@/stores/transactionStore";
-import { supabase } from "@/lib/supabase/client";
 import { getMonthRange } from "@/utils/date";
-import { guestTransactions } from "@/utils/sample-data";
 import type { Transaction } from "@/types";
 
 function buildChartData(transactions: Transaction[]) {
@@ -47,16 +45,40 @@ export default function StatisticsPage() {
   const { data } = useQuery({
     queryKey: ["transactions", "stats", user?.id ?? "guest", currentMonth.year, currentMonth.month],
     queryFn: async () => {
-      if (!user) return guestTransactions;
+      if (!user) return [];
       const { start, end } = getMonthRange(currentMonth.year, currentMonth.month);
-      const { data: result, error } = await supabase
-        .from("transactions")
-        .select("*")
-        .eq("user_id", user.id)
-        .gte("date", start)
-        .lte("date", end);
-      if (error) throw error;
-      return (result ?? []) as Transaction[];
+      const params = new URLSearchParams({
+        limit: "500",
+        offset: "0",
+        dateFrom: start,
+        dateTo: end,
+      });
+      const response = await fetch(`/api/transactions?${params.toString()}`);
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      const payload = (await response.json()) as {
+        items: Array<{
+          id: string;
+          amount: number;
+          type: Transaction["type"];
+          date: string;
+          walletId?: string | null;
+          categoryId?: string | null;
+          note?: string | null;
+        }>;
+      };
+      return (payload.items ?? []).map((item) => ({
+        id: item.id,
+        wallet_id: item.walletId ?? "",
+        user_id: user.id,
+        description: item.note ?? "",
+        amount: Number(item.amount ?? 0),
+        type: item.type,
+        date: item.date,
+        created_at: item.date,
+        category_id: item.categoryId ?? null,
+      })) as Transaction[];
     },
   });
 

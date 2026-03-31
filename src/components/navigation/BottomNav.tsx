@@ -9,7 +9,7 @@ const navItems = [
   { label: "Dashboard", href: "/beranda", icon: "dashboard" },
   { label: "Trans", href: "/transactions", icon: "receipt_long" },
   { label: "Budgets", href: "/dompet", icon: "account_balance_wallet" },
-  { label: "Profile", href: "/profile", icon: "person" },
+  { label: "Akun", href: "/profile", icon: "person" },
 ];
 
 export default function BottomNav() {

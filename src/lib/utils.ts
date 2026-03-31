@@ -1,17 +1,32 @@
+import { getAppSettingsState } from "@/stores/appSettingsStore";
+
 export function cn(...classes: Array<string | false | null | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
 
+function resolveFormatConfig() {
+  const settings = getAppSettingsState();
+  return {
+    locale: settings.numberLocale ?? "id-ID",
+    currency: settings.currency ?? "IDR",
+    dateLocale: settings.dateLocale ?? "id-ID",
+    hideAmounts: settings.privacyHideAmounts ?? false,
+  };
+}
+
 export function formatCurrency(value: number) {
-  return new Intl.NumberFormat("id-ID", {
+  const { locale, currency, hideAmounts } = resolveFormatConfig();
+  if (hideAmounts) return "****";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "IDR",
+    currency,
     maximumFractionDigits: 0,
   }).format(value);
 }
 
 export function formatDate(date: string, withYear = false) {
-  return new Intl.DateTimeFormat("id-ID", {
+  const { dateLocale } = resolveFormatConfig();
+  return new Intl.DateTimeFormat(dateLocale, {
     day: "2-digit",
     month: "short",
     year: withYear ? "numeric" : undefined,
@@ -29,7 +44,8 @@ export function getIsoDateToday() {
 
 export function getMonthLabel(key: string) {
   const [year, month] = key.split("-").map(Number);
-  return new Intl.DateTimeFormat("id-ID", {
+  const { dateLocale } = resolveFormatConfig();
+  return new Intl.DateTimeFormat(dateLocale, {
     month: "long",
     year: "numeric",
   }).format(new Date(year, month - 1, 1));

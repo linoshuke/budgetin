@@ -47,7 +47,8 @@ export default function LoginClient() {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
-      if (data.session && modeParam !== "reset") {
+      const isAnonymous = Boolean(data.session?.user?.is_anonymous);
+      if (data.session && !isAnonymous && modeParam !== "reset") {
         router.replace(nextPath as Route);
       }
     };

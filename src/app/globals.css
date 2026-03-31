@@ -11,6 +11,10 @@ body {
   padding: 0;
 }
 
+html {
+  font-size: calc(16px * var(--app-text-scale, 1));
+}
+
 body {
   min-height: 100vh;
   position: relative;
@@ -61,6 +65,11 @@ a {
 
 .tnum {
   font-feature-settings: "tnum";
+}
+
+.privacy-hide-amounts .tnum {
+  filter: blur(6px);
+  user-select: none;
 }
 
 ::-webkit-scrollbar {

@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import AuthGate from "@/components/shared/AuthGate";
 import MainHeader from "@/components/navigation/MainHeader";
 import Sidebar from "@/components/navigation/Sidebar";
@@ -12,11 +12,12 @@ import { useTransactionsFilter } from "@/hooks/useTransactionsFilter";
 import { useWalletFilter } from "@/hooks/useWalletFilter";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { calculateTotals } from "@/lib/budget";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Transaction } from "@/types/transaction";
 
-const pageSize = 10;
+const pageSize = 50;
 
 type ActivityTab = "all" | "pending" | "scheduled";
 
@@ -55,11 +56,18 @@ function resolveActivityStatus(transaction: Transaction): ActivityTab {
 }
 
 export default function TransactionsPage() {
-  const transactions = useBudgetStore((state) => state.transactions);
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
   const syncLoading = useBudgetStore((state) => state.syncLoading);
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
+  const defaultPeriod = useAppSettingsStore((state) => state.defaultPeriod);
+
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [pageOffset, setPageOffset] = useState(0);
+  const [hasMore, setHasMore] = useState(true);
+  const [loadingPage, setLoadingPage] = useState(false);
+  const [loadError, setLoadError] = useState("");
+  const loadingRef = useRef(false);
 
   const [showTransactionModal, setShowTransactionModal] = useState(false);
   const [savingTransaction, setSavingTransaction] = useState(false);
@@ -70,7 +78,90 @@ export default function TransactionsPage() {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
 
   const walletFilter = useWalletFilter();
-  const filter = useTransactionsFilter(transactions, walletFilter.selectedWalletIds, "monthly");
+  const filter = useTransactionsFilter(transactions, walletFilter.selectedWalletIds, defaultPeriod);
+
+  const buildDateRange = useCallback(() => {
+    if (filter.period === "daily") {
+      const today = new Date().toISOString().slice(0, 10);
+      return { dateFrom: today, dateTo: today };
+    }
+
+    if (filter.period === "monthly") {
+      const year = filter.selectedMonth.getFullYear();
+      const month = filter.selectedMonth.getMonth();
+      const start = new Date(year, month, 1).toISOString().slice(0, 10);
+      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+      return { dateFrom: start, dateTo: end };
+    }
+
+    return { dateFrom: filter.fromDate, dateTo: filter.toDate };
+  }, [filter.fromDate, filter.period, filter.selectedMonth, filter.toDate]);
+
+  const fetchPage = useCallback(
+    async (offset: number, reset = false) => {
+      if (loadingRef.current) return;
+      loadingRef.current = true;
+      setLoadingPage(true);
+      setLoadError("");
+
+      try {
+        const params = new URLSearchParams({
+          limit: String(pageSize),
+          offset: String(offset),
+        });
+        const { dateFrom, dateTo } = buildDateRange();
+        if (dateFrom) params.set("dateFrom", dateFrom);
+        if (dateTo) params.set("dateTo", dateTo);
+        if (walletFilter.selectedWalletIds.length) {
+          params.set("walletIds", walletFilter.selectedWalletIds.join(","));
+        }
+        if (selectedCategoryIds.length) {
+          params.set("categoryIds", selectedCategoryIds.join(","));
+        }
+
+        const response = await fetch(`/api/transactions?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+
+        const payload = (await response.json()) as {
+          items: Transaction[];
+          hasMore: boolean;
+          nextOffset: number | null;
+        };
+
+        const items = payload.items ?? [];
+        setTransactions((prev) => (reset ? items : [...prev, ...items]));
+        setHasMore(Boolean(payload.hasMore));
+        if (payload.nextOffset !== null) {
+          setPageOffset(payload.nextOffset);
+        } else {
+          setPageOffset(reset ? items.length : offset + items.length);
+        }
+      } catch (error) {
+        setLoadError(error instanceof Error ? error.message : "Gagal memuat transaksi.");
+      } finally {
+        loadingRef.current = false;
+        setLoadingPage(false);
+      }
+    },
+    [buildDateRange, selectedCategoryIds, walletFilter.selectedWalletIds],
+  );
+
+  useEffect(() => {
+    setTransactions([]);
+    setPageOffset(0);
+    setHasMore(true);
+    void fetchPage(0, true);
+  }, [
+    fetchPage,
+    filter.period,
+    filter.selectedMonth,
+    filter.fromDate,
+    filter.toDate,
+    walletFilter.selectedWalletIds.join("|"),
+    selectedCategoryIds.join("|"),
+  ]);
 
   const categoryMap = useMemo(
     () => new Map(categories.map((item) => [item.id, item])),
@@ -85,6 +176,47 @@ export default function TransactionsPage() {
     () => calculateTotals(filter.filteredTransactions),
     [filter.filteredTransactions],
   );
+
+  const spendingTrend = useMemo(() => {
+    const trendMonth = filter.period === "monthly" ? filter.selectedMonth : new Date();
+    const monthStart = new Date(trendMonth.getFullYear(), trendMonth.getMonth(), 1);
+    const nextMonthStart = new Date(trendMonth.getFullYear(), trendMonth.getMonth() + 1, 1);
+    const prevMonthStart = new Date(trendMonth.getFullYear(), trendMonth.getMonth() - 1, 1);
+
+    const walletSet = new Set(walletFilter.selectedWalletIds);
+    const categorySet = new Set(selectedCategoryIds);
+
+    let currentExpense = 0;
+    let previousExpense = 0;
+
+    transactions.forEach((item) => {
+      if (walletSet.size && !walletSet.has(item.walletId)) return;
+      if (categorySet.size && !categorySet.has(item.categoryId)) return;
+
+      const date = new Date(item.date);
+      if (date >= monthStart && date < nextMonthStart) {
+        if (item.type === "expense") currentExpense += item.amount;
+        return;
+      }
+      if (date >= prevMonthStart && date < monthStart) {
+        if (item.type === "expense") previousExpense += item.amount;
+      }
+    });
+
+    const delta = currentExpense - previousExpense;
+    const percent =
+      previousExpense === 0
+        ? currentExpense === 0
+          ? 0
+          : 100
+        : (delta / Math.abs(previousExpense)) * 100;
+
+    return {
+      percent,
+      increase: delta > 0,
+      label: `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}% vs bulan lalu`,
+    };
+  }, [filter.period, filter.selectedMonth, selectedCategoryIds, transactions, walletFilter.selectedWalletIds]);
 
   const largestExpense = useMemo(() => {
     const expenseItems = filter.filteredTransactions.filter((item) => item.type === "expense");
@@ -121,18 +253,7 @@ export default function TransactionsPage() {
     walletMap,
   ]);
 
-  const [page, setPage] = useState(1);
-  const pageCount = Math.max(1, Math.ceil(visibleTransactions.length / pageSize));
-  const pagedTransactions = useMemo(() => {
-    const start = (page - 1) * pageSize;
-    return visibleTransactions.slice(start, start + pageSize);
-  }, [page, visibleTransactions]);
-
-  useEffect(() => {
-    if (page > pageCount) {
-      setPage(1);
-    }
-  }, [page, pageCount]);
+  const pagedTransactions = visibleTransactions;
 
   const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
 
@@ -286,9 +407,15 @@ export default function TransactionsPage() {
                   <h2 className="tnum font-headline text-3xl font-extrabold text-on-surface">
                     {formatCurrency(totals.expense)}
                   </h2>
-                  <span className="flex items-center gap-1 text-sm font-bold text-error">
-                    <span className="material-symbols-outlined text-sm">trending_up</span>
-                    12%
+                  <span
+                    className={`flex items-center gap-1 text-sm font-bold ${
+                      spendingTrend.increase ? "text-error" : "text-primary"
+                    }`}
+                  >
+                    <span className="material-symbols-outlined text-sm">
+                      {spendingTrend.increase ? "trending_up" : "trending_down"}
+                    </span>
+                    {spendingTrend.label}
                   </span>
                 </div>
               </div>
@@ -432,43 +559,26 @@ export default function TransactionsPage() {
               </div>
             </div>
 
-            <div className="flex items-center justify-between py-4">
+            <div className="flex flex-wrap items-center justify-between gap-3 py-4">
               <p className="text-sm font-medium text-slate-500">
-                Showing {pagedTransactions.length} of {visibleTransactions.length} transactions
+                Menampilkan {pagedTransactions.length} transaksi
               </p>
-              <div className="flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setPage((prev) => Math.max(1, prev - 1))}
-                  className="rounded-lg bg-surface-container p-2 text-slate-400 transition-colors hover:text-on-surface"
-                >
-                  <span className="material-symbols-outlined">chevron_left</span>
-                </button>
-                {Array.from({ length: Math.min(3, pageCount) }).map((_, index) => {
-                  const number = index + 1;
-                  const active = number === page;
-                  return (
-                    <button
-                      key={number}
-                      type="button"
-                      onClick={() => setPage(number)}
-                      className={`rounded-lg px-4 py-2 font-bold ${
-                        active
-                          ? "border border-primary/20 bg-surface-container text-primary"
-                          : "bg-surface-container-low text-slate-400 transition-colors hover:bg-surface-container"
-                      }`}
-                    >
-                      {number}
-                    </button>
-                  );
-                })}
-                <button
-                  type="button"
-                  onClick={() => setPage((prev) => Math.min(pageCount, prev + 1))}
-                  className="rounded-lg bg-surface-container p-2 text-slate-400 transition-colors hover:text-on-surface"
-                >
-                  <span className="material-symbols-outlined">chevron_right</span>
-                </button>
+              <div className="flex flex-wrap items-center gap-3">
+                {loadError ? (
+                  <span className="text-xs text-error">{loadError}</span>
+                ) : null}
+                {hasMore ? (
+                  <button
+                    type="button"
+                    onClick={() => fetchPage(pageOffset, false)}
+                    disabled={loadingPage}
+                    className="rounded-lg border border-primary/20 px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10 disabled:opacity-60"
+                  >
+                    {loadingPage ? "Memuat..." : "Load More"}
+                  </button>
+                ) : (
+                  <span className="text-xs text-on-surface-variant">Semua data sudah ditampilkan</span>
+                )}
               </div>
             </div>
           </section>

@@ -15,7 +15,7 @@ export async function getAllWallets(
 ): Promise<Wallet[]> {
     const { data, error } = await supabase
         .from("wallets")
-        .select("*")
+        .select("id, name, category, location, balance, is_default")
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
@@ -33,7 +33,7 @@ export async function getWalletById(
 ): Promise<Wallet> {
     const { data, error } = await supabase
         .from("wallets")
-        .select("*")
+        .select("id, name, category, location, balance, is_default")
         .eq("id", id)
         .eq("user_id", userId)
         .single();
@@ -75,7 +75,7 @@ export async function createWallet(
     const { data, error } = await supabase
         .from("wallets")
         .insert(insertRow)
-        .select()
+        .select("id, name, category, location, balance, is_default")
         .single();
 
     if (error) {
@@ -122,7 +122,7 @@ export async function updateWallet(
         .update(updates)
         .eq("id", id)
         .eq("user_id", userId)
-        .select()
+        .select("id, name, category, location, balance, is_default")
         .single();
 
     if (error) {

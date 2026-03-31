@@ -129,7 +129,8 @@ BEGIN
   user_name := COALESCE(
     NEW.raw_user_meta_data->>'name',
     NEW.raw_user_meta_data->>'full_name',
-    split_part(NEW.email, '@', 1)
+    split_part(NEW.email, '@', 1),
+    'Pengguna'
   );
 
   -- Buat profil

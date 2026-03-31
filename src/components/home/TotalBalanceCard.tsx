@@ -1,15 +1,76 @@
 "use client";
 
+import { useMemo } from "react";
 import { useWalletStore } from "@/stores/walletStore";
 import { useUIStore } from "@/stores/uiStore";
+import { useBudgetStore } from "@/store/budgetStore";
+import { useMonthlySummary } from "@/hooks/useTransactions";
 import { formatCurrency } from "@/utils/format";
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
 export default function TotalBalanceCard() {
-  const totalBalance = useWalletStore((state) => state.totalBalance);
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
   const openModal = useUIStore((state) => state.openModal);
+  const transactions = useBudgetStore((state) => state.transactions);
+  const wallets = useBudgetStore((state) => state.wallets);
+
+  const totalBalance = useMemo(() => {
+    const ids = selectedWalletIds.length ? selectedWalletIds : wallets.map((wallet) => wallet.id);
+    return wallets
+      .filter((wallet) => ids.includes(wallet.id))
+      .reduce((sum, wallet) => sum + Number(wallet.balance ?? 0), 0);
+  }, [selectedWalletIds, wallets]);
+
+  const now = new Date();
+  const currentMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonth = { year: prevMonthDate.getFullYear(), month: prevMonthDate.getMonth() + 1 };
+
+  const { data: currentSummary } = useMonthlySummary(selectedWalletIds, currentMonth);
+  const { data: prevSummary } = useMonthlySummary(selectedWalletIds, prevMonth);
 
   const openDialog = () => openModal("walletSelection");
+  const { trendLabel, trendTone, lastSyncLabel } = useMemo(() => {
+    if (!transactions.length && !currentSummary && !prevSummary) {
+      return {
+        trendLabel: "+0.0%",
+        trendTone: "primary" as const,
+        lastSyncLabel: "Belum ada data",
+      };
+    }
+
+    const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    const netThis = (currentSummary?.total_income ?? 0) - (currentSummary?.total_expense ?? 0);
+    const netPrev = (prevSummary?.total_income ?? 0) - (prevSummary?.total_expense ?? 0);
+    let latest: Date | null = null;
+
+    for (const item of transactions) {
+      const date = new Date(item.date);
+      if (!latest || date > latest) {
+        latest = date;
+      }
+    }
+
+    const base = Math.abs(netPrev);
+    let percent = 0;
+    if (base > 0) {
+      percent = ((netThis - netPrev) / base) * 100;
+    } else if (netThis !== 0) {
+      percent = 100;
+    }
+
+    const trendLabel = `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}%`;
+    const trendTone = percent >= 0 ? "primary" : "error";
+
+    const diffDays = latest
+      ? Math.max(0, Math.floor((todayStart.getTime() - latest.getTime()) / DAY_MS))
+      : null;
+    const lastSyncLabel =
+      diffDays === null ? "Belum ada data" : diffDays === 0 ? "Hari ini" : `${diffDays} hari lalu`;
+
+    return { trendLabel, trendTone, lastSyncLabel };
+  }, [currentSummary, prevSummary, transactions]);
 
   return (
     <div
@@ -39,16 +100,25 @@ export default function TotalBalanceCard() {
           </p>
         </div>
         <div className="mt-10 flex flex-wrap items-center gap-4">
-          <div className="flex items-center space-x-2 rounded-full border border-primary/20 bg-primary/10 px-4 py-2 backdrop-blur-md">
-            <span className="material-symbols-outlined text-primary" data-icon="trending_up">
-              trending_up
+          <div
+            className={`flex items-center space-x-2 rounded-full px-4 py-2 backdrop-blur-md ${
+              trendTone === "primary"
+                ? "border border-primary/20 bg-primary/10"
+                : "border border-error/30 bg-error/10"
+            }`}
+          >
+            <span
+              className={`material-symbols-outlined ${trendTone === "primary" ? "text-primary" : "text-error"}`}
+              data-icon={trendTone === "primary" ? "trending_up" : "trending_down"}
+            >
+              {trendTone === "primary" ? "trending_up" : "trending_down"}
             </span>
-            <span className="text-sm font-bold text-primary">
-              +12.4% <span className="font-normal opacity-70">bulan ini</span>
+            <span className={`text-sm font-bold ${trendTone === "primary" ? "text-primary" : "text-error"}`}>
+              {trendLabel} <span className="font-normal opacity-70">bulan ini</span>
             </span>
           </div>
           <div className="text-xs font-medium uppercase tracking-widest text-on-surface-variant">
-            Terakhir sinkron: 2m
+            Terakhir sinkron: {lastSyncLabel}
           </div>
         </div>
       </div>

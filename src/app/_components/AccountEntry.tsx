@@ -1,20 +1,12 @@
 "use client";
 
-import { useBudgetStore } from "@/store/budgetStore";
 import Link from "next/link";
-
-function getInitials(name: string, email: string) {
-  const source = name.trim() || email.trim() || "BU";
-  const parts = source.split(" ").filter(Boolean);
-  if (parts.length >= 2) return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  return source.slice(0, 2).toUpperCase();
-}
+import { useAuth } from "@/hooks/useAuth";
 
 export default function AccountEntry() {
-  const profile = useBudgetStore((state) => state.profile);
-  const isAuthenticated = useBudgetStore((state) => state.isAuthenticated);
+  const { user, avatarUrl, initials } = useAuth();
 
-  if (!isAuthenticated) {
+  if (!user) {
     return (
       <Link
         href="/login"
@@ -40,15 +32,18 @@ export default function AccountEntry() {
     );
   }
 
-  const initials = getInitials(profile.name ?? "", profile.email ?? "");
-
   return (
     <Link
       href="/profile"
-      className="inline-flex h-9 w-9 items-center justify-center rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] text-sm font-semibold text-[var(--text-primary)]"
+      className="inline-flex h-9 w-9 items-center justify-center overflow-hidden rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] text-sm font-semibold text-[var(--text-primary)]"
       aria-label="Pengaturan akun"
     >
-      {initials}
+      {avatarUrl ? (
+        // eslint-disable-next-line @next/next/no-img-element
+        <img src={avatarUrl} alt="Foto profil" className="h-full w-full object-cover" />
+      ) : (
+        initials
+      )}
     </Link>
   );
 }

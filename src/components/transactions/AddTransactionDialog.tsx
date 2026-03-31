@@ -71,7 +71,7 @@ export default function AddTransactionDialog({ walletId, walletBalance }: AddTra
       const month = date.getMonth() + 1;
       const { data: existing } = await supabase
         .from("monthly_summary")
-        .select("*")
+        .select("id, total_income, total_expense")
         .eq("user_id", user.id)
         .eq("wallet_id", walletId)
         .eq("year", year)

@@ -1,6 +1,7 @@
 "use client";
 
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 type HeaderTab = {
   key: string;
@@ -15,14 +16,14 @@ const titles: Array<{ prefix: string; label: string }> = [
   { prefix: "/statistik", label: "Reports" },
   { prefix: "/reports", label: "Reports" },
   { prefix: "/categories", label: "Categories" },
-  { prefix: "/profile", label: "Profile" },
-  { prefix: "/pengaturan", label: "Settings" },
+  { prefix: "/profile", label: "Akun" },
+  { prefix: "/pengaturan", label: "Pengaturan Aplikasi" },
   { prefix: "/lainnya", label: "Settings" },
 ];
 
 const breadcrumbPages: Array<{ prefix: string; label: string }> = [
   { prefix: "/categories", label: "Categories" },
-  { prefix: "/profile", label: "Profile" },
+  { prefix: "/profile", label: "Akun" },
   { prefix: "/reports", label: "Reports" },
 ];
 
@@ -49,6 +50,8 @@ export default function MainHeader({
   onTabChange?: (key: string) => void;
 }) {
   const pathname = usePathname();
+  const router = useRouter();
+  const { avatarUrl, initials, displayName, user } = useAuth();
   const resolvedTitle = title ?? resolveTitle(pathname);
   const breadcrumb = resolveBreadcrumb(pathname);
 
@@ -95,13 +98,20 @@ export default function MainHeader({
           <button type="button" className="rounded-full p-2 text-slate-400 transition-all hover:bg-[#1a202a]">
             <span className="material-symbols-outlined">notifications</span>
           </button>
-          <div className="h-8 w-8 overflow-hidden rounded-full border border-outline-variant/30">
-            <img
-              alt="Profile"
-              className="h-full w-full object-cover"
-              src="https://lh3.googleusercontent.com/aida-public/AB6AXuChIel7SOAGWormjaIzVWiqshNteBFZCW-YADqsLHChJan_PCto7MdR7zWcEx3V-ozIBBRenVdVt31bZ_hLsD_LRCr2_-0O-JDr182KtbnGmilK-6nQm0LXY-rbPWEBcNY08HKMtTBcbILIyZwzTwe1TIJfdvDthJcmTW3lC0jEgBGRaFVF5gVb1GcFEcpGT900Z87nZ38iXVoBfavim3S6AgqCErODnLxFLrjmjijJML0X9jiY45GSExEfqfe3g3RTovAun_2NFMoA"
-            />
-          </div>
+          <button
+            type="button"
+            onClick={() => router.push("/profile")}
+            className="flex h-8 w-8 items-center justify-center overflow-hidden rounded-full border border-outline-variant/30 bg-surface-container text-[10px] font-semibold text-on-surface transition-colors hover:border-primary/40"
+            aria-label="Buka pengaturan akun"
+            title="Pengaturan akun"
+          >
+            {user && avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img alt={displayName} className="h-full w-full object-cover" src={avatarUrl} />
+            ) : (
+              initials
+            )}
+          </button>
         </div>
       </div>
     </header>

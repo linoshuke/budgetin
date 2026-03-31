@@ -7,6 +7,8 @@ import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ToastHost from "@/components/ui/ToastHost";
 import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
+import AppSettingsSync from "@/components/shared/AppSettingsSync";
+import DataLoader from "@/components/shared/DataLoader";
 
 function AnimatedSwitcher({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -36,6 +38,7 @@ function AuthGate({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const router = useRouter();
 
+  const isAnonymous = Boolean(user?.is_anonymous);
   const emailVerified = Boolean(
     user?.email_confirmed_at ?? (user as { confirmed_at?: string | null } | null)?.confirmed_at,
   );
@@ -43,11 +46,12 @@ function AuthGate({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (loading) return;
     if (!user) return;
+    if (isAnonymous) return;
     if (emailVerified) return;
     if (pathname.startsWith("/verify-email")) return;
     const email = user.email ?? "";
     router.replace(`/verify-email?email=${encodeURIComponent(email)}`);
-  }, [emailVerified, loading, pathname, router, user]);
+  }, [emailVerified, isAnonymous, loading, pathname, router, user]);
 
   if (loading) {
     return (
@@ -57,7 +61,7 @@ function AuthGate({ children }: { children: ReactNode }) {
     );
   }
 
-  if (user && !emailVerified && !pathname.startsWith("/verify-email")) {
+  if (user && !isAnonymous && !emailVerified && !pathname.startsWith("/verify-email")) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-indigo)]/30 border-t-[var(--accent-indigo)]" />
@@ -115,8 +119,10 @@ export default function Providers({ children }: { children: ReactNode }) {
   return (
     <QueryClientProvider client={queryClient}>
       <SupabaseProvider>
+        <DataLoader />
         <AuthGate>{content}</AuthGate>
       </SupabaseProvider>
+      <AppSettingsSync />
       <ToastHost />
     </QueryClientProvider>
   );

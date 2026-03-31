@@ -4,4 +4,5 @@ export interface Wallet {
   category: string;
   location: string;
   isDefault: boolean;
+  balance?: number;
 }

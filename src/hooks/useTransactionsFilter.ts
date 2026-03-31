@@ -6,6 +6,7 @@ import {
 } from "@/lib/budget";
 import { getMonthLabel, monthKey } from "@/lib/utils";
 import type { Transaction } from "@/types/transaction";
+import { useAppSettingsStore } from "@/stores/appSettingsStore";
 
 export type PeriodMode = "daily" | "monthly" | "range";
 
@@ -21,9 +22,10 @@ function isSameDate(date: string, compare: Date) {
 export function useTransactionsFilter(
   transactions: Transaction[],
   walletIds: string[] = [],
-  initialPeriod: PeriodMode = "daily",
+  initialPeriod?: PeriodMode,
 ) {
-  const [period, setPeriod] = useState<PeriodMode>(initialPeriod);
+  const defaultPeriod = useAppSettingsStore((state) => state.defaultPeriod);
+  const [period, setPeriod] = useState<PeriodMode>(initialPeriod ?? defaultPeriod ?? "daily");
   const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");

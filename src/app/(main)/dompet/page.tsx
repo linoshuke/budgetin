@@ -4,13 +4,16 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useBudgetStore } from "@/store/budgetStore";
 import { useTransactionStore } from "@/stores/transactionStore";
 import LockWidget from "@/components/LockWidget";
 import Modal from "@/components/shared/Modal";
 import { supabase } from "@/lib/supabase/client";
 import { formatCurrency, monthKey } from "@/lib/utils";
 import { getMonthLabel } from "@/utils/date";
-import type { Category, CategoryBudget, Transaction, Wallet } from "@/types";
+import type { CategoryBudget, Transaction } from "@/types";
+import type { Category } from "@/types/category";
+import type { Wallet } from "@/types/wallet";
 
 const BASELINE_MONTHS = 3;
 const MIN_BUDGET = 100_000;
@@ -272,7 +275,11 @@ function buildGoals(wallets: Wallet[], avgExpense: number, avgSavings: number) {
 
   const fallbackWallets = savingsWallets.length ? savingsWallets : normalizedWallets;
   const savingsBalance = fallbackWallets.reduce((sum, wallet) => sum + (wallet.balance ?? 0), 0);
-  const baseExpense = avgExpense > 0 ? avgExpense : 1_000_000;
+  const baseExpense = avgExpense > 0 ? avgExpense : savingsBalance > 0 ? savingsBalance / 3 : 0;
+
+  if (baseExpense <= 0) {
+    return [];
+  }
 
   const configs = [
     {
@@ -395,55 +402,65 @@ export default function BudgetsPage() {
     },
   });
 
-  const { data: categoriesData = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories", user?.id ?? "guest"],
-    enabled: Boolean(user),
-    queryFn: async () => {
-      if (!user) return [];
-      const { data, error } = await supabase
-        .from("categories")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: true });
-      if (error) throw error;
-      return (data ?? []) as Category[];
-    },
-  });
-
-  const { data: walletsData = [], isLoading: walletsLoading } = useQuery({
-    queryKey: ["wallets", user?.id ?? "guest"],
-    enabled: Boolean(user),
-    queryFn: async () => {
-      if (!user) return [];
-      const { data, error } = await supabase
-        .from("wallets")
-        .select("*")
-        .eq("user_id", user.id)
-        .order("created_at", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as Wallet[];
-    },
-  });
+  const categories = useBudgetStore((state) => state.categories) as Category[];
+  const wallets = useBudgetStore((state) => state.wallets) as Wallet[];
+  const budgetLoading = useBudgetStore((state) => state.loading);
 
   const { data: transactionsData = [], isLoading: transactionsLoading } = useQuery({
     queryKey: ["transactions", "budget", user?.id ?? "guest", start, end],
     enabled: Boolean(user),
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("transactions")
-        .select("id, amount, type, date, category_id")
-        .eq("user_id", user.id)
-        .gte("date", start)
-        .lte("date", end);
-      if (error) throw error;
-      return (data ?? []) as BudgetTransaction[];
+      const pageLimit = 500;
+      let offset = 0;
+      let hasMore = true;
+      const items: BudgetTransaction[] = [];
+
+      while (hasMore) {
+        const params = new URLSearchParams({
+          limit: String(pageLimit),
+          offset: String(offset),
+          dateFrom: start,
+          dateTo: end,
+        });
+
+        const response = await fetch(`/api/transactions?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const payload = (await response.json()) as {
+          items: Array<{
+            id: string;
+            amount: number;
+            type: Transaction["type"];
+            date: string;
+            categoryId?: string | null;
+          }>;
+          hasMore: boolean;
+          nextOffset: number | null;
+        };
+
+        const mapped = (payload.items ?? []).map((item) => ({
+          id: item.id,
+          amount: Number(item.amount ?? 0),
+          type: item.type,
+          date: item.date,
+          category_id: item.categoryId ?? null,
+        })) as BudgetTransaction[];
+
+        items.push(...mapped);
+        hasMore = Boolean(payload.hasMore);
+        if (!payload.nextOffset) break;
+        offset = payload.nextOffset;
+
+        if (offset > 2500) break;
+      }
+
+      return items;
     },
   });
 
-  const categories = categoriesData;
   const transactions = transactionsData;
-  const wallets = walletsData;
   const budgetMap = useMemo(
     () => new Map(budgetsData.map((item) => [item.category_id, toNumber(item.target_amount)])),
     [budgetsData],
@@ -493,9 +510,10 @@ export default function BudgetsPage() {
     [baselineKeys, budgetMap, categories, currentKey, transactions],
   );
 
+  const hasGoalData = wallets.length > 0 && transactions.length > 0;
   const goals = useMemo(
-    () => buildGoals(wallets, averages.avgExpense, averages.avgSavings),
-    [averages.avgExpense, averages.avgSavings, wallets],
+    () => (hasGoalData ? buildGoals(wallets, averages.avgExpense, averages.avgSavings) : []),
+    [averages.avgExpense, averages.avgSavings, hasGoalData, wallets],
   );
 
   const suggestion = useMemo(
@@ -508,7 +526,7 @@ export default function BudgetsPage() {
     [currentMonth.month, currentMonth.year],
   );
 
-  const loading = categoriesLoading || transactionsLoading || budgetsLoading || walletsLoading;
+  const loading = budgetLoading || transactionsLoading || budgetsLoading;
 
   const handleStartEdit = (categoryId: string) => {
     const currentTarget = budgetMap.get(categoryId);
@@ -969,60 +987,66 @@ export default function BudgetsPage() {
           <div className="h-full rounded-2xl border border-outline-variant/5 bg-surface-container-low p-8">
             <h2 className="mb-6 font-headline text-xl font-bold">Active Savings Goals</h2>
             <div className="space-y-8">
-              {goals.map((goal) => {
-                const strokeClass =
-                  goal.accent === "primary"
-                    ? "text-primary"
-                    : goal.accent === "tertiary"
-                      ? "text-tertiary"
-                      : "text-secondary";
-                const ringOffset = CIRCLE_CIRCUMFERENCE * (1 - Math.min(goal.percent, 1));
+              {goals.length ? (
+                goals.map((goal) => {
+                  const strokeClass =
+                    goal.accent === "primary"
+                      ? "text-primary"
+                      : goal.accent === "tertiary"
+                        ? "text-tertiary"
+                        : "text-secondary";
+                  const ringOffset = CIRCLE_CIRCUMFERENCE * (1 - Math.min(goal.percent, 1));
 
-                return (
-                  <div
-                    key={goal.id}
-                    className="flex cursor-pointer flex-col items-center rounded-2xl bg-surface-container p-6 text-center transition-transform hover:scale-[1.02]"
-                  >
-                    <div className="relative mb-4 h-32 w-32">
-                      <svg className="h-full w-full -rotate-90 transform">
-                        <circle
-                          className="text-surface-container-highest"
-                          cx="64"
-                          cy="64"
-                          r={CIRCLE_RADIUS}
-                          fill="transparent"
-                          stroke="currentColor"
-                          strokeWidth="8"
-                        />
-                        <circle
-                          className={strokeClass}
-                          cx="64"
-                          cy="64"
-                          r={CIRCLE_RADIUS}
-                          fill="transparent"
-                          stroke="currentColor"
-                          strokeWidth="8"
-                          strokeDasharray={CIRCLE_CIRCUMFERENCE}
-                          strokeDashoffset={ringOffset}
-                        />
-                      </svg>
-                      <div className="absolute inset-0 flex flex-col items-center justify-center">
-                        <span className="font-headline text-2xl font-extrabold tnum">
-                          {Math.round(goal.percent * 100)}%
-                        </span>
+                  return (
+                    <div
+                      key={goal.id}
+                      className="flex cursor-pointer flex-col items-center rounded-2xl bg-surface-container p-6 text-center transition-transform hover:scale-[1.02]"
+                    >
+                      <div className="relative mb-4 h-32 w-32">
+                        <svg className="h-full w-full -rotate-90 transform">
+                          <circle
+                            className="text-surface-container-highest"
+                            cx="64"
+                            cy="64"
+                            r={CIRCLE_RADIUS}
+                            fill="transparent"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                          />
+                          <circle
+                            className={strokeClass}
+                            cx="64"
+                            cy="64"
+                            r={CIRCLE_RADIUS}
+                            fill="transparent"
+                            stroke="currentColor"
+                            strokeWidth="8"
+                            strokeDasharray={CIRCLE_CIRCUMFERENCE}
+                            strokeDashoffset={ringOffset}
+                          />
+                        </svg>
+                        <div className="absolute inset-0 flex flex-col items-center justify-center">
+                          <span className="font-headline text-2xl font-extrabold tnum">
+                            {Math.round(goal.percent * 100)}%
+                          </span>
+                        </div>
+                      </div>
+                      <h3 className="text-lg font-bold">{goal.name}</h3>
+                      <p className="mb-4 text-sm text-on-surface-variant">Target: {goal.targetDate}</p>
+                      <div className="w-full border-t border-outline-variant/10 pt-4">
+                        <div className="flex justify-between text-xs font-bold uppercase tracking-tighter">
+                          <span className={strokeClass}>{formatCurrency(goal.saved)} Saved</span>
+                          <span className="text-on-surface-variant">{formatCurrency(goal.target)} Goal</span>
+                        </div>
                       </div>
                     </div>
-                    <h3 className="text-lg font-bold">{goal.name}</h3>
-                    <p className="mb-4 text-sm text-on-surface-variant">Target: {goal.targetDate}</p>
-                    <div className="w-full border-t border-outline-variant/10 pt-4">
-                      <div className="flex justify-between text-xs font-bold uppercase tracking-tighter">
-                        <span className={strokeClass}>{formatCurrency(goal.saved)} Saved</span>
-                        <span className="text-on-surface-variant">{formatCurrency(goal.target)} Goal</span>
-                      </div>
-                    </div>
-                  </div>
-                );
-              })}
+                  );
+                })
+              ) : (
+                <div className="rounded-xl border border-outline-variant/10 bg-surface-container p-6 text-sm text-on-surface-variant">
+                  Belum ada data untuk menghitung target tabungan. Tambahkan transaksi dan saldo dompet terlebih dahulu.
+                </div>
+              )}
 
               <button
                 type="button"

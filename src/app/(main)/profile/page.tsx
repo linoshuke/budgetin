@@ -1,49 +1,28 @@
 ﻿"use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import AuthGate from "@/components/shared/AuthGate";
 import Modal from "@/components/shared/Modal";
 import LockWidget from "@/components/LockWidget";
 import { supabase } from "@/lib/supabase/client";
 import { formatDate, toCsvRow } from "@/lib/utils";
+import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/user-profile";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
+import type { Transaction } from "@/types/transaction";
 import type { User } from "@supabase/supabase-js";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 
 function getProvider(user: User | null) {
+  if (user?.is_anonymous) return "anonim";
   const providers = user?.app_metadata?.providers as string[] | undefined;
   return providers?.[0] ?? "email";
 }
 
-function getAvatarUrl(user: User | null) {
-  const provider = getProvider(user);
-  if (provider !== "google") return "";
-  const metadata = user?.user_metadata as Record<string, unknown> | undefined;
-  const avatar = metadata?.avatar_url ?? metadata?.picture;
-  return typeof avatar === "string" ? avatar : "";
-}
-
-function getDisplayName(user: User | null) {
-  const metadata = user?.user_metadata as Record<string, unknown> | undefined;
-  const fullName = metadata?.full_name ?? metadata?.name;
-  return typeof fullName === "string" ? fullName : "";
-}
-
-function getInitials(name: string, email: string) {
-  const source = name.trim() || email.trim() || "BU";
-  const parts = source.split(" ").filter(Boolean);
-  if (parts.length >= 2) {
-    return `${parts[0][0]}${parts[1][0]}`.toUpperCase();
-  }
-  return source.slice(0, 2).toUpperCase();
-}
-
 export default function ProfilePage() {
   const router = useRouter();
-  const transactions = useBudgetStore((state) => state.transactions);
+  const pathname = usePathname();
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
-  const isAuthenticated = useBudgetStore((state) => state.isAuthenticated);
 
   const [authUser, setAuthUser] = useState<User | null>(null);
   const [loadingUser, setLoadingUser] = useState(true);
@@ -63,15 +42,6 @@ export default function ProfilePage() {
   const [showEditName, setShowEditName] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
-  const categoryMap = useMemo(
-    () => new Map(categories.map((item) => [item.id, item.name])),
-    [categories],
-  );
-  const walletMap = useMemo(
-    () => new Map(wallets.map((item) => [item.id, item.name])),
-    [wallets],
-  );
-
   useEffect(() => {
     let active = true;
 
@@ -81,7 +51,7 @@ export default function ProfilePage() {
 
       const user = data.user ?? null;
       setAuthUser(user);
-      setName(getDisplayName(user));
+      setName(getUserDisplayName(user));
       setEmail(user?.email ?? "");
       setLoadingUser(false);
     };
@@ -91,7 +61,7 @@ export default function ProfilePage() {
     const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
       const user = session?.user ?? null;
       setAuthUser(user);
-      setName(getDisplayName(user));
+      setName(getUserDisplayName(user));
       setEmail(user?.email ?? "");
       setLoadingUser(false);
     });
@@ -102,33 +72,70 @@ export default function ProfilePage() {
     };
   }, []);
 
-  const avatarUrl = getAvatarUrl(authUser);
+  const avatarUrl = getUserAvatarUrl(authUser);
   const provider = getProvider(authUser);
+  const isAnonymous = Boolean(authUser?.is_anonymous);
   const isVerified = Boolean(authUser?.email_confirmed_at);
+  const verificationLabel = isAnonymous ? "Anonim" : isVerified ? "Terverifikasi" : "Belum terverifikasi";
   const createdDate = authUser?.created_at ? formatDate(authUser.created_at, true) : "-";
+  const nextParam = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
 
-  const exportCsv = () => {
-    const header = ["Tanggal", "Jenis", "Kategori", "Dompet", "Nominal", "Catatan"];
-    const rows = transactions.map((item) => [
-      formatDate(item.date, true),
-      item.type === "income" ? "Pemasukan" : "Pengeluaran",
-      categoryMap.get(item.categoryId) ?? "Tanpa kategori",
-      walletMap.get(item.walletId) ?? "Tanpa dompet",
-      item.amount,
-      item.note ?? "",
-    ]);
+  const exportCsv = async () => {
+    try {
+      const categoryMap = new Map(categories.map((item) => [item.id, item.name]));
+      const walletMap = new Map(wallets.map((item) => [item.id, item.name]));
+      const header = ["Tanggal", "Jenis", "Kategori", "Dompet", "Nominal", "Catatan"];
 
-    const csv = [toCsvRow(header), ...rows.map((row) => toCsvRow(row))].join("\n");
-    const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-    const url = URL.createObjectURL(blob);
+      const allTransactions: Transaction[] = [];
+      let offset = 0;
+      let hasMore = true;
 
-    const anchor = document.createElement("a");
-    anchor.href = url;
-    anchor.download = `budgetin-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
-    document.body.appendChild(anchor);
-    anchor.click();
-    document.body.removeChild(anchor);
-    URL.revokeObjectURL(url);
+      while (hasMore) {
+        const params = new URLSearchParams({
+          limit: "500",
+          offset: String(offset),
+        });
+        const response = await fetch(`/api/transactions?${params.toString()}`);
+        if (!response.ok) {
+          throw new Error(`HTTP ${response.status}`);
+        }
+        const payload = (await response.json()) as {
+          items: Transaction[];
+          hasMore: boolean;
+          nextOffset: number | null;
+        };
+        const items = payload.items ?? [];
+        allTransactions.push(...items);
+        hasMore = Boolean(payload.hasMore);
+        if (!payload.nextOffset) break;
+        offset = payload.nextOffset;
+        if (offset > 10_000) break;
+      }
+
+      const rows = allTransactions.map((item) => [
+        formatDate(item.date, true),
+        item.type === "income" ? "Pemasukan" : "Pengeluaran",
+        categoryMap.get(item.categoryId) ?? "Tanpa kategori",
+        walletMap.get(item.walletId) ?? "Tanpa dompet",
+        item.amount,
+        item.note ?? "",
+      ]);
+
+      const csv = [toCsvRow(header), ...rows.map((row) => toCsvRow(row))].join("\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+
+      const anchor = document.createElement("a");
+      anchor.href = url;
+      anchor.download = `budgetin-transactions-${new Date().toISOString().slice(0, 10)}.csv`;
+      document.body.appendChild(anchor);
+      anchor.click();
+      document.body.removeChild(anchor);
+      URL.revokeObjectURL(url);
+    } catch (error) {
+      console.error("Gagal mengekspor data:", error);
+      alert("Gagal mengekspor data transaksi.");
+    }
   };
 
   const handleSaveAccount = async () => {
@@ -166,7 +173,7 @@ export default function ProfilePage() {
 
       const { data } = await supabase.auth.getUser();
       setAuthUser(data.user ?? null);
-      setName(getDisplayName(data.user ?? null));
+      setName(getUserDisplayName(data.user ?? null));
       setEmail(data.user?.email ?? nextEmail);
       setShowEditName(false);
     } catch (error) {
@@ -207,7 +214,11 @@ export default function ProfilePage() {
     setShowPasswordModal(false);
   };
 
-  if (!isAuthenticated && !loadingUser) {
+  const handleUpgradeAccount = () => {
+    router.push(`/login${nextParam}`);
+  };
+
+  if (!authUser && !loadingUser) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <LockWidget message="Masuk untuk mengelola profil." />
@@ -236,7 +247,7 @@ export default function ProfilePage() {
                   />
                 ) : (
                   <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-secondary-container text-lg font-semibold text-on-primary">
-                    {getInitials(name, email)}
+                    {getUserInitials(name, email)}
                   </div>
                 )}
               </div>
@@ -254,7 +265,7 @@ export default function ProfilePage() {
                 Provider: {provider}
               </span>
               <span className="rounded-full border border-outline-variant/20 bg-surface-container px-3 py-1">
-                Verifikasi: {isVerified ? "Terverifikasi" : "Belum terverifikasi"}
+                Verifikasi: {verificationLabel}
               </span>
               <span className="rounded-full border border-outline-variant/20 bg-surface-container px-3 py-1">
                 Bergabung: {createdDate}
@@ -272,9 +283,41 @@ export default function ProfilePage() {
           </section>
 
           <section className="space-y-6 lg:col-span-8">
+            {isAnonymous ? (
+              <div className="rounded-2xl border border-primary/20 bg-primary/10 p-6">
+                <h2 className="font-headline text-lg font-bold text-on-surface">Simpan Data Permanen</h2>
+                <p className="mt-2 text-sm text-on-surface-variant">
+                  Akun Anda masih anonim. Hubungkan dengan email atau OAuth agar data tersimpan aman dan bisa dipulihkan kapan pun.
+                </p>
+                <div className="mt-4 flex flex-wrap gap-2">
+                  <button
+                    type="button"
+                    onClick={handleUpgradeAccount}
+                    className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary"
+                  >
+                    Simpan Data Permanen
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => router.push(`/register${nextParam}`)}
+                    className="rounded-lg border border-outline-variant/30 px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface"
+                  >
+                    Buat Akun Baru
+                  </button>
+                </div>
+              </div>
+            ) : null}
             <div className="rounded-2xl border border-outline-variant/5 bg-surface-container-low p-6">
               <h2 className="font-headline text-lg font-bold text-on-surface">Account Management</h2>
               <div className="mt-4 grid gap-3">
+                <button
+                  type="button"
+                  className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high"
+                  onClick={() => router.push("/pengaturan")}
+                >
+                  Pengaturan Aplikasi
+                  <span className="text-on-surface-variant">&gt;</span>
+                </button>
                 <button
                   type="button"
                   className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high"

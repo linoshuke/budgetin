@@ -40,6 +40,8 @@ const initialState: BudgetState = {
   syncError: null,
 };
 
+const DASHBOARD_TRANSACTION_LIMIT = 100;
+
 let state: BudgetState = initialState;
 const listeners = new Set<() => void>();
 
@@ -95,8 +97,8 @@ export const budgetActions = {
     setState((c) => ({ ...c, loading: true }));
 
     try {
-      const [transactions, categories, profile] = await Promise.all([
-        apiFetch<Transaction[]>("/api/transactions"),
+      const [transactionsPage, categories, profile] = await Promise.all([
+        apiFetch<{ items: Transaction[] }>("/api/transactions?limit=" + DASHBOARD_TRANSACTION_LIMIT),
         apiFetch<Category[]>("/api/categories"),
         apiFetch<UserProfile>("/api/profiles"),
       ]);
@@ -110,7 +112,7 @@ export const budgetActions = {
 
       setState((c) => ({
         ...c,
-        transactions,
+        transactions: transactionsPage.items ?? [],
         categories,
         wallets,
         profile,
@@ -236,7 +238,7 @@ export const budgetActions = {
 
       const next = {
         ...state,
-        transactions: [created, ...state.transactions],
+        transactions: [created, ...state.transactions].slice(0, DASHBOARD_TRANSACTION_LIMIT),
       };
       const guestPending = hasGuestDataFromState(next);
 
@@ -252,7 +254,7 @@ export const budgetActions = {
 
     setState((c) => ({
       ...c,
-      transactions: [created, ...c.transactions],
+      transactions: [created, ...c.transactions].slice(0, DASHBOARD_TRANSACTION_LIMIT),
     }));
   },
 
@@ -381,7 +383,7 @@ export const budgetActions = {
     }
 
     const updated = await apiFetch<Wallet>(`/api/wallets/${id}`, {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify(payload),
     });
 
@@ -426,7 +428,7 @@ export const budgetActions = {
     }
 
     const updated = await apiFetch<UserProfile>("/api/profiles", {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify(payload),
     });
 
@@ -449,7 +451,7 @@ export const budgetActions = {
     }
 
     const updated = await apiFetch<UserProfile>("/api/profiles", {
-      method: "PUT",
+      method: "PATCH",
       body: JSON.stringify({ theme }),
     });
 

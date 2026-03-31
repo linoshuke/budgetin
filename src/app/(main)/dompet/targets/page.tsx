@@ -5,28 +5,19 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import LockWidget from "@/components/LockWidget";
 import { useAuth } from "@/hooks/useAuth";
+import { useBudgetStore } from "@/store/budgetStore";
 import { supabase } from "@/lib/supabase/client";
 import { formatCurrency, getMonthLabel, toCsvRow } from "@/lib/utils";
-import type { Category, CategoryBudget } from "@/types";
+import type { CategoryBudget } from "@/types";
+import type { Category } from "@/types/category";
 
 export default function BudgetTargetsHistoryPage() {
   const { user, isGuest, loading: authLoading } = useAuth();
   const [yearFilter, setYearFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
 
-  const { data: categoriesData = [], isLoading: categoriesLoading } = useQuery({
-    queryKey: ["categories", user?.id ?? "guest"],
-    enabled: Boolean(user),
-    queryFn: async () => {
-      if (!user) return [];
-      const { data, error } = await supabase
-        .from("categories")
-        .select("id, name, color")
-        .eq("user_id", user.id);
-      if (error) throw error;
-      return (data ?? []) as Category[];
-    },
-  });
+  const categoriesData = useBudgetStore((state) => state.categories) as Category[];
+  const categoriesLoading = useBudgetStore((state) => state.loading);
 
   const { data: budgetsData = [], isLoading: budgetsLoading } = useQuery({
     queryKey: ["category-budgets", user?.id ?? "guest", "history"],

@@ -13,7 +13,7 @@ export async function getProfile(
 ): Promise<UserProfile> {
     const { data, error } = await supabase
         .from("profiles")
-        .select("*")
+        .select("name, email, theme")
         .eq("id", userId)
         .single();
 
@@ -43,7 +43,7 @@ export async function updateProfile(
         .from("profiles")
         .update(updateRow)
         .eq("id", userId)
-        .select()
+        .select("name, email, theme")
         .single();
 
     if (error) {

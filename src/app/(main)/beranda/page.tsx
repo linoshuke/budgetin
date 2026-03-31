@@ -1,86 +1,96 @@
 "use client";
 
+import { useMemo } from "react";
 import TotalBalanceCard from "@/components/home/TotalBalanceCard";
 import MonthlySummary from "@/components/home/MonthlySummary";
 import ExpenseChart from "@/components/home/ExpenseChart";
 import CashFlowChartCard from "@/components/home/CashFlowChartCard";
 import WalletSelectionDialog from "@/components/modals/WalletSelectionDialog";
+import { useBudgetStore } from "@/store/budgetStore";
+import { formatCurrency, formatDate } from "@/lib/utils";
+import type { Category } from "@/types/category";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+function resolveCategoryIcon(category: Category | undefined) {
+  const code = category?.icon?.toUpperCase();
+  const name = category?.name?.toLowerCase() ?? "";
+
+  const codeMap: Record<string, string> = {
+    FOOD: "shopping_cart",
+    MOVE: "directions_car",
+    BILL: "home",
+    PAY: "payments",
+    PLUS: "savings",
+    FUN: "movie",
+    HEALTH: "favorite",
+  };
+
+  if (code && codeMap[code]) return codeMap[code];
+  if (name.includes("makan") || name.includes("food") || name.includes("grocery")) return "shopping_cart";
+  if (name.includes("transport") || name.includes("bensin") || name.includes("travel")) return "directions_car";
+  if (name.includes("tagih") || name.includes("bill") || name.includes("util") || name.includes("sewa")) return "home";
+  if (name.includes("hibur") || name.includes("entertain") || name.includes("movie")) return "movie";
+  if (name.includes("kesehatan") || name.includes("health") || name.includes("med")) return "favorite";
+  if (name.includes("gaji") || name.includes("income")) return "payments";
+  return "category";
+}
 
 export default function HomePage() {
-  const recentTransactions = [
-    {
-      title: "Apple Store Soho",
-      category: "Technology",
-      date: "Oct 24, 2023",
-      amount: "-$1,299.00",
-      status: "Success",
-      icon: "shopping_bag",
-      tone: "error",
-    },
-    {
-      title: "Stripe Inc. Payout",
-      category: "Income",
-      date: "Oct 23, 2023",
-      amount: "+$5,400.00",
-      status: "Settled",
-      icon: "payments",
-      tone: "primary",
-    },
-    {
-      title: "Blue Hill Restaurant",
-      category: "Dining",
-      date: "Oct 22, 2023",
-      amount: "-$342.50",
-      status: "Success",
-      icon: "restaurant",
-      tone: "error",
-    },
-    {
-      title: "Uber Trip",
-      category: "Transport",
-      date: "Oct 22, 2023",
-      amount: "-$28.90",
-      status: "Success",
-      icon: "directions_car",
-      tone: "error",
-    },
-    {
-      title: "Equinox Membership",
-      category: "Wellness",
-      date: "Oct 20, 2023",
-      amount: "-$215.00",
-      status: "Recurring",
-      icon: "fitness_center",
-      tone: "error",
-    },
-  ];
+  const transactions = useBudgetStore((state) => state.transactions);
+  const categories = useBudgetStore((state) => state.categories);
 
-  const upcomingBills = [
-    {
-      title: "AWS Cloud Services",
-      meta: "Due in 3 days",
-      amount: "$158.32",
-      status: "Pending",
-      tone: "primary",
-      action: "Auto-pay",
-    },
-    {
-      title: "Netflix Subscription",
-      meta: "Paid on Oct 18",
-      amount: "$19.99",
-      status: "Paid",
-      tone: "secondary",
-      action: "check_circle",
-    },
-    {
-      title: "Adobe Creative Cloud",
-      meta: "Due tomorrow",
-      amount: "$52.99",
-      status: "Urgent",
-      tone: "error",
-      action: "Pay Now",
-    },
-  ];
+  const categoryMap = useMemo(() => new Map(categories.map((item) => [item.id, item])), [categories]);
+
+  const recentTransactions = useMemo(() => {
+    const sorted = [...transactions].sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    );
+
+    return sorted.slice(0, 5).map((item) => {
+      const category = categoryMap.get(item.categoryId);
+      const title = (item.note ?? "").trim() || category?.name || "Transaksi";
+      const amountValue = Math.abs(item.amount);
+      return {
+        title,
+        category: category?.name ?? "Tanpa kategori",
+        date: formatDate(item.date, true),
+        amount: `${item.type === "income" ? "+" : "-"}${formatCurrency(amountValue)}`,
+        status: item.type === "income" ? "Pemasukan" : "Pengeluaran",
+        icon: resolveCategoryIcon(category),
+        tone: item.type === "income" ? "primary" : "error",
+      };
+    });
+  }, [categoryMap, transactions]);
+
+  const upcomingBills = useMemo(() => {
+    const today = new Date();
+    const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
+
+    const upcoming = transactions
+      .filter((item) => new Date(item.date).getTime() >= todayStart.getTime())
+      .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
+      .slice(0, 3);
+
+    return upcoming.map((item) => {
+      const category = categoryMap.get(item.categoryId);
+      const title = (item.note ?? "").trim() || category?.name || "Tagihan";
+      const dateValue = new Date(item.date);
+      const diffDays = Math.max(0, Math.ceil((dateValue.getTime() - todayStart.getTime()) / DAY_MS));
+      const meta =
+        diffDays === 0 ? "Jatuh tempo hari ini" : diffDays === 1 ? "Jatuh tempo besok" : `Jatuh tempo ${diffDays} hari lagi`;
+      const isUrgent = diffDays <= 1;
+
+      return {
+        title,
+        meta,
+        amount: formatCurrency(Math.abs(item.amount)),
+        status: isUrgent ? "Urgent" : "Pending",
+        tone: isUrgent ? "error" : "primary",
+        action: isUrgent ? "Bayar" : "Auto-pay",
+      };
+    });
+  }, [categoryMap, transactions]);
 
   return (
     <div className="space-y-8">
@@ -106,7 +116,8 @@ export default function HomePage() {
           </div>
           <div className="overflow-hidden rounded-xl bg-surface-container-low">
             <div className="divide-y divide-outline-variant/5">
-              {recentTransactions.map((item) => (
+              {recentTransactions.length ? (
+                recentTransactions.map((item) => (
                 <div
                   key={`${item.title}-${item.date}`}
                   className="group flex items-center justify-between p-4 transition-colors hover:bg-surface-container"
@@ -131,7 +142,12 @@ export default function HomePage() {
                     <div className="text-[10px] font-medium uppercase text-on-surface-variant">{item.status}</div>
                   </div>
                 </div>
-              ))}
+                ))
+              ) : (
+                <div className="p-6 text-sm text-on-surface-variant">
+                  Belum ada transaksi untuk ditampilkan.
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -139,59 +155,65 @@ export default function HomePage() {
         <div>
           <h3 className="mb-6 font-headline text-xl font-bold">Upcoming Bills</h3>
           <div className="space-y-4">
-            {upcomingBills.map((bill) => (
-              <div
-                key={bill.title}
-                className={`rounded-xl bg-surface-container-low p-5 ${
-                  bill.tone === "primary"
-                    ? "border-l-4 border-primary shadow-lg shadow-[#000]/10"
-                    : bill.tone === "secondary"
-                      ? "border-l-4 border-secondary-container opacity-80 transition-opacity hover:opacity-100"
-                      : "border-l-4 border-error/50"
-                }`}
-              >
-                <div className="mb-2 flex items-start justify-between">
-                  <div>
-                    <div className="text-sm font-bold">{bill.title}</div>
-                    <div className="text-xs text-on-surface-variant">{bill.meta}</div>
-                  </div>
-                  <span
-                    className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
-                      bill.tone === "primary"
-                        ? "bg-primary/10 text-primary"
-                        : bill.tone === "secondary"
-                          ? "bg-secondary-container/10 text-secondary-container"
-                          : "bg-error/10 text-error"
-                    }`}
-                  >
-                    {bill.status}
-                  </span>
-                </div>
-                <div className="flex items-end justify-between">
-                  <div className="tnum text-xl font-bold">{bill.amount}</div>
-                  {bill.action === "check_circle" ? (
+            {upcomingBills.length ? (
+              upcomingBills.map((bill) => (
+                <div
+                  key={`${bill.title}-${bill.meta}`}
+                  className={`rounded-xl bg-surface-container-low p-5 ${
+                    bill.tone === "primary"
+                      ? "border-l-4 border-primary shadow-lg shadow-[#000]/10"
+                      : bill.tone === "secondary"
+                        ? "border-l-4 border-secondary-container opacity-80 transition-opacity hover:opacity-100"
+                        : "border-l-4 border-error/50"
+                  }`}
+                >
+                  <div className="mb-2 flex items-start justify-between">
+                    <div>
+                      <div className="text-sm font-bold">{bill.title}</div>
+                      <div className="text-xs text-on-surface-variant">{bill.meta}</div>
+                    </div>
                     <span
-                      className="material-symbols-outlined text-secondary-container"
-                      data-icon="check_circle"
-                      style={{ fontVariationSettings: '"FILL" 1' }}
-                    >
-                      check_circle
-                    </span>
-                  ) : (
-                    <button
-                      className={`rounded-md px-3 py-1 text-xs font-bold ${
+                      className={`rounded px-2 py-0.5 text-[10px] font-bold uppercase ${
                         bill.tone === "primary"
-                          ? "bg-surface-container-highest hover:bg-surface-bright"
-                          : "bg-gradient-to-r from-primary to-secondary-container text-on-primary"
+                          ? "bg-primary/10 text-primary"
+                          : bill.tone === "secondary"
+                            ? "bg-secondary-container/10 text-secondary-container"
+                            : "bg-error/10 text-error"
                       }`}
-                      type="button"
                     >
-                      {bill.action}
-                    </button>
-                  )}
+                      {bill.status}
+                    </span>
+                  </div>
+                  <div className="flex items-end justify-between">
+                    <div className="tnum text-xl font-bold">{bill.amount}</div>
+                    {bill.action === "check_circle" ? (
+                      <span
+                        className="material-symbols-outlined text-secondary-container"
+                        data-icon="check_circle"
+                        style={{ fontVariationSettings: '"FILL" 1' }}
+                      >
+                        check_circle
+                      </span>
+                    ) : (
+                      <button
+                        className={`rounded-md px-3 py-1 text-xs font-bold ${
+                          bill.tone === "primary"
+                            ? "bg-surface-container-highest hover:bg-surface-bright"
+                            : "bg-gradient-to-r from-primary to-secondary-container text-on-primary"
+                        }`}
+                        type="button"
+                      >
+                        {bill.action}
+                      </button>
+                    )}
+                  </div>
                 </div>
+              ))
+            ) : (
+              <div className="rounded-xl bg-surface-container-low p-5 text-sm text-on-surface-variant">
+                Belum ada tagihan terjadwal.
               </div>
-            ))}
+            )}
             <div className="group relative mt-8 overflow-hidden rounded-xl bg-[#1a202a] p-6">
               <img
                 alt="savings"

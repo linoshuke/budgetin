@@ -12,12 +12,12 @@ const navItems = [
   { label: "Transactions", href: "/transactions", icon: "receipt_long" },
   { label: "Budgets", href: "/dompet", icon: "account_balance_wallet" },
   { label: "Reports", href: "/statistik", icon: "bar_chart" },
-  { label: "Settings", href: "/pengaturan", icon: "settings" },
+  { label: "Pengaturan Aplikasi", href: "/pengaturan", icon: "settings" },
 ];
 
 const quickItems = [
   { label: "Categories", href: "/categories", icon: "category" },
-  { label: "Profile", href: "/profile", icon: "person" },
+  { label: "Akun", href: "/profile", icon: "person" },
 ];
 
 const SIDEBAR_STORAGE_KEY = "budgetin:sidebar";

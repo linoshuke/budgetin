@@ -2,12 +2,13 @@ import type { Wallet } from "@/types/wallet";
 
 export interface WalletRow {
     id: string;
-    user_id: string;
+    user_id?: string;
     name: string;
     category: string | null;
     location: string | null;
+    balance?: number | string | null;
     is_default: boolean;
-    created_at: string;
+    created_at?: string;
 }
 
 export interface CreateWalletDTO {
@@ -29,6 +30,7 @@ export function mapRowToWallet(row: WalletRow): Wallet {
         category: row.category ?? "Umum",
         location: row.location ?? "Lokal",
         isDefault: row.is_default,
+        balance: row.balance !== undefined && row.balance !== null ? Number(row.balance) : undefined,
     };
 }
 

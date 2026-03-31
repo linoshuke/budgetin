@@ -1,13 +1,28 @@
+import { getAppSettingsState } from "@/stores/appSettingsStore";
+
+function resolveFormatConfig() {
+  const settings = getAppSettingsState();
+  return {
+    locale: settings.numberLocale ?? "id-ID",
+    currency: settings.currency ?? "IDR",
+    hideAmounts: settings.privacyHideAmounts ?? false,
+  };
+}
+
 export function formatCurrency(value: number) {
-  return new Intl.NumberFormat("id-ID", {
+  const { locale, currency, hideAmounts } = resolveFormatConfig();
+  if (hideAmounts) return "****";
+  return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "IDR",
+    currency,
     maximumFractionDigits: 0,
   }).format(value);
 }
 
 export function formatCompactCurrency(value: number) {
-  return new Intl.NumberFormat("id-ID", {
+  const { locale, hideAmounts } = resolveFormatConfig();
+  if (hideAmounts) return "***";
+  return new Intl.NumberFormat(locale, {
     notation: "compact",
     maximumFractionDigits: 1,
   }).format(value);

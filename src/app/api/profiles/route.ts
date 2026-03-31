@@ -15,7 +15,7 @@ export async function GET() {
     }
 }
 
-export async function PUT(request: Request) {
+export async function PATCH(request: Request) {
     try {
         const { user, supabase } = await getAuthUser();
         const raw = await request.json();

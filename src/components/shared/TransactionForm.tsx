@@ -3,6 +3,7 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { formatCurrency, getIsoDateToday } from "@/lib/utils";
+import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import type { Category } from "@/types/category";
 import type { Transaction, TransactionType } from "@/types/transaction";
 import type { Wallet } from "@/types/wallet";
@@ -29,10 +30,14 @@ export default function TransactionForm({
   submitLabel = "Simpan Transaksi",
   disabled = false,
 }: TransactionFormProps) {
-  const [type, setType] = useState<TransactionType>(initialValue?.type ?? "expense");
+  const defaultType = useAppSettingsStore((state) => state.defaultTransactionType);
+  const defaultWalletId = useAppSettingsStore((state) => state.defaultWalletId);
+  const defaultCategoryId = useAppSettingsStore((state) => state.defaultCategoryId);
+
+  const [type, setType] = useState<TransactionType>(initialValue?.type ?? defaultType ?? "expense");
   const [amountInput, setAmountInput] = useState(initialValue ? String(initialValue.amount) : "");
-  const [categoryId, setCategoryId] = useState(initialValue?.categoryId ?? "");
-  const [walletId, setWalletId] = useState(initialValue?.walletId ?? "");
+  const [categoryId, setCategoryId] = useState(initialValue?.categoryId ?? defaultCategoryId ?? "");
+  const [walletId, setWalletId] = useState(initialValue?.walletId ?? defaultWalletId ?? "");
   const [date, setDate] = useState(initialValue?.date ?? getIsoDateToday());
   const [note, setNote] = useState(initialValue?.note ?? "");
   const [newWalletName, setNewWalletName] = useState("");

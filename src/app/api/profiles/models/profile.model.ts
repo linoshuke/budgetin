@@ -1,11 +1,11 @@
 import type { UserProfile, ThemeMode } from "@/types/profile";
 
 export interface ProfileRow {
-    id: string;
+    id?: string;
     name: string;
     email: string;
     theme: ThemeMode;
-    created_at: string;
+    created_at?: string;
 }
 
 export interface UpdateProfileDTO {

@@ -16,7 +16,7 @@ export async function getAllTransactions(
 ): Promise<Transaction[]> {
     const { data, error } = await supabase
         .from("transactions")
-        .select("*")
+        .select("id, type, amount, category_id, wallet_id, date, note")
         .eq("user_id", userId)
         .order("date", { ascending: false });
 
@@ -34,7 +34,7 @@ export async function getTransactionById(
 ): Promise<Transaction> {
     const { data, error } = await supabase
         .from("transactions")
-        .select("*")
+        .select("id, type, amount, category_id, wallet_id, date, note")
         .eq("id", id)
         .eq("user_id", userId)
         .single();
@@ -55,21 +55,30 @@ export async function getTransactionsByFilter(
     userId: string,
     options: {
         walletId?: string;
+        walletIds?: string[];
         categoryId?: string;
+        categoryIds?: string[];
         dateFrom?: string;
         dateTo?: string;
+        type?: Transaction["type"];
+        limit?: number;
+        offset?: number;
     },
 ): Promise<Transaction[]> {
     let query = supabase
         .from("transactions")
-        .select("*")
+        .select("id, type, amount, category_id, wallet_id, date, note")
         .eq("user_id", userId)
         .order("date", { ascending: false });
 
-    if (options.walletId) {
+    if (options.walletIds?.length) {
+        query = query.in("wallet_id", options.walletIds);
+    } else if (options.walletId) {
         query = query.eq("wallet_id", options.walletId);
     }
-    if (options.categoryId) {
+    if (options.categoryIds?.length) {
+        query = query.in("category_id", options.categoryIds);
+    } else if (options.categoryId) {
         query = query.eq("category_id", options.categoryId);
     }
     if (options.dateFrom) {
@@ -77,6 +86,14 @@ export async function getTransactionsByFilter(
     }
     if (options.dateTo) {
         query = query.lte("date", options.dateTo);
+    }
+    if (options.type) {
+        query = query.eq("type", options.type);
+    }
+    if (options.limit !== undefined) {
+        const offset = Math.max(0, options.offset ?? 0);
+        const limit = Math.max(1, options.limit);
+        query = query.range(offset, offset + limit - 1);
     }
 
     const { data, error } = await query;
@@ -101,7 +118,7 @@ export async function createTransaction(
     const { data, error } = await supabase
         .from("transactions")
         .insert(insertRow)
-        .select()
+        .select("id, type, amount, category_id, wallet_id, date, note")
         .single();
 
     if (error) {
@@ -124,7 +141,7 @@ export async function updateTransaction(
         .update(updateRow)
         .eq("id", id)
         .eq("user_id", userId)
-        .select()
+        .select("id, type, amount, category_id, wallet_id, date, note")
         .single();
 
     if (error) {

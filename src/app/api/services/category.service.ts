@@ -14,7 +14,7 @@ export async function getAllCategories(
 ): Promise<Category[]> {
     const { data, error } = await supabase
         .from("categories")
-        .select("*")
+        .select("id, name, icon, color, type, is_default")
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
@@ -32,7 +32,7 @@ export async function getCategoryById(
 ): Promise<Category> {
     const { data, error } = await supabase
         .from("categories")
-        .select("*")
+        .select("id, name, icon, color, type, is_default")
         .eq("id", id)
         .eq("user_id", userId)
         .single();
@@ -65,7 +65,7 @@ export async function createCategory(
     const { data, error } = await supabase
         .from("categories")
         .insert(insertRow)
-        .select()
+        .select("id, name, icon, color, type, is_default")
         .single();
 
     if (error) {

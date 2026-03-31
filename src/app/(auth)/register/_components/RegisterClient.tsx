@@ -36,7 +36,8 @@ export default function RegisterClient() {
     const checkSession = async () => {
       const { data } = await supabase.auth.getSession();
       if (!active) return;
-      if (data.session) {
+      const isAnonymous = Boolean(data.session?.user?.is_anonymous);
+      if (data.session && !isAnonymous) {
         router.replace(nextPath as Route);
       }
     };

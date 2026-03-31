@@ -2,14 +2,14 @@ import type { Transaction, TransactionType } from "@/types/transaction";
 
 export interface TransactionRow {
     id: string;
-    user_id: string;
+    user_id?: string;
     type: TransactionType;
     amount: number | string;
     category_id: string;
     wallet_id: string | null;
     date: string;
     note: string | null;
-    created_at: string;
+    created_at?: string;
 }
 
 export interface CreateTransactionDTO {
