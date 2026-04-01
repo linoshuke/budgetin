@@ -6,7 +6,6 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/Dialog";
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
-import { supabase } from "@/lib/supabase/client";
 import { useUIStore } from "@/stores/uiStore";
 
 const schema = z.object({
@@ -43,57 +42,25 @@ export default function AddTransactionDialog({ walletId, walletBalance }: AddTra
 
   const onSubmit = async (values: FormValues) => {
     try {
-      const { data: userData } = await supabase.auth.getUser();
-      const user = userData.user;
-      if (!user) throw new Error("Anda harus login.");
-
-      const delta = values.type === "expense" ? -values.amount : values.amount;
-      const newBalance = Number(walletBalance) + delta;
       const date = new Date();
 
-      const { error: trxError } = await supabase.from("transactions").insert({
-        wallet_id: walletId,
-        user_id: user.id,
-        description: values.description,
-        amount: values.amount,
-        type: values.type,
-        date: date.toISOString().slice(0, 10),
+      const response = await fetch("/api/transactions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          walletId,
+          categoryId: null,
+          type: values.type,
+          amount: values.amount,
+          note: values.description,
+          date: date.toISOString().slice(0, 10),
+        }),
       });
-      if (trxError) throw trxError;
 
-      const { error: walletError } = await supabase
-        .from("wallets")
-        .update({ balance: newBalance })
-        .eq("id", walletId);
-      if (walletError) throw walletError;
-
-      const year = date.getFullYear();
-      const month = date.getMonth() + 1;
-      const { data: existing } = await supabase
-        .from("monthly_summary")
-        .select("id, total_income, total_expense")
-        .eq("user_id", user.id)
-        .eq("wallet_id", walletId)
-        .eq("year", year)
-        .eq("month", month)
-        .maybeSingle();
-
-      if (existing) {
-        const total_income = Number(existing.total_income ?? 0) + (values.type === "income" ? values.amount : 0);
-        const total_expense = Number(existing.total_expense ?? 0) + (values.type === "expense" ? values.amount : 0);
-        await supabase
-          .from("monthly_summary")
-          .update({ total_income, total_expense })
-          .eq("id", existing.id);
-      } else {
-        await supabase.from("monthly_summary").insert({
-          user_id: user.id,
-          wallet_id: walletId,
-          year,
-          month,
-          total_income: values.type === "income" ? values.amount : 0,
-          total_expense: values.type === "expense" ? values.amount : 0,
-        });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
       }
 
       pushToast({ title: "Transaksi tersimpan", variant: "success" });

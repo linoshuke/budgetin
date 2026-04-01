@@ -14,9 +14,10 @@ export async function createServerSupabase() {
                 },
                 setAll(cookiesToSet) {
                     try {
-                        cookiesToSet.forEach(({ name, value, options }) =>
-                            cookieStore.set(name, value, options),
-                        );
+                        cookiesToSet.forEach(({ name, value, options }) => {
+                            const nextOptions = { ...(options ?? {}), httpOnly: true };
+                            cookieStore.set(name, value, nextOptions);
+                        });
                     } catch {
                         // setAll called from Server Component where cookies are read-only
                     }

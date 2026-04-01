@@ -6,7 +6,6 @@ import { useQuery } from "@tanstack/react-query";
 import LockWidget from "@/components/LockWidget";
 import { useAuth } from "@/hooks/useAuth";
 import { useBudgetStore } from "@/store/budgetStore";
-import { supabase } from "@/lib/supabase/client";
 import { formatCurrency, getMonthLabel, toCsvRow } from "@/lib/utils";
 import type { CategoryBudget } from "@/types";
 import type { Category } from "@/types/category";
@@ -24,13 +23,11 @@ export default function BudgetTargetsHistoryPage() {
     enabled: Boolean(user),
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("category_budgets")
-        .select("id, category_id, month_key, target_amount, created_at")
-        .eq("user_id", user.id)
-        .order("month_key", { ascending: false });
-      if (error) throw error;
-      return (data ?? []) as CategoryBudget[];
+      const response = await fetch("/api/category-budgets?history=1", { credentials: "include" });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return (await response.json()) as CategoryBudget[];
     },
   });
 

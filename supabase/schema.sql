@@ -25,6 +25,7 @@ CREATE TABLE IF NOT EXISTS wallets (
   name       TEXT NOT NULL,
   category   TEXT NOT NULL DEFAULT 'Umum',
   location   TEXT NOT NULL DEFAULT 'Lokal',
+  balance    NUMERIC NOT NULL DEFAULT 0,
   is_default BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
@@ -41,6 +42,21 @@ CREATE TABLE IF NOT EXISTS transactions (
   created_at  TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- 4b. Tabel: monthly_summary
+CREATE TABLE IF NOT EXISTS monthly_summary (
+  id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id       UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  wallet_id     UUID NOT NULL REFERENCES wallets(id) ON DELETE CASCADE,
+  year          INT NOT NULL CHECK (year >= 2000),
+  month         INT NOT NULL CHECK (month BETWEEN 1 AND 12),
+  total_income  NUMERIC NOT NULL DEFAULT 0,
+  total_expense NUMERIC NOT NULL DEFAULT 0,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE UNIQUE INDEX IF NOT EXISTS monthly_summary_unique
+  ON monthly_summary (user_id, wallet_id, year, month);
+
 -- 5. Tabel: category_budgets
 CREATE TABLE IF NOT EXISTS category_budgets (
   id            UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -53,6 +69,20 @@ CREATE TABLE IF NOT EXISTS category_budgets (
 
 CREATE UNIQUE INDEX IF NOT EXISTS category_budgets_unique
   ON category_budgets (user_id, category_id, month_key);
+
+-- 6. Tabel: goals
+CREATE TABLE IF NOT EXISTS goals (
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id        UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name           TEXT NOT NULL,
+  target_amount  NUMERIC NOT NULL DEFAULT 0,
+  current_amount NUMERIC NOT NULL DEFAULT 0,
+  target_date    DATE,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS goals_user_id_idx
+  ON goals (user_id);
 
 ALTER TABLE transactions
 ADD COLUMN IF NOT EXISTS wallet_id UUID;

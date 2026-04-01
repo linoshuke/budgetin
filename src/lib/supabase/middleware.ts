@@ -19,7 +19,8 @@ export async function updateSession(request: NextRequest) {
       },
       setAll(cookiesToSet) {
         cookiesToSet.forEach(({ name, value, options }) => {
-          response.cookies.set(name, value, options);
+          const nextOptions = { ...(options ?? {}), httpOnly: true };
+          response.cookies.set(name, value, nextOptions);
         });
       },
     },

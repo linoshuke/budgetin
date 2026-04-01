@@ -5,8 +5,8 @@ import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ToastHost from "@/components/ui/ToastHost";
-import { supabase } from "@/lib/supabase/client";
 import { useAuthStore } from "@/stores/authStore";
+import type { User } from "@supabase/supabase-js";
 import AppSettingsSync from "@/components/shared/AppSettingsSync";
 import DataLoader from "@/components/shared/DataLoader";
 
@@ -79,22 +79,34 @@ function SupabaseProvider({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     let mounted = true;
-    supabase.auth.getSession().then(({ data }) => {
-      if (!mounted) return;
-      setSession(data.session ?? null);
-      setUser(data.session?.user ?? null);
-      setLoading(false);
-    });
 
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session ?? null);
-      setUser(session?.user ?? null);
-      setLoading(false);
-    });
+    const loadSession = async () => {
+      try {
+        const response = await fetch("/api/auth/session", { credentials: "include" });
+        const payload = (await response.json()) as { user: User | null };
+        if (!mounted) return;
+        setSession(null);
+        setUser(payload.user);
+        setLoading(false);
+      } catch {
+        if (!mounted) return;
+        setSession(null);
+        setUser(null);
+        setLoading(false);
+      }
+    };
+
+    loadSession();
+
+    const handleAuthChange = () => {
+      void loadSession();
+    };
+
+    window.addEventListener("auth:changed", handleAuthChange);
 
     return () => {
       mounted = false;
-      listener.subscription.unsubscribe();
+      window.removeEventListener("auth:changed", handleAuthChange);
     };
   }, [setLoading, setSession, setUser]);
 

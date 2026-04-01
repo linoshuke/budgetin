@@ -8,10 +8,9 @@ import { useBudgetStore } from "@/store/budgetStore";
 import { useTransactionStore } from "@/stores/transactionStore";
 import LockWidget from "@/components/LockWidget";
 import Modal from "@/components/shared/Modal";
-import { supabase } from "@/lib/supabase/client";
 import { formatCurrency, monthKey } from "@/lib/utils";
 import { getMonthLabel } from "@/utils/date";
-import type { CategoryBudget, Transaction } from "@/types";
+import type { CategoryBudget, Goal, Transaction } from "@/types";
 import type { Category } from "@/types/category";
 import type { Wallet } from "@/types/wallet";
 
@@ -38,6 +37,8 @@ const statusStyles = {
   },
 } as const;
 
+const GOAL_ACCENTS = ["primary", "tertiary", "secondary"] as const;
+
 type BudgetStatus = keyof typeof statusStyles;
 
 type BudgetRow = {
@@ -58,6 +59,9 @@ type GoalRow = {
   target: number;
   percent: number;
   targetDate: string;
+  targetDateISO?: string;
+  isSuggested?: boolean;
+  source?: Goal;
 };
 
 type BudgetTransaction = Pick<Transaction, "id" | "amount" | "type" | "date" | "category_id">;
@@ -314,6 +318,7 @@ function buildGoals(wallets: Wallet[], avgExpense: number, avgSavings: number) {
     const months = avgSavings > 0
       ? Math.max(1, Math.ceil(remaining / avgSavings))
       : config.fallbackMonths;
+    const targetDate = addMonths(new Date(), months);
 
     return {
       id: config.id,
@@ -322,7 +327,8 @@ function buildGoals(wallets: Wallet[], avgExpense: number, avgSavings: number) {
       saved,
       target,
       percent,
-      targetDate: formatShortDate(addMonths(new Date(), months)),
+      targetDate: formatShortDate(targetDate),
+      targetDateISO: targetDate.toISOString().slice(0, 10),
     };
   });
 }
@@ -371,6 +377,14 @@ export default function BudgetsPage() {
   const [bulkError, setBulkError] = useState("");
   const [savingBulk, setSavingBulk] = useState(false);
   const [resettingAll, setResettingAll] = useState(false);
+  const [goalModalOpen, setGoalModalOpen] = useState(false);
+  const [editingGoal, setEditingGoal] = useState<Goal | null>(null);
+  const [goalName, setGoalName] = useState("");
+  const [goalTargetInput, setGoalTargetInput] = useState("");
+  const [goalSavedInput, setGoalSavedInput] = useState("");
+  const [goalTargetDate, setGoalTargetDate] = useState("");
+  const [goalError, setGoalError] = useState("");
+  const [savingGoal, setSavingGoal] = useState(false);
 
   const currentKey = useMemo(
     () => monthKey(new Date(currentMonth.year, currentMonth.month - 1, 1)),
@@ -392,13 +406,26 @@ export default function BudgetsPage() {
     enabled: Boolean(user),
     queryFn: async () => {
       if (!user) return [];
-      const { data, error } = await supabase
-        .from("category_budgets")
-        .select("id, category_id, month_key, target_amount")
-        .eq("user_id", user.id)
-        .eq("month_key", currentKey);
-      if (error) throw error;
-      return (data ?? []) as CategoryBudget[];
+      const response = await fetch(`/api/category-budgets?monthKey=${encodeURIComponent(currentKey)}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return (await response.json()) as CategoryBudget[];
+    },
+  });
+
+  const { data: goalsData = [], isLoading: goalsLoading } = useQuery({
+    queryKey: ["goals", user?.id ?? "guest"],
+    enabled: Boolean(user),
+    queryFn: async () => {
+      if (!user) return [];
+      const response = await fetch("/api/goals", { credentials: "include" });
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
+      return (await response.json()) as Goal[];
     },
   });
 
@@ -510,15 +537,41 @@ export default function BudgetsPage() {
     [baselineKeys, budgetMap, categories, currentKey, transactions],
   );
 
-  const hasGoalData = wallets.length > 0 && transactions.length > 0;
-  const goals = useMemo(
-    () => (hasGoalData ? buildGoals(wallets, averages.avgExpense, averages.avgSavings) : []),
-    [averages.avgExpense, averages.avgSavings, hasGoalData, wallets],
+  const hasGoalBaseline = wallets.length > 0 && transactions.length > 0;
+  const suggestedGoals = useMemo(
+    () => (hasGoalBaseline ? buildGoals(wallets, averages.avgExpense, averages.avgSavings) : []),
+    [averages.avgExpense, averages.avgSavings, hasGoalBaseline, wallets],
   );
 
+  const storedGoals = useMemo(() => {
+    return goalsData.map((goal, index) => {
+      const target = Math.max(0, toNumber(goal.target_amount));
+      const saved = Math.max(0, toNumber(goal.current_amount));
+      const percent = target ? saved / target : 0;
+      const targetDate = goal.target_date ? formatShortDate(new Date(goal.target_date)) : "Tanpa tanggal";
+
+      return {
+        id: goal.id,
+        name: goal.name,
+        accent: GOAL_ACCENTS[index % GOAL_ACCENTS.length],
+        saved,
+        target,
+        percent,
+        targetDate,
+        targetDateISO: goal.target_date ?? undefined,
+        source: goal,
+      } satisfies GoalRow;
+    });
+  }, [goalsData]);
+
+  const activeGoals = useMemo(() => {
+    if (storedGoals.length) return storedGoals;
+    return suggestedGoals.map((goal) => ({ ...goal, isSuggested: true }));
+  }, [storedGoals, suggestedGoals]);
+
   const suggestion = useMemo(
-    () => buildSuggestion(budgetRows, goals, averages.avgSavings),
-    [averages.avgSavings, budgetRows, goals],
+    () => buildSuggestion(budgetRows, activeGoals, averages.avgSavings),
+    [activeGoals, averages.avgSavings, budgetRows],
   );
 
   const monthLabel = useMemo(
@@ -547,18 +600,20 @@ export default function BudgetsPage() {
     try {
       setSavingTarget(true);
       setTargetError("");
-      const { error } = await supabase
-        .from("category_budgets")
-        .upsert(
-          {
-            user_id: user.id,
-            category_id: categoryId,
-            month_key: currentKey,
-            target_amount: amount,
-          },
-          { onConflict: "user_id,category_id,month_key" },
-        );
-      if (error) throw error;
+      const response = await fetch("/api/category-budgets", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          categoryId,
+          monthKey: currentKey,
+          targetAmount: amount,
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
+      }
       await queryClient.invalidateQueries({ queryKey: ["category-budgets", user.id, currentKey] });
       setEditingId(null);
       setTargetInput("");
@@ -577,11 +632,16 @@ export default function BudgetsPage() {
     try {
       setSavingTarget(true);
       setTargetError("");
-      const { error } = await supabase
-        .from("category_budgets")
-        .delete()
-        .eq("id", record.id);
-      if (error) throw error;
+      const response = await fetch("/api/category-budgets", {
+        method: "DELETE",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: [record.id] }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
+      }
       await queryClient.invalidateQueries({ queryKey: ["category-budgets", user.id, currentKey] });
       setEditingId(null);
       setTargetInput("");
@@ -600,18 +660,20 @@ export default function BudgetsPage() {
     try {
       setQuickSavingId(categoryId);
       setTargetError("");
-      const { error } = await supabase
-        .from("category_budgets")
-        .upsert(
-          {
-            user_id: user.id,
-            category_id: categoryId,
-            month_key: currentKey,
-            target_amount: recommended,
-          },
-          { onConflict: "user_id,category_id,month_key" },
-        );
-      if (error) throw error;
+      const response = await fetch("/api/category-budgets", {
+        method: "POST",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          categoryId,
+          monthKey: currentKey,
+          targetAmount: recommended,
+        }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
+      }
       await queryClient.invalidateQueries({ queryKey: ["category-budgets", user.id, currentKey] });
     } catch (error) {
       console.error("Gagal set rekomendasi:", error);
@@ -644,7 +706,7 @@ export default function BudgetsPage() {
 
   const handleBulkSave = async () => {
     if (!user) return;
-    const upserts: Array<Pick<CategoryBudget, "user_id" | "category_id" | "month_key" | "target_amount">> = [];
+    const upserts: Array<{ categoryId: string; monthKey: string; targetAmount: number }> = [];
     const deletes: string[] = [];
 
     expenseCategories.forEach((category) => {
@@ -659,10 +721,9 @@ export default function BudgetsPage() {
         return;
       }
       upserts.push({
-        user_id: user.id,
-        category_id: category.id,
-        month_key: currentKey,
-        target_amount: amount,
+        categoryId: category.id,
+        monthKey: currentKey,
+        targetAmount: amount,
       });
     });
 
@@ -683,18 +744,29 @@ export default function BudgetsPage() {
       setBulkError("");
 
       if (upserts.length > 0) {
-        const { error } = await supabase
-          .from("category_budgets")
-          .upsert(upserts, { onConflict: "user_id,category_id,month_key" });
-        if (error) throw error;
+        const response = await fetch("/api/category-budgets", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ entries: upserts }),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
+        }
       }
 
       if (deletes.length > 0) {
-        const { error } = await supabase
-          .from("category_budgets")
-          .delete()
-          .in("id", deletes);
-        if (error) throw error;
+        const response = await fetch("/api/category-budgets", {
+          method: "DELETE",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ ids: deletes }),
+        });
+        if (!response.ok) {
+          const payload = await response.json().catch(() => ({}));
+          throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
+        }
       }
 
       await queryClient.invalidateQueries({ queryKey: ["category-budgets", user.id, currentKey] });
@@ -715,18 +787,135 @@ export default function BudgetsPage() {
 
     try {
       setResettingAll(true);
-      const { error } = await supabase
-        .from("category_budgets")
-        .delete()
-        .eq("user_id", user.id)
-        .eq("month_key", currentKey);
-      if (error) throw error;
+      const response = await fetch(`/api/category-budgets?monthKey=${encodeURIComponent(currentKey)}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
+      }
       await queryClient.invalidateQueries({ queryKey: ["category-budgets", user.id, currentKey] });
     } catch (error) {
       console.error("Gagal reset target:", error);
       window.alert(error instanceof Error ? error.message : "Gagal mereset target.");
     } finally {
       setResettingAll(false);
+    }
+  };
+
+  const resetGoalForm = () => {
+    setGoalName("");
+    setGoalTargetInput("");
+    setGoalSavedInput("");
+    setGoalTargetDate("");
+    setGoalError("");
+    setEditingGoal(null);
+  };
+
+  const startCreateGoal = (preset?: { name: string; target: number; saved?: number; targetDateISO?: string }) => {
+    setEditingGoal(null);
+    setGoalName(preset?.name ?? "");
+    setGoalTargetInput(preset?.target ? String(Math.round(preset.target)) : "");
+    setGoalSavedInput(preset?.saved !== undefined ? String(Math.round(preset.saved)) : "");
+    setGoalTargetDate(preset?.targetDateISO ?? "");
+    setGoalError("");
+    setGoalModalOpen(true);
+  };
+
+  const startEditGoal = (goal: Goal) => {
+    setEditingGoal(goal);
+    setGoalName(goal.name);
+    setGoalTargetInput(goal.target_amount ? String(Math.round(toNumber(goal.target_amount))) : "");
+    setGoalSavedInput(goal.current_amount ? String(Math.round(toNumber(goal.current_amount))) : "");
+    setGoalTargetDate(goal.target_date ?? "");
+    setGoalError("");
+    setGoalModalOpen(true);
+  };
+
+  const handleSaveGoal = async () => {
+    if (!user) return;
+    const name = goalName.trim();
+    const targetRaw = goalTargetInput.replace(/\D/g, "");
+    const savedRaw = goalSavedInput.replace(/\D/g, "");
+    const targetAmount = Number(targetRaw);
+    const currentAmount = savedRaw ? Number(savedRaw) : 0;
+
+    if (!name) {
+      setGoalError("Nama goal wajib diisi.");
+      return;
+    }
+    if (!targetRaw || !Number.isFinite(targetAmount) || targetAmount <= 0) {
+      setGoalError("Target goal harus lebih dari 0.");
+      return;
+    }
+    if (!Number.isFinite(currentAmount) || currentAmount < 0) {
+      setGoalError("Progress harus 0 atau lebih.");
+      return;
+    }
+
+    const payload = {
+      name,
+      targetAmount,
+      currentAmount,
+      targetDate: goalTargetDate || null,
+    };
+
+    try {
+      setSavingGoal(true);
+      setGoalError("");
+
+      if (editingGoal) {
+        const response = await fetch(`/api/goals/${editingGoal.id}`, {
+          method: "PATCH",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error((data as { error?: string }).error ?? `HTTP ${response.status}`);
+        }
+      } else {
+        const response = await fetch("/api/goals", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+        if (!response.ok) {
+          const data = await response.json().catch(() => ({}));
+          throw new Error((data as { error?: string }).error ?? `HTTP ${response.status}`);
+        }
+      }
+
+      await queryClient.invalidateQueries({ queryKey: ["goals", user.id] });
+      setGoalModalOpen(false);
+      resetGoalForm();
+    } catch (error) {
+      setGoalError(error instanceof Error ? error.message : "Gagal menyimpan goal.");
+    } finally {
+      setSavingGoal(false);
+    }
+  };
+
+  const handleDeleteGoal = async (goalId: string) => {
+    if (!user) return;
+    const confirmed = window.confirm("Hapus goal ini?");
+    if (!confirmed) return;
+
+    try {
+      const response = await fetch(`/api/goals/${goalId}`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}));
+        throw new Error((data as { error?: string }).error ?? `HTTP ${response.status}`);
+      }
+      await queryClient.invalidateQueries({ queryKey: ["goals", user.id] });
+    } catch (error) {
+      window.alert(error instanceof Error ? error.message : "Gagal menghapus goal.");
     }
   };
 
@@ -820,164 +1009,170 @@ export default function BudgetsPage() {
                     Kelola Kategori
                   </Link>
                 </div>
-              ) : transactions.length === 0 ? (
-                <div className="rounded-xl border border-outline-variant/10 bg-surface-container p-6 text-sm text-on-surface-variant">
-                  <p className="text-base font-semibold text-on-surface">Belum ada transaksi.</p>
-                  <p className="mt-1 text-sm text-on-surface-variant">
-                    Catat transaksi pertama untuk melihat progres anggaran secara real-time.
-                  </p>
-                  <Link
-                    href="/transactions"
-                    className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-wider text-primary"
-                  >
-                    Tambah Transaksi
-                  </Link>
-                </div>
-              ) : budgetRows.length ? (
-                budgetRows.map((row) => {
-                  const style = statusStyles[row.status];
-                  const percentLabel = `${Math.round(row.percent * 100)}% Consumed`;
-                  const hasManualTarget = budgetMap.has(row.id);
-                  const recommended = recommendedMap.get(row.id) ?? 0;
-                  const canRecommend = recommended > 0;
-                  const previewTarget = targetInput
-                    ? formatCurrency(Number(targetInput.replace(/\D/g, "")))
-                    : formatCurrency(row.budget);
-                  return (
-                    <div key={row.id} className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-on-surface">
-                            <span className="material-symbols-outlined" data-icon={row.icon}>
-                              {row.icon}
-                            </span>
-                          </div>
-                          <span className="text-lg font-bold">{row.name}</span>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-lg font-bold tnum text-on-surface">
-                            {formatCurrency(row.spent)}
-                            <span className="text-sm font-medium text-on-surface-variant"> / {formatCurrency(row.budget)}</span>
-                          </span>
-                          <div className="text-xs text-on-surface-variant">
-                            Rekomendasi: <span className="tnum">{formatCurrency(recommended)}</span>
-                          </div>
-                        </div>
-                      </div>
-                      <div className="relative h-3 w-full overflow-hidden rounded-full bg-surface-container">
-                        <div
-                          className={`absolute left-0 top-0 h-full rounded-full ${style.bar}`}
-                          style={{ width: `${Math.min(row.percent * 100, 100)}%` }}
-                        />
-                      </div>
-                      <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                        <span>{percentLabel}</span>
-                        <div className="flex flex-wrap items-center gap-2">
-                          {hasManualTarget ? (
-                            <span className="rounded-full bg-surface-container-highest px-2 py-0.5 text-[10px] uppercase tracking-wider text-on-surface-variant">
-                              Manual
-                            </span>
-                          ) : null}
-                          <span className={style.text}>{style.label}</span>
-                          <button
-                            type="button"
-                            onClick={() => handleStartEdit(row.id)}
-                            className="rounded-full border border-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary transition-colors hover:bg-primary/10"
-                          >
-                            {hasManualTarget ? "Ubah Target" : "Set Target"}
-                          </button>
-                          {canRecommend ? (
-                            <button
-                              type="button"
-                              disabled={quickSavingId === row.id}
-                              onClick={() => handleSetRecommendedTarget(row.id)}
-                              className="rounded-full border border-secondary/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary transition-colors hover:bg-secondary/10 disabled:opacity-60"
-                            >
-                              {quickSavingId === row.id ? "Menyimpan..." : "Set Rekomendasi"}
-                            </button>
-                          ) : null}
-                          {hasManualTarget ? (
-                            <button
-                              type="button"
-                              disabled={savingTarget}
-                              onClick={() => {
-                                if (savingTarget) return;
-                                const confirmed = window.confirm("Reset target manual ke otomatis?");
-                                if (!confirmed) return;
-                                handleDeleteTarget(row.id);
-                              }}
-                              className="rounded-full border border-outline-variant/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary"
-                            >
-                              Reset Otomatis
-                            </button>
-                          ) : null}
-                        </div>
-                      </div>
-                      {editingId === row.id ? (
-                        <div className="rounded-xl border border-outline-variant/10 bg-surface-container p-4">
-                          <div className="flex flex-wrap items-center gap-3">
-                            <div className="flex-1 space-y-1">
-                              <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
-                                Target Bulan Ini
-                              </label>
-                              <input
-                                value={targetInput}
-                                onChange={(event) => setTargetInput(event.target.value.replace(/\D/g, ""))}
-                                placeholder="Contoh: 1500000"
-                                className="w-full rounded-lg border border-outline-variant/10 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
-                                disabled={savingTarget}
-                              />
-                              <p className="text-xs text-on-surface-variant">Preview: {previewTarget}</p>
+              ) : (
+                <>
+                  {transactions.length === 0 ? (
+                    <div className="rounded-xl border border-outline-variant/10 bg-surface-container p-6 text-sm text-on-surface-variant">
+                      <p className="text-base font-semibold text-on-surface">Belum ada transaksi.</p>
+                      <p className="mt-1 text-sm text-on-surface-variant">
+                        Anda tetap bisa mengatur target bulanan untuk tiap kategori.
+                      </p>
+                      <Link
+                        href="/transactions"
+                        className="mt-4 inline-flex items-center gap-2 rounded-lg bg-primary/10 px-3 py-2 text-xs font-bold uppercase tracking-wider text-primary"
+                      >
+                        Tambah Transaksi
+                      </Link>
+                    </div>
+                  ) : null}
+
+                  {budgetRows.length ? (
+                    budgetRows.map((row) => {
+                      const style = statusStyles[row.status];
+                      const percentLabel = `${Math.round(row.percent * 100)}% Consumed`;
+                      const hasManualTarget = budgetMap.has(row.id);
+                      const recommended = recommendedMap.get(row.id) ?? 0;
+                      const canRecommend = recommended > 0;
+                      const previewTarget = targetInput
+                        ? formatCurrency(Number(targetInput.replace(/\D/g, "")))
+                        : formatCurrency(row.budget);
+                      return (
+                        <div key={row.id} className="space-y-3">
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-surface-container text-on-surface">
+                                <span className="material-symbols-outlined" data-icon={row.icon}>
+                                  {row.icon}
+                                </span>
+                              </div>
+                              <span className="text-lg font-bold">{row.name}</span>
                             </div>
+                            <div className="text-right">
+                              <span className="text-lg font-bold tnum text-on-surface">
+                                {formatCurrency(row.spent)}
+                                <span className="text-sm font-medium text-on-surface-variant"> / {formatCurrency(row.budget)}</span>
+                              </span>
+                              <div className="text-xs text-on-surface-variant">
+                                Rekomendasi: <span className="tnum">{formatCurrency(recommended)}</span>
+                              </div>
+                            </div>
+                          </div>
+                          <div className="relative h-3 w-full overflow-hidden rounded-full bg-surface-container">
+                            <div
+                              className={`absolute left-0 top-0 h-full rounded-full ${style.bar}`}
+                              style={{ width: `${Math.min(row.percent * 100, 100)}%` }}
+                            />
+                          </div>
+                          <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+                            <span>{percentLabel}</span>
                             <div className="flex flex-wrap items-center gap-2">
+                              {hasManualTarget ? (
+                                <span className="rounded-full bg-surface-container-highest px-2 py-0.5 text-[10px] uppercase tracking-wider text-on-surface-variant">
+                                  Manual
+                                </span>
+                              ) : null}
+                              <span className={style.text}>{style.label}</span>
                               <button
                                 type="button"
-                                onClick={() => handleSaveTarget(row.id)}
-                                disabled={savingTarget}
-                                className="rounded-lg bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-on-primary"
+                                onClick={() => handleStartEdit(row.id)}
+                                className="rounded-full border border-primary/20 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-primary transition-colors hover:bg-primary/10"
                               >
-                                {savingTarget ? "Menyimpan..." : "Simpan"}
+                                {hasManualTarget ? "Ubah Target" : "Set Target"}
                               </button>
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setEditingId(null);
-                                  setTargetInput("");
-                                  setTargetError("");
-                                }}
-                                disabled={savingTarget}
-                                className="rounded-lg border border-outline-variant/20 px-4 py-2 text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:text-on-surface"
-                              >
-                                Batal
-                              </button>
+                              {canRecommend ? (
+                                <button
+                                  type="button"
+                                  disabled={quickSavingId === row.id}
+                                  onClick={() => handleSetRecommendedTarget(row.id)}
+                                  className="rounded-full border border-secondary/40 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-secondary transition-colors hover:bg-secondary/10 disabled:opacity-60"
+                                >
+                                  {quickSavingId === row.id ? "Menyimpan..." : "Set Rekomendasi"}
+                                </button>
+                              ) : null}
                               {hasManualTarget ? (
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteTarget(row.id)}
                                   disabled={savingTarget}
-                                  className="rounded-lg border border-error/30 px-4 py-2 text-xs font-bold uppercase tracking-wider text-error hover:bg-error/10"
+                                  onClick={() => {
+                                    if (savingTarget) return;
+                                    const confirmed = window.confirm("Reset target manual ke otomatis?");
+                                    if (!confirmed) return;
+                                    handleDeleteTarget(row.id);
+                                  }}
+                                  className="rounded-full border border-outline-variant/30 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider text-on-surface-variant transition-colors hover:border-primary/30 hover:text-primary"
                                 >
-                                  Hapus Target
+                                  Reset Otomatis
                                 </button>
                               ) : null}
                             </div>
                           </div>
-                          {targetError ? (
-                            <p className="mt-2 text-xs text-error">{targetError}</p>
-                          ) : (
-                            <p className="mt-2 text-xs text-on-surface-variant">
-                              Target berlaku untuk {monthLabel}.
-                            </p>
-                          )}
+                          {editingId === row.id ? (
+                            <div className="rounded-xl border border-outline-variant/10 bg-surface-container p-4">
+                              <div className="flex flex-wrap items-center gap-3">
+                                <div className="flex-1 space-y-1">
+                                  <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+                                    Target Bulan Ini
+                                  </label>
+                                  <input
+                                    value={targetInput}
+                                    onChange={(event) => setTargetInput(event.target.value.replace(/\D/g, ""))}
+                                    placeholder="Contoh: 1500000"
+                                    className="w-full rounded-lg border border-outline-variant/10 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
+                                    disabled={savingTarget}
+                                  />
+                                  <p className="text-xs text-on-surface-variant">Preview: {previewTarget}</p>
+                                </div>
+                                <div className="flex flex-wrap items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => handleSaveTarget(row.id)}
+                                    disabled={savingTarget}
+                                    className="rounded-lg bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-on-primary"
+                                  >
+                                    {savingTarget ? "Menyimpan..." : "Simpan"}
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setEditingId(null);
+                                      setTargetInput("");
+                                      setTargetError("");
+                                    }}
+                                    disabled={savingTarget}
+                                    className="rounded-lg border border-outline-variant/20 px-4 py-2 text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:text-on-surface"
+                                  >
+                                    Batal
+                                  </button>
+                                  {hasManualTarget ? (
+                                    <button
+                                      type="button"
+                                      onClick={() => handleDeleteTarget(row.id)}
+                                      disabled={savingTarget}
+                                      className="rounded-lg border border-error/30 px-4 py-2 text-xs font-bold uppercase tracking-wider text-error hover:bg-error/10"
+                                    >
+                                      Hapus Target
+                                    </button>
+                                  ) : null}
+                                </div>
+                              </div>
+                              {targetError ? (
+                                <p className="mt-2 text-xs text-error">{targetError}</p>
+                              ) : (
+                                <p className="mt-2 text-xs text-on-surface-variant">
+                                  Target berlaku untuk {monthLabel}.
+                                </p>
+                              )}
+                            </div>
+                          ) : null}
                         </div>
-                      ) : null}
+                      );
+                    })
+                  ) : (
+                    <div className="rounded-xl border border-outline-variant/10 bg-surface-container p-6 text-sm text-on-surface-variant">
+                      Belum ada kategori pengeluaran untuk ditampilkan.
                     </div>
-                  );
-                })
-              ) : (
-                <div className="rounded-xl border border-outline-variant/10 bg-surface-container p-6 text-sm text-on-surface-variant">
-                  Belum ada kategori pengeluaran untuk ditampilkan.
-                </div>
+                  )}
+                </>
               )}
             </div>
           </div>
@@ -987,8 +1182,12 @@ export default function BudgetsPage() {
           <div className="h-full rounded-2xl border border-outline-variant/5 bg-surface-container-low p-8">
             <h2 className="mb-6 font-headline text-xl font-bold">Active Savings Goals</h2>
             <div className="space-y-8">
-              {goals.length ? (
-                goals.map((goal) => {
+              {goalsLoading ? (
+                <div className="rounded-xl border border-outline-variant/10 bg-surface-container p-6 text-sm text-on-surface-variant">
+                  Memuat goals...
+                </div>
+              ) : activeGoals.length ? (
+                activeGoals.map((goal) => {
                   const strokeClass =
                     goal.accent === "primary"
                       ? "text-primary"
@@ -1000,7 +1199,7 @@ export default function BudgetsPage() {
                   return (
                     <div
                       key={goal.id}
-                      className="flex cursor-pointer flex-col items-center rounded-2xl bg-surface-container p-6 text-center transition-transform hover:scale-[1.02]"
+                      className="flex flex-col items-center rounded-2xl bg-surface-container p-6 text-center transition-transform hover:scale-[1.02]"
                     >
                       <div className="relative mb-4 h-32 w-32">
                         <svg className="h-full w-full -rotate-90 transform">
@@ -1032,24 +1231,65 @@ export default function BudgetsPage() {
                         </div>
                       </div>
                       <h3 className="text-lg font-bold">{goal.name}</h3>
-                      <p className="mb-4 text-sm text-on-surface-variant">Target: {goal.targetDate}</p>
+                      <p className="mb-3 text-sm text-on-surface-variant">Target: {goal.targetDate}</p>
+                      {goal.isSuggested ? (
+                        <span className="mb-4 rounded-full bg-primary/10 px-3 py-1 text-[10px] font-bold uppercase tracking-widest text-primary">
+                          Rekomendasi
+                        </span>
+                      ) : null}
                       <div className="w-full border-t border-outline-variant/10 pt-4">
                         <div className="flex justify-between text-xs font-bold uppercase tracking-tighter">
                           <span className={strokeClass}>{formatCurrency(goal.saved)} Saved</span>
                           <span className="text-on-surface-variant">{formatCurrency(goal.target)} Goal</span>
                         </div>
                       </div>
+                      <div className="mt-4 flex w-full flex-wrap items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider">
+                        {goal.isSuggested ? (
+                          <button
+                            type="button"
+                            onClick={() =>
+                              startCreateGoal({
+                                name: goal.name,
+                                target: goal.target,
+                                saved: goal.saved,
+                                targetDateISO: goal.targetDateISO,
+                              })
+                            }
+                            className="rounded-full border border-primary/30 px-3 py-1 text-primary transition-colors hover:bg-primary/10"
+                          >
+                            Gunakan
+                          </button>
+                        ) : (
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => goal.source && startEditGoal(goal.source)}
+                              className="rounded-full border border-outline-variant/30 px-3 py-1 text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary"
+                            >
+                              Edit
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteGoal(goal.id)}
+                              className="rounded-full border border-error/30 px-3 py-1 text-error transition-colors hover:bg-error/10"
+                            >
+                              Hapus
+                            </button>
+                          </>
+                        )}
+                      </div>
                     </div>
                   );
                 })
               ) : (
                 <div className="rounded-xl border border-outline-variant/10 bg-surface-container p-6 text-sm text-on-surface-variant">
-                  Belum ada data untuk menghitung target tabungan. Tambahkan transaksi dan saldo dompet terlebih dahulu.
+                  Belum ada goal aktif. Tambahkan goal baru untuk mulai melacak progress tabungan.
                 </div>
               )}
 
               <button
                 type="button"
+                onClick={() => startCreateGoal()}
                 className="flex w-full items-center justify-center space-x-2 rounded-xl border-2 border-dashed border-outline-variant/30 py-4 font-bold text-on-surface-variant transition-all hover:border-primary hover:text-primary"
               >
                 <span className="material-symbols-outlined" data-icon="add">
@@ -1176,6 +1416,89 @@ export default function BudgetsPage() {
               disabled={savingBulk}
             >
               {savingBulk ? "Menyimpan..." : "Simpan Semua"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={goalModalOpen}
+        title={editingGoal ? "Edit Goal" : "Buat Goal Baru"}
+        onClose={() => {
+          setGoalModalOpen(false);
+          resetGoalForm();
+        }}
+        sizeClassName="max-w-xl"
+      >
+        <div className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Nama Goal</label>
+            <input
+              value={goalName}
+              onChange={(event) => setGoalName(event.target.value)}
+              placeholder="Contoh: Dana Darurat"
+              className="w-full rounded-lg border border-outline-variant/10 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
+              disabled={savingGoal}
+            />
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Target Nominal</label>
+            <input
+              value={goalTargetInput}
+              onChange={(event) => setGoalTargetInput(event.target.value.replace(/\D/g, ""))}
+              placeholder="Contoh: 10000000"
+              className="w-full rounded-lg border border-outline-variant/10 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
+              disabled={savingGoal}
+            />
+            <p className="text-xs text-on-surface-variant">
+              Preview: {goalTargetInput ? formatCurrency(Number(goalTargetInput.replace(/\D/g, ""))) : "-"}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Progress Saat Ini</label>
+            <input
+              value={goalSavedInput}
+              onChange={(event) => setGoalSavedInput(event.target.value.replace(/\D/g, ""))}
+              placeholder="Contoh: 2500000"
+              className="w-full rounded-lg border border-outline-variant/10 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
+              disabled={savingGoal}
+            />
+            <p className="text-xs text-on-surface-variant">
+              Preview: {goalSavedInput ? formatCurrency(Number(goalSavedInput.replace(/\D/g, ""))) : "-"}
+            </p>
+          </div>
+          <div className="space-y-1">
+            <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">Target Tanggal</label>
+            <input
+              type="date"
+              value={goalTargetDate}
+              onChange={(event) => setGoalTargetDate(event.target.value)}
+              className="w-full rounded-lg border border-outline-variant/10 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
+              disabled={savingGoal}
+            />
+          </div>
+
+          {goalError ? <p className="text-xs text-error">{goalError}</p> : null}
+
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              onClick={() => {
+                setGoalModalOpen(false);
+                resetGoalForm();
+              }}
+              className="rounded-lg border border-outline-variant/20 px-4 py-2 text-xs font-bold uppercase tracking-wider text-on-surface-variant hover:text-on-surface"
+              disabled={savingGoal}
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={handleSaveGoal}
+              className="rounded-lg bg-primary px-4 py-2 text-xs font-bold uppercase tracking-wider text-on-primary"
+              disabled={savingGoal}
+            >
+              {savingGoal ? "Menyimpan..." : "Simpan Goal"}
             </button>
           </div>
         </div>

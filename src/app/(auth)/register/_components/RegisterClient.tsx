@@ -34,10 +34,11 @@ export default function RegisterClient() {
     let active = true;
 
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      const response = await fetch("/api/auth/session", { credentials: "include" });
+      const data = (await response.json()) as { user: { is_anonymous?: boolean } | null };
       if (!active) return;
-      const isAnonymous = Boolean(data.session?.user?.is_anonymous);
-      if (data.session && !isAnonymous) {
+      const isAnonymous = Boolean(data.user?.is_anonymous);
+      if (data.user && !isAnonymous) {
         router.replace(nextPath as Route);
       }
     };
@@ -67,40 +68,35 @@ export default function RegisterClient() {
       return;
     }
 
-    const emailRedirectTo = `${window.location.origin}/login${
-      nextPath && nextPath !== "/" ? `?next=${encodeURIComponent(nextPath)}` : ""
-    }`;
-
-    const { data, error: signUpError } = await supabase.auth.signUp({
-      email,
-      password,
-      options: {
-        data: { name: name.trim() },
-        emailRedirectTo,
-      },
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        email,
+        password,
+        metadata: { name: name.trim(), full_name: name.trim() },
+      }),
     });
 
-    if (signUpError) {
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
       setLoading(false);
-      setError(signUpError.message);
+      setError((payload as { error?: string }).error ?? `HTTP ${response.status}`);
       return;
     }
 
-    if (data.session) {
-      setLoading(false);
-      router.replace(nextPath as Route);
-      return;
-    }
-
-    const { data: loginData } = await supabase.auth.signInWithPassword({ email, password });
+    const sessionResponse = await fetch("/api/auth/session", { credentials: "include" });
+    const sessionPayload = (await sessionResponse.json()) as { user: { is_anonymous?: boolean } | null };
     setLoading(false);
 
-    if (loginData.session) {
+    if (sessionPayload.user && !sessionPayload.user.is_anonymous) {
+      window.dispatchEvent(new Event("auth:changed"));
       router.replace(nextPath as Route);
       return;
     }
 
-    setNotice("Akun berhasil dibuat. Cek email Anda untuk verifikasi, lalu Anda akan langsung masuk setelah klik tautan.");
+    setNotice("Akun berhasil dibuat. Cek email Anda untuk verifikasi.");
   };
 
   const handleGoogle = async () => {

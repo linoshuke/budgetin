@@ -17,7 +17,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 export default function WalletsPage() {
   const wallets = useBudgetStore((state) => state.wallets);
   const transactions = useBudgetStore((state) => state.transactions);
-  const syncLoading = useBudgetStore((state) => state.syncLoading);
+  const loading = useBudgetStore((state) => state.loading);
   const [renameTarget, setRenameTarget] = useState<Wallet | null>(null);
   const [renameValue, setRenameValue] = useState("");
   const [renameError, setRenameError] = useState("");
@@ -160,7 +160,7 @@ export default function WalletsPage() {
             <Button
               id="btn-tambah-dompet"
               onClick={() => setShowAddModal(true)}
-              disabled={syncLoading}
+              disabled={loading}
             >
               + Tambah Dompet
             </Button>
@@ -177,7 +177,7 @@ export default function WalletsPage() {
                   key={wallet.id}
                   wallet={wallet}
                   balance={walletBalances.get(wallet.id) ?? 0}
-                  disabled={syncLoading}
+                  disabled={loading}
                   onRename={() => setRenameTarget(wallet)}
                   onDelete={() => setDeleteTarget(wallet)}
                 />
@@ -201,7 +201,7 @@ export default function WalletsPage() {
                 placeholder="Contoh: BCA, OVO, Tunai..."
                 value={addWalletName}
                 onChange={(event) => setAddWalletName(event.target.value)}
-                disabled={syncLoading || addWalletLoading}
+                disabled={loading || addWalletLoading}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") handleAddWallet();
                 }}
@@ -237,14 +237,14 @@ export default function WalletsPage() {
               <Button
                 id="btn-simpan-dompet"
                 onClick={handleAddWallet}
-                disabled={syncLoading || addWalletLoading}
+                disabled={loading || addWalletLoading}
               >
                 {addWalletLoading ? "Menyimpan..." : "Simpan"}
               </Button>
               <Button
                 variant="outline"
                 onClick={() => setShowAddModal(false)}
-                disabled={syncLoading || addWalletLoading}
+                disabled={loading || addWalletLoading}
               >
                 Batal
               </Button>
@@ -264,15 +264,15 @@ export default function WalletsPage() {
               <Input
                 value={renameValue}
                 onChange={(event) => setRenameValue(event.target.value)}
-                disabled={syncLoading || renameLoading}
+                disabled={loading || renameLoading}
               />
               {renameError ? <p className="text-xs text-rose-400">{renameError}</p> : null}
             </div>
             <div className="flex flex-wrap items-center gap-2">
-              <Button onClick={handleRename} disabled={syncLoading || renameLoading}>
+              <Button onClick={handleRename} disabled={loading || renameLoading}>
                 {renameLoading ? "Menyimpan..." : "Simpan"}
               </Button>
-              <Button variant="outline" onClick={() => setRenameTarget(null)} disabled={syncLoading || renameLoading}>
+              <Button variant="outline" onClick={() => setRenameTarget(null)} disabled={loading || renameLoading}>
                 Batal
               </Button>
             </div>
@@ -297,7 +297,7 @@ export default function WalletsPage() {
                 placeholder="Tulis nama dompet"
                 value={deleteValue}
                 onChange={(event) => setDeleteValue(event.target.value)}
-                disabled={syncLoading || deleteLoading}
+                disabled={loading || deleteLoading}
               />
               {deleteError ? <p className="text-xs text-rose-400">{deleteError}</p> : null}
             </div>
@@ -306,7 +306,7 @@ export default function WalletsPage() {
                 variant="danger"
                 onClick={handleDelete}
                 disabled={
-                  syncLoading ||
+                  loading ||
                   deleteLoading ||
                   !deleteTarget ||
                   deleteTarget.isDefault ||
@@ -315,7 +315,7 @@ export default function WalletsPage() {
               >
                 {deleteLoading ? "Menghapus..." : "Hapus Permanen"}
               </Button>
-              <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={syncLoading || deleteLoading}>
+              <Button variant="outline" onClick={() => setDeleteTarget(null)} disabled={loading || deleteLoading}>
                 Batal
               </Button>
             </div>

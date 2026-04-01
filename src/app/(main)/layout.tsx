@@ -6,8 +6,6 @@ import BottomNav from "@/components/navigation/BottomNav";
 import Sidebar from "@/components/navigation/Sidebar";
 import MainHeader from "@/components/navigation/MainHeader";
 import { useUIStore } from "@/stores/uiStore";
-import { useAuthStore } from "@/stores/authStore";
-import { supabase } from "@/lib/supabase/client";
 
 const tabPaths = ["/beranda", "/transactions", "/dompet", "/statistik", "/lainnya"];
 
@@ -21,11 +19,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const activeTab = useUIStore((state) => state.activeTab);
   const setActiveTab = useUIStore((state) => state.setActiveTab);
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
-  const pushToast = useUIStore((state) => state.pushToast);
-  const authUser = useAuthStore((state) => state.user);
-  const authLoading = useAuthStore((state) => state.loading);
   const [cache, setCache] = useState<Record<string, ReactNode>>({});
-  const [anonAttempted, setAnonAttempted] = useState(false);
 
   const isTabPage = tabPaths.includes(pathname);
 
@@ -36,24 +30,6 @@ export default function MainLayout({ children }: { children: ReactNode }) {
       setCache((prev) => ({ ...prev, [pathname]: children }));
     }
   }, [children, isTabPage, pathname, setActiveTab]);
-
-  useEffect(() => {
-    if (authLoading) return;
-    if (authUser) return;
-    if (anonAttempted) return;
-
-    setAnonAttempted(true);
-
-    supabase.auth.signInAnonymously().then(({ error }) => {
-      if (error) {
-        pushToast({
-          title: "Gagal masuk anonim",
-          description: error.message,
-          variant: "error",
-        });
-      }
-    });
-  }, [anonAttempted, authLoading, authUser, pushToast]);
 
   const content = useMemo(() => {
     if (!isTabPage) return children;

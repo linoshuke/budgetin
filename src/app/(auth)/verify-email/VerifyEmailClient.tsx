@@ -4,7 +4,6 @@ import { useEffect, useMemo, useState } from "react";
 import { Mail } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Button from "@/components/ui/Button";
-import { supabase } from "@/lib/supabase/client";
 import { useUIStore } from "@/stores/uiStore";
 
 export default function VerifyEmailClient() {
@@ -17,8 +16,9 @@ export default function VerifyEmailClient() {
   useEffect(() => {
     let interval: ReturnType<typeof setInterval> | null = null;
     const check = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (data.user?.email_confirmed_at) {
+      const response = await fetch("/api/auth/session", { credentials: "include" });
+      const payload = (await response.json()) as { user: { email_confirmed_at?: string | null } | null };
+      if (payload.user?.email_confirmed_at) {
         router.replace("/beranda");
       }
     };
@@ -43,17 +43,31 @@ export default function VerifyEmailClient() {
 
   const handleResend = async () => {
     if (!email) return;
-    const { error } = await supabase.auth.resend({ type: "signup", email });
-    if (error) {
-      pushToast({ title: "Gagal kirim ulang", description: error.message, variant: "error" });
-      return;
+    try {
+      const response = await fetch("/api/auth/resend", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
+      }
+      pushToast({ title: "Email verifikasi dikirim", description: "Silakan cek kotak masuk Anda." });
+      setCooldown(60);
+    } catch (error) {
+      pushToast({
+        title: "Gagal kirim ulang",
+        description: error instanceof Error ? error.message : "Gagal mengirim ulang.",
+        variant: "error",
+      });
     }
-    pushToast({ title: "Email verifikasi dikirim", description: "Silakan cek kotak masuk Anda." });
-    setCooldown(60);
   };
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    window.dispatchEvent(new Event("auth:changed"));
     router.push("/login");
   };
 

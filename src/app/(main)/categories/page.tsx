@@ -10,7 +10,7 @@ export default function CategoriesPage() {
   const { isGuest } = useAuth();
   const categories = useBudgetStore((state) => state.categories);
   const transactions = useBudgetStore((state) => state.transactions);
-  const syncLoading = useBudgetStore((state) => state.syncLoading);
+  const loading = useBudgetStore((state) => state.loading);
 
   const [name, setName] = useState("");
   const [icon, setIcon] = useState("");
@@ -27,7 +27,7 @@ export default function CategoriesPage() {
 
   const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!name.trim() || syncLoading) return;
+    if (!name.trim() || loading) return;
 
     try {
       await budgetActions.addCategory({
@@ -76,7 +76,7 @@ export default function CategoriesPage() {
                 onChange={(event) => setName(event.target.value)}
                 placeholder="Contoh: Investasi"
                 className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
-                disabled={syncLoading}
+                disabled={loading}
                 required
               />
             </div>
@@ -89,7 +89,7 @@ export default function CategoriesPage() {
                 onChange={(event) => setIcon(event.target.value.toUpperCase().slice(0, 5))}
                 placeholder="Contoh: FUND"
                 className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
-                disabled={syncLoading}
+                disabled={loading}
               />
             </div>
             <div className="space-y-2">
@@ -100,7 +100,7 @@ export default function CategoriesPage() {
                 value={type}
                 onChange={(event) => setType(event.target.value as CategoryType)}
                 className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
-                disabled={syncLoading}
+                disabled={loading}
               >
                 <option value="expense">Pengeluaran</option>
                 <option value="income">Pemasukan</option>
@@ -116,15 +116,15 @@ export default function CategoriesPage() {
                 value={color}
                 onChange={(event) => setColor(event.target.value)}
                 className="h-12 w-full rounded-lg border border-outline-variant/20 bg-surface-container"
-                disabled={syncLoading}
+                disabled={loading}
               />
             </div>
             <button
               type="submit"
-              disabled={syncLoading}
+              disabled={loading}
               className="w-full rounded-lg bg-primary px-4 py-3 text-sm font-bold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-60"
             >
-              {syncLoading ? "Menyimpan..." : "Tambah Kategori"}
+              {loading ? "Menyimpan..." : "Tambah Kategori"}
             </button>
           </form>
         </section>

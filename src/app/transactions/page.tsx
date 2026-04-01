@@ -58,7 +58,7 @@ function resolveActivityStatus(transaction: Transaction): ActivityTab {
 export default function TransactionsPage() {
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
-  const syncLoading = useBudgetStore((state) => state.syncLoading);
+  const loading = useBudgetStore((state) => state.loading);
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const defaultPeriod = useAppSettingsStore((state) => state.defaultPeriod);
 
@@ -274,7 +274,7 @@ export default function TransactionsPage() {
     }
   };
 
-  const formDisabled = syncLoading || savingTransaction;
+  const formDisabled = loading || savingTransaction;
 
   return (
     <AuthGate>

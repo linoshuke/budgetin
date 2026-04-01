@@ -24,11 +24,21 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
     setLoading(true);
     setError("");
 
-    const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
-
     setLoading(false);
-    if (signInError) {
-      setError(signInError.message);
+    try {
+      const response = await fetch("/api/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, password }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
+      }
+      window.dispatchEvent(new Event("auth:changed"));
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Gagal login.");
     }
   };
 

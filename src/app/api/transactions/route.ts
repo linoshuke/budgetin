@@ -68,6 +68,56 @@ export async function POST(request: Request) {
     const raw = await request.json();
     const dto = CreateTransactionSchema.parse(raw);
     const transaction = await createTransaction(supabase, user.id, dto);
+
+    const delta = dto.type === "expense" ? -dto.amount : dto.amount;
+    const { data: wallet } = await supabase
+      .from("wallets")
+      .select("id, balance")
+      .eq("id", dto.walletId)
+      .eq("user_id", user.id)
+      .single();
+
+    if (wallet) {
+      const nextBalance = Number(wallet.balance ?? 0) + delta;
+      await supabase
+        .from("wallets")
+        .update({ balance: nextBalance })
+        .eq("id", wallet.id)
+        .eq("user_id", user.id);
+    }
+
+    const dateValue = new Date(dto.date);
+    const year = dateValue.getFullYear();
+    const month = dateValue.getMonth() + 1;
+    const { data: existing } = await supabase
+      .from("monthly_summary")
+      .select("id, total_income, total_expense")
+      .eq("user_id", user.id)
+      .eq("wallet_id", dto.walletId)
+      .eq("year", year)
+      .eq("month", month)
+      .maybeSingle();
+
+    if (existing) {
+      const total_income =
+        Number(existing.total_income ?? 0) + (dto.type === "income" ? dto.amount : 0);
+      const total_expense =
+        Number(existing.total_expense ?? 0) + (dto.type === "expense" ? dto.amount : 0);
+      await supabase
+        .from("monthly_summary")
+        .update({ total_income, total_expense })
+        .eq("id", existing.id);
+    } else {
+      await supabase.from("monthly_summary").insert({
+        user_id: user.id,
+        wallet_id: dto.walletId,
+        year,
+        month,
+        total_income: dto.type === "income" ? dto.amount : 0,
+        total_expense: dto.type === "expense" ? dto.amount : 0,
+      });
+    }
+
     return NextResponse.json(transaction, { status: 201 });
   } catch (error) {
     if (error instanceof Error && error.name === "ZodError") {

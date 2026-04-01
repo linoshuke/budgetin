@@ -7,7 +7,6 @@ import { KeyRound, MailCheck, ShieldCheck } from "lucide-react";
 import LoginForm from "./LoginForm";
 import ForgotPasswordForm from "./ForgotPasswordForm";
 import ResetPasswordForm from "./ResetPasswordForm";
-import { supabase } from "@/lib/supabase/client";
 
 type Mode = "login" | "forgot" | "reset";
 
@@ -45,10 +44,11 @@ export default function LoginClient() {
     let active = true;
 
     const checkSession = async () => {
-      const { data } = await supabase.auth.getSession();
+      const response = await fetch("/api/auth/session", { credentials: "include" });
+      const data = (await response.json()) as { user: { is_anonymous?: boolean } | null };
       if (!active) return;
-      const isAnonymous = Boolean(data.session?.user?.is_anonymous);
-      if (data.session && !isAnonymous && modeParam !== "reset") {
+      const isAnonymous = Boolean(data.user?.is_anonymous);
+      if (data.user && !isAnonymous && modeParam !== "reset") {
         router.replace(nextPath as Route);
       }
     };

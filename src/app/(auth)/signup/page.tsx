@@ -40,23 +40,31 @@ export default function SignupPage() {
   } = useForm<FormValues>({ resolver: zodResolver(schema) });
 
   const onSubmit = async (values: FormValues) => {
-    const { data, error } = await supabase.auth.signUp({
-      email: values.email,
-      password: values.password,
-      options: {
-        data: {
+    const response = await fetch("/api/auth/register", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      credentials: "include",
+      body: JSON.stringify({
+        email: values.email,
+        password: values.password,
+        metadata: {
           username: values.username,
           display_name: values.username,
         },
-      },
+      }),
     });
 
-    if (error) {
-      pushToast({ title: "Gagal daftar", description: error.message, variant: "error" });
+    if (!response.ok) {
+      const payload = await response.json().catch(() => ({}));
+      pushToast({
+        title: "Gagal daftar",
+        description: (payload as { error?: string }).error ?? `HTTP ${response.status}`,
+        variant: "error",
+      });
       return;
     }
 
-    const email = data.user?.email ?? values.email;
+    const email = values.email;
     router.push(`/verify-email?email=${encodeURIComponent(email)}`);
   };
 

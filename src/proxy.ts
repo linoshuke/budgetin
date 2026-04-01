@@ -17,9 +17,10 @@ export async function proxy(request: NextRequest) {
                         request.cookies.set(name, value),
                     );
                     supabaseResponse = NextResponse.next({ request });
-                    cookiesToSet.forEach(({ name, value, options }) =>
-                        supabaseResponse.cookies.set(name, value, options),
-                    );
+                    cookiesToSet.forEach(({ name, value, options }) => {
+                        const nextOptions = { ...(options ?? {}), httpOnly: true };
+                        supabaseResponse.cookies.set(name, value, nextOptions);
+                    });
                 },
             },
         },

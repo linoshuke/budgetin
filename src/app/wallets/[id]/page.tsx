@@ -31,7 +31,7 @@ export default function WalletDetailPage() {
   const wallets = useBudgetStore((state) => state.wallets);
   const transactions = useBudgetStore((state) => state.transactions);
   const categories = useBudgetStore((state) => state.categories);
-  const syncLoading = useBudgetStore((state) => state.syncLoading);
+  const loading = useBudgetStore((state) => state.loading);
 
   const wallet = wallets.find((item) => item.id === walletId);
   const [period, setPeriod] = useState<PeriodMode>("daily");
@@ -226,7 +226,7 @@ export default function WalletDetailPage() {
                 onSubmit={handleSubmitTransaction}
                 onCreateWallet={(payload) => budgetActions.addWallet(payload)}
                 submitLabel="Simpan Transaksi"
-                disabled={syncLoading || savingTransaction}
+                disabled={loading || savingTransaction}
               />
             </div>
           </aside>
@@ -257,7 +257,7 @@ export default function WalletDetailPage() {
             onCreateWallet={(payload) => budgetActions.addWallet(payload)}
             submitLabel="Simpan Transaksi"
             onCancel={() => setShowAddModal(false)}
-            disabled={syncLoading || savingTransaction}
+            disabled={loading || savingTransaction}
           />
         </Modal>
       </div>

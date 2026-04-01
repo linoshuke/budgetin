@@ -2,7 +2,6 @@
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase/client";
 import { FormEvent, useState } from "react";
 
 interface ForgotPasswordFormProps {
@@ -23,15 +22,23 @@ export default function ForgotPasswordForm({ nextPath, onBack }: ForgotPasswordF
     setNotice("");
 
     const redirectTo = `${window.location.origin}/login?mode=reset${nextPath && nextPath !== "/" ? `&next=${encodeURIComponent(nextPath)}` : ""}`;
-    const { error: resetError } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
-
     setLoading(false);
-    if (resetError) {
-      setError(resetError.message);
-      return;
-    }
+    try {
+      const response = await fetch("/api/auth/password-reset", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email, redirectTo }),
+      });
+      if (!response.ok) {
+        const payload = await response.json().catch(() => ({}));
+        throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
+      }
 
-    setNotice("Email reset password sudah dikirim. Cek inbox/spam Anda.");
+      setNotice("Email reset password sudah dikirim. Cek inbox/spam Anda.");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Gagal mengirim email reset.");
+    }
   };
 
   return (
