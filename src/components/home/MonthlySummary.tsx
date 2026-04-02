@@ -42,6 +42,8 @@ export default function MonthlySummary() {
   const expenseTone = expenseDelta >= 0 ? "error" : "primary";
   const incomeLabel = `${incomeDelta >= 0 ? "+" : ""}${incomeDelta.toFixed(1)}% vs bulan lalu`;
   const expenseLabel = `${expenseDelta >= 0 ? "+" : ""}${expenseDelta.toFixed(1)}% vs bulan lalu`;
+  const incomeIcon = incomeDelta >= 0 ? "arrow_upward" : "arrow_downward";
+  const expenseIcon = expenseDelta >= 0 ? "arrow_upward" : "arrow_downward";
 
   return (
     <div className="space-y-6">
@@ -50,9 +52,9 @@ export default function MonthlySummary() {
           <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${incomeTone === "primary" ? "bg-primary/10" : "bg-error/10"}`}>
             <span
               className={`material-symbols-outlined ${incomeTone === "primary" ? "text-primary" : "text-error"}`}
-              data-icon={incomeTone === "primary" ? "arrow_downward" : "arrow_downward"}
+              data-icon={incomeIcon}
             >
-              arrow_downward
+              {incomeIcon}
             </span>
           </div>
           <span
@@ -73,9 +75,9 @@ export default function MonthlySummary() {
           <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${expenseTone === "error" ? "bg-error/10" : "bg-primary/10"}`}>
             <span
               className={`material-symbols-outlined ${expenseTone === "error" ? "text-error" : "text-primary"}`}
-              data-icon="arrow_upward"
+              data-icon={expenseIcon}
             >
-              arrow_upward
+              {expenseIcon}
             </span>
           </div>
           <span

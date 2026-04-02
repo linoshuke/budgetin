@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { handleServiceError } from "@/lib/service-error";
+import { assertRegisteredUser } from "@/lib/anonymous";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -9,6 +10,7 @@ type RouteContext = {
 export async function PATCH(request: Request, context: RouteContext) {
   try {
     const { user, supabase } = await getAuthUser();
+    assertRegisteredUser(user, "Fitur goals hanya tersedia untuk akun terdaftar.");
     const { id } = await context.params;
     const raw = (await request.json().catch(() => ({}))) as {
       name?: string;
@@ -43,6 +45,7 @@ export async function PATCH(request: Request, context: RouteContext) {
 export async function DELETE(_request: Request, context: RouteContext) {
   try {
     const { user, supabase } = await getAuthUser();
+    assertRegisteredUser(user, "Fitur goals hanya tersedia untuk akun terdaftar.");
     const { id } = await context.params;
 
     const { error } = await supabase

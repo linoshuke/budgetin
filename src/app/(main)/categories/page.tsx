@@ -7,7 +7,7 @@ import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import type { CategoryType } from "@/types/category";
 
 export default function CategoriesPage() {
-  const { isGuest } = useAuth();
+  const { isAnonymous } = useAuth();
   const categories = useBudgetStore((state) => state.categories);
   const transactions = useBudgetStore((state) => state.transactions);
   const loading = useBudgetStore((state) => state.loading);
@@ -46,10 +46,10 @@ export default function CategoriesPage() {
     }
   };
 
-  if (isGuest) {
+  if (isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <LockWidget message="Masuk untuk mengelola kategori." />
+        <LockWidget message="Fitur kategori tersedia setelah Anda login." />
       </div>
     );
   }

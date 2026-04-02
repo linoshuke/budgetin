@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { handleServiceError } from "@/lib/service-error";
+import { assertRegisteredUser } from "@/lib/anonymous";
 
 export async function GET(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
+    assertRegisteredUser(user, "Fitur budget hanya tersedia untuk akun terdaftar.");
     const { searchParams } = new URL(request.url);
     const monthKey = searchParams.get("monthKey");
     const history = searchParams.get("history") === "1";
@@ -34,6 +36,7 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
+    assertRegisteredUser(user, "Fitur budget hanya tersedia untuk akun terdaftar.");
     const raw = (await request.json().catch(() => ({}))) as {
       entries?: Array<{ categoryId: string; monthKey: string; targetAmount: number }>;
       categoryId?: string;
@@ -80,6 +83,7 @@ export async function POST(request: Request) {
 export async function DELETE(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
+    assertRegisteredUser(user, "Fitur budget hanya tersedia untuk akun terdaftar.");
     const { searchParams } = new URL(request.url);
     const monthKey = searchParams.get("monthKey");
 

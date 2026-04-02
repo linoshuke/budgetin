@@ -17,7 +17,7 @@ import { getMonthLabel } from "@/utils/date";
 export default function WalletDetailPage() {
   const params = useParams();
   const walletId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
-  const { wallets, isGuest } = useWallets();
+  const { wallets, isAnonymous } = useWallets();
   const { query } = useTransactions({ walletId });
   const transactions = useTransactionStore((state) => state.transactions);
   const dateRange = useTransactionStore((state) => state.dateRange);
@@ -48,10 +48,10 @@ export default function WalletDetailPage() {
     currentMonth.year > now.getFullYear() ||
     (currentMonth.year === now.getFullYear() && currentMonth.month >= now.getMonth() + 1);
 
-  if (isGuest) {
+  if (isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <LockWidget message="Masuk untuk melihat transaksi dompet." />
+        <LockWidget message="Detail dompet tersedia setelah Anda login." />
       </div>
     );
   }
@@ -120,7 +120,7 @@ export default function WalletDetailPage() {
         Transaksi
       </button>
 
-      <AddTransactionDialog walletId={wallet.id} walletBalance={wallet.balance} />
+      <AddTransactionDialog walletId={wallet.id} />
     </div>
   );
 }

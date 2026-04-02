@@ -3,6 +3,7 @@ import type { Category } from "@/types/category";
 import type { UserProfile } from "@/types/profile";
 import type { Transaction } from "@/types/transaction";
 import type { Wallet } from "@/types/wallet";
+import { dispatchTransactionsChanged } from "@/lib/transaction-events";
 
 export interface BudgetState {
   transactions: Transaction[];
@@ -100,10 +101,19 @@ export const budgetActions = {
       body: JSON.stringify(payload),
     });
 
+    const delta = created.type === "expense" ? -created.amount : created.amount;
     setState((c) => ({
       ...c,
       transactions: [created, ...c.transactions].slice(0, DASHBOARD_TRANSACTION_LIMIT),
+      wallets: c.wallets.map((wallet) =>
+        wallet.id === created.walletId
+          ? { ...wallet, balance: Number(wallet.balance ?? 0) + delta }
+          : wallet,
+      ),
     }));
+
+    dispatchTransactionsChanged();
+    return created;
   },
 
   async updateTransaction(id: string, payload: Omit<Transaction, "id">) {
@@ -112,19 +122,58 @@ export const budgetActions = {
       body: JSON.stringify(payload),
     });
 
-    setState((c) => ({
-      ...c,
-      transactions: c.transactions.map((item) => (item.id === id ? updated : item)),
-    }));
+    setState((c) => {
+      const previous = c.transactions.find((item) => item.id === id);
+      let wallets = c.wallets;
+      if (previous) {
+        const prevDelta = previous.type === "expense" ? -previous.amount : previous.amount;
+        wallets = wallets.map((wallet) =>
+          wallet.id === previous.walletId
+            ? { ...wallet, balance: Number(wallet.balance ?? 0) - prevDelta }
+            : wallet,
+        );
+      }
+      const nextDelta = updated.type === "expense" ? -updated.amount : updated.amount;
+      wallets = wallets.map((wallet) =>
+        wallet.id === updated.walletId
+          ? { ...wallet, balance: Number(wallet.balance ?? 0) + nextDelta }
+          : wallet,
+      );
+
+      return {
+        ...c,
+        transactions: c.transactions.map((item) => (item.id === id ? updated : item)),
+        wallets,
+      };
+    });
+
+    dispatchTransactionsChanged();
+    return updated;
   },
 
   async deleteTransaction(id: string) {
     await apiFetch(`/api/transactions/${id}`, { method: "DELETE" });
 
-    setState((c) => ({
-      ...c,
-      transactions: c.transactions.filter((item) => item.id !== id),
-    }));
+    setState((c) => {
+      const previous = c.transactions.find((item) => item.id === id);
+      let wallets = c.wallets;
+      if (previous) {
+        const prevDelta = previous.type === "expense" ? -previous.amount : previous.amount;
+        wallets = wallets.map((wallet) =>
+          wallet.id === previous.walletId
+            ? { ...wallet, balance: Number(wallet.balance ?? 0) - prevDelta }
+            : wallet,
+        );
+      }
+
+      return {
+        ...c,
+        transactions: c.transactions.filter((item) => item.id !== id),
+        wallets,
+      };
+    });
+
+    dispatchTransactionsChanged();
   },
 
   async addCategory(payload: Omit<Category, "id" | "isDefault">) {

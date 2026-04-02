@@ -12,7 +12,6 @@ import {
   type DefaultPeriod,
   type DefaultTransactionType,
 } from "@/stores/appSettingsStore";
-import { readGuestSnapshot, writeGuestSnapshot, type GuestSnapshot } from "@/lib/guest-storage";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { formatCompactCurrency } from "@/utils/format";
 
@@ -102,7 +101,6 @@ export default function SettingsPage() {
   const handleExport = () => {
     const payload = {
       settings: getSerializableAppSettings(),
-      guestSnapshot: readGuestSnapshot(),
       exportedAt: new Date().toISOString(),
     };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
@@ -121,12 +119,9 @@ export default function SettingsPage() {
     if (!file) return;
     try {
       const raw = await file.text();
-      const parsed = JSON.parse(raw) as { settings?: Record<string, unknown>; guestSnapshot?: unknown };
+      const parsed = JSON.parse(raw) as { settings?: Record<string, unknown> };
       if (parsed.settings && typeof parsed.settings === "object") {
         importSettings(parsed.settings);
-      }
-      if (parsed.guestSnapshot) {
-        writeGuestSnapshot(parsed.guestSnapshot as GuestSnapshot);
       }
     } catch (error) {
       console.warn("Gagal mengimpor data pengaturan:", error);
@@ -401,7 +396,7 @@ export default function SettingsPage() {
 
       <section className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6">
         <h2 className="font-headline text-lg font-bold text-on-surface">Cadangan Lokal</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Ekspor atau impor pengaturan serta data lokal.</p>
+        <p className="mt-1 text-sm text-on-surface-variant">Ekspor atau impor pengaturan aplikasi.</p>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <button

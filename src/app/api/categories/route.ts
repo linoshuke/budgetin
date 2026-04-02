@@ -3,6 +3,7 @@ import { handleServiceError } from "@/lib/service-error";
 import { getAuthUser } from "@/lib/auth";
 import { getAllCategories, createCategory } from "@/app/api/services/category.service";
 import { CreateCategorySchema } from "@/lib/validators";
+import { assertRegisteredUser } from "@/lib/anonymous";
 
 export async function GET() {
     try {
@@ -18,6 +19,7 @@ export async function GET() {
 export async function POST(request: Request) {
     try {
         const { user, supabase } = await getAuthUser();
+        assertRegisteredUser(user, "Fitur kategori hanya tersedia untuk akun terdaftar.");
         const raw = await request.json();
         const dto = CreateCategorySchema.parse(raw);
         const category = await createCategory(supabase, user.id, dto);

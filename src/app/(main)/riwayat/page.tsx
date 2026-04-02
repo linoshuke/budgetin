@@ -11,7 +11,7 @@ import { useTransactionStore } from "@/stores/transactionStore";
 import { useUIStore } from "@/stores/uiStore";
 
 export default function HistoryPage() {
-  const { isGuest } = useAuth();
+  const { isAnonymous } = useAuth();
   const { query } = useTransactions();
   const transactions = useTransactionStore((state) => state.transactions);
   const pushToast = useUIStore((state) => state.pushToast);
@@ -26,10 +26,10 @@ export default function HistoryPage() {
     }
   }, [query.error, pushToast]);
 
-  if (isGuest) {
+  if (isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <LockWidget message="Masuk untuk melihat riwayat lengkap." />
+        <LockWidget message="Riwayat lengkap tersedia setelah Anda login." />
       </div>
     );
   }

@@ -16,6 +16,7 @@ import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { calculateTotals } from "@/lib/budget";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Transaction } from "@/types/transaction";
+import { TRANSACTIONS_CHANGED_EVENT } from "@/lib/transaction-events";
 
 const pageSize = 50;
 
@@ -148,13 +149,17 @@ export default function TransactionsPage() {
     [buildDateRange, selectedCategoryIds, walletFilter.selectedWalletIds],
   );
 
-  useEffect(() => {
+  const refreshTransactions = useCallback(() => {
     setTransactions([]);
     setPageOffset(0);
     setHasMore(true);
     void fetchPage(0, true);
+  }, [fetchPage]);
+
+  useEffect(() => {
+    refreshTransactions();
   }, [
-    fetchPage,
+    refreshTransactions,
     filter.period,
     filter.selectedMonth,
     filter.fromDate,
@@ -162,6 +167,12 @@ export default function TransactionsPage() {
     walletFilter.selectedWalletIds.join("|"),
     selectedCategoryIds.join("|"),
   ]);
+
+  useEffect(() => {
+    const handleChanged = () => refreshTransactions();
+    window.addEventListener(TRANSACTIONS_CHANGED_EVENT, handleChanged);
+    return () => window.removeEventListener(TRANSACTIONS_CHANGED_EVENT, handleChanged);
+  }, [refreshTransactions]);
 
   const categoryMap = useMemo(
     () => new Map(categories.map((item) => [item.id, item])),

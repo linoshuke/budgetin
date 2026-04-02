@@ -8,6 +8,8 @@ import type { MonthlySummary } from "@/types";
 
 const MIN_Y = 6;
 const MAX_Y = 34;
+const MID_Y = (MIN_Y + MAX_Y) / 2;
+const HALF_RANGE = (MAX_Y - MIN_Y) / 2;
 
 function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -27,24 +29,30 @@ function buildMonths(count: number) {
 
 function buildLinePath(values: number[], maxValue: number) {
   if (!values.length) return "";
-  const range = MAX_Y - MIN_Y;
   const denom = maxValue || 1;
   const step = values.length > 1 ? 100 / (values.length - 1) : 0;
   return values
     .map((value, index) => {
       const x = step * index;
-      const y = MAX_Y - (Math.max(value, 0) / denom) * range;
+      const y = MID_Y - (value / denom) * HALF_RANGE;
       return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
     })
     .join(" ");
 }
 
-function buildAreaPath(values: number[], maxValue: number) {
+function buildAreaPath(values: number[], maxValue: number, baselineY: number = MID_Y) {
   if (!values.length) return "";
   const step = values.length > 1 ? 100 / (values.length - 1) : 0;
   const lastX = step * (values.length - 1);
   const linePath = buildLinePath(values, maxValue);
-  return `${linePath} L${lastX.toFixed(2)},40 L0,40 Z`;
+  return `${linePath} L${lastX.toFixed(2)},${baselineY.toFixed(2)} L0,${baselineY.toFixed(2)} Z`;
+}
+
+function calculateChange(current: number, previous: number) {
+  if (previous === 0) {
+    return current === 0 ? 0 : 100;
+  }
+  return ((current - previous) / Math.abs(previous)) * 100;
 }
 
 export default function CashFlowChartCard() {
@@ -54,7 +62,7 @@ export default function CashFlowChartCard() {
   const monthCount = range === "1y" ? 12 : 6;
 
   const { data: summaryRows = [] } = useQuery({
-    queryKey: ["monthly-summary-series", user?.id ?? "guest", selectedWalletIds.join("-")],
+    queryKey: ["monthly-summary-series", user?.id ?? "anon", selectedWalletIds.join("-")],
     enabled: Boolean(user),
     queryFn: async () => {
       if (!user) return [];
@@ -71,7 +79,7 @@ export default function CashFlowChartCard() {
     },
   });
 
-  const { months, incomeSeries, expenseSeries, maxValue } = useMemo(() => {
+  const { months, incomeSeries, expenseSeries, maxValue, trend } = useMemo(() => {
     const months = buildMonths(monthCount);
     const totals = new Map<string, { income: number; expense: number }>();
 
@@ -84,14 +92,38 @@ export default function CashFlowChartCard() {
     });
 
     const incomeSeries = months.map((month) => totals.get(month.key)?.income ?? 0);
-    const expenseSeries = months.map((month) => totals.get(month.key)?.expense ?? 0);
-    const maxValue = Math.max(1, ...incomeSeries, ...expenseSeries);
+    const expenseSeries = months.map((month) => -((totals.get(month.key)?.expense ?? 0)));
+    const maxValue = Math.max(
+      1,
+      ...incomeSeries.map((value) => Math.abs(value)),
+      ...expenseSeries.map((value) => Math.abs(value)),
+    );
 
-    return { months, incomeSeries, expenseSeries, maxValue };
+    const last = months[months.length - 1];
+    const previous = months[months.length - 2];
+    const currentTotals = last ? totals.get(last.key) ?? { income: 0, expense: 0 } : { income: 0, expense: 0 };
+    const prevTotals = previous ? totals.get(previous.key) ?? { income: 0, expense: 0 } : { income: 0, expense: 0 };
+    const incomeDelta = calculateChange(currentTotals.income, prevTotals.income);
+    const expenseDelta = calculateChange(currentTotals.expense, prevTotals.expense);
+
+    const trend = {
+      income: {
+        percent: incomeDelta,
+        label: `${incomeDelta >= 0 ? "Naik" : "Turun"} ${Math.abs(incomeDelta).toFixed(1)}%`,
+        tone: incomeDelta >= 0 ? "primary" : "error",
+      },
+      expense: {
+        percent: expenseDelta,
+        label: `${expenseDelta >= 0 ? "Naik" : "Turun"} ${Math.abs(expenseDelta).toFixed(1)}%`,
+        tone: expenseDelta >= 0 ? "error" : "primary",
+      },
+    };
+
+    return { months, incomeSeries, expenseSeries, maxValue, trend };
   }, [monthCount, summaryRows]);
 
   const incomePath = useMemo(() => buildLinePath(incomeSeries, maxValue), [incomeSeries, maxValue]);
-  const incomeArea = useMemo(() => buildAreaPath(incomeSeries, maxValue), [incomeSeries, maxValue]);
+  const incomeArea = useMemo(() => buildAreaPath(incomeSeries, maxValue, MID_Y), [incomeSeries, maxValue]);
   const expensePath = useMemo(() => buildLinePath(expenseSeries, maxValue), [expenseSeries, maxValue]);
 
   return (
@@ -99,7 +131,37 @@ export default function CashFlowChartCard() {
       <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h3 className="font-headline text-lg font-bold">Monthly Cash Flow</h3>
-          <p className="text-xs text-on-surface-variant">Comparative analysis of inflow and outflow</p>
+          <p className="text-xs text-on-surface-variant">Pemasukan di atas garis tengah, pengeluaran di bawah.</p>
+          <div className="mt-2 flex items-center gap-4 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#7cebff]" />
+              Pemasukan
+            </span>
+            <span className="flex items-center gap-2">
+              <span className="h-2 w-2 rounded-full bg-[#adc6ff]" />
+              Pengeluaran
+            </span>
+          </div>
+          <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
+            <span
+              className={`rounded-full px-2 py-1 ${
+                trend.income.tone === "primary"
+                  ? "bg-primary/10 text-primary"
+                  : "bg-error/10 text-error"
+              }`}
+            >
+              Pemasukan {trend.income.label} vs bulan lalu
+            </span>
+            <span
+              className={`rounded-full px-2 py-1 ${
+                trend.expense.tone === "error"
+                  ? "bg-error/10 text-error"
+                  : "bg-primary/10 text-primary"
+              }`}
+            >
+              Pengeluaran {trend.expense.label} vs bulan lalu
+            </span>
+          </div>
         </div>
         <div className="flex space-x-2">
           <button
@@ -132,6 +194,7 @@ export default function CashFlowChartCard() {
           <line className="text-outline-variant/30" stroke="currentColor" strokeWidth="0.1" x1="0" x2="100" y1="10" y2="10" />
           <line className="text-outline-variant/30" stroke="currentColor" strokeWidth="0.1" x1="0" x2="100" y1="20" y2="20" />
           <line className="text-outline-variant/30" stroke="currentColor" strokeWidth="0.1" x1="0" x2="100" y1="30" y2="30" />
+          <line className="text-outline-variant/40" stroke="currentColor" strokeWidth="0.2" x1="0" x2="100" y1={MID_Y} y2={MID_Y} />
           {incomeArea ? <path d={incomeArea} fill="url(#chart-glow)" opacity="0.15" /> : null}
           {incomePath ? (
             <path

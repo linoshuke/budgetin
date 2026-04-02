@@ -9,6 +9,7 @@ import { useAuthStore } from "@/stores/authStore";
 import type { User } from "@supabase/supabase-js";
 import AppSettingsSync from "@/components/shared/AppSettingsSync";
 import DataLoader from "@/components/shared/DataLoader";
+import TransactionsQuerySync from "@/components/shared/TransactionsQuerySync";
 
 function AnimatedSwitcher({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -132,6 +133,7 @@ export default function Providers({ children }: { children: ReactNode }) {
     <QueryClientProvider client={queryClient}>
       <SupabaseProvider>
         <DataLoader />
+        <TransactionsQuerySync />
         <AuthGate>{content}</AuthGate>
       </SupabaseProvider>
       <AppSettingsSync />

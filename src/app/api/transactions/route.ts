@@ -3,6 +3,7 @@ import { handleServiceError } from "@/lib/service-error";
 import { getAuthUser } from "@/lib/auth";
 import { createTransaction, getTransactionsByFilter } from "@/app/api/transactions/service/transaction.service";
 import { CreateTransactionSchema } from "@/lib/validators";
+import { ANON_LIMITS, enforceAnonCountLimit } from "@/lib/anonymous";
 
 function parseList(value: string | null) {
   if (!value) return [];
@@ -65,6 +66,13 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
+    await enforceAnonCountLimit({
+      supabase,
+      user,
+      table: "transactions",
+      limit: ANON_LIMITS.transactions,
+      message: `Akun anonim dibatasi hingga ${ANON_LIMITS.transactions} transaksi. Masuk untuk menyimpan tanpa batas.`,
+    });
     const raw = await request.json();
     const dto = CreateTransactionSchema.parse(raw);
     const transaction = await createTransaction(supabase, user.id, dto);

@@ -13,7 +13,7 @@ interface TransactionQueryOptions {
 }
 
 export function useTransactions(options: TransactionQueryOptions = {}) {
-  const { user, isGuest } = useAuth();
+  const { user, isAnonymous } = useAuth();
   const queryClient = useQueryClient();
   const { dateRange, currentMonth, setTransactions } = useTransactionStore();
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
@@ -30,7 +30,7 @@ export function useTransactions(options: TransactionQueryOptions = {}) {
       range,
       month.year,
       month.month,
-      user?.id ?? "guest",
+      user?.id ?? "anon",
     ],
     queryFn: async () => {
       const { start, end } = getMonthRange(month.year, month.month);
@@ -92,7 +92,7 @@ export function useTransactions(options: TransactionQueryOptions = {}) {
     dateRange: range,
     currentMonth: month,
     walletIds,
-    isGuest,
+    isAnonymous,
   };
 }
 
@@ -105,7 +105,7 @@ export function useMonthlySummary(
   const activeMonth = monthOverride ?? currentMonth;
 
   return useQuery({
-    queryKey: ["monthlySummary", user?.id ?? "guest", activeMonth.year, activeMonth.month, walletIds.join("-")],
+    queryKey: ["monthlySummary", user?.id ?? "anon", activeMonth.year, activeMonth.month, walletIds.join("-")],
     queryFn: async () => {
       if (!user) return { total_income: 0, total_expense: 0 };
 
@@ -136,7 +136,7 @@ export function useExpenseByCategory(walletIds: string[] = []) {
   const { start, end } = getMonthRange(currentMonth.year, currentMonth.month);
 
   return useQuery({
-    queryKey: ["expenseByCategory", user?.id ?? "guest", currentMonth.year, currentMonth.month, walletIds.join("-")],
+    queryKey: ["expenseByCategory", user?.id ?? "anon", currentMonth.year, currentMonth.month, walletIds.join("-")],
     queryFn: async () => {
       if (!user) return [];
 

@@ -1,10 +1,12 @@
 import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { handleServiceError } from "@/lib/service-error";
+import { assertRegisteredUser } from "@/lib/anonymous";
 
 export async function GET() {
   try {
     const { user, supabase } = await getAuthUser();
+    assertRegisteredUser(user, "Fitur goals hanya tersedia untuk akun terdaftar.");
     const { data, error } = await supabase
       .from("goals")
       .select("id, user_id, name, target_amount, current_amount, target_date, created_at")
@@ -21,6 +23,7 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
+    assertRegisteredUser(user, "Fitur goals hanya tersedia untuk akun terdaftar.");
     const raw = (await request.json().catch(() => ({}))) as {
       name?: string;
       targetAmount?: number;

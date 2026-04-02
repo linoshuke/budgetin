@@ -11,7 +11,7 @@ import type { CategoryBudget } from "@/types";
 import type { Category } from "@/types/category";
 
 export default function BudgetTargetsHistoryPage() {
-  const { user, isGuest, loading: authLoading } = useAuth();
+  const { user, isAnonymous, loading: authLoading } = useAuth();
   const [yearFilter, setYearFilter] = useState("all");
   const [monthFilter, setMonthFilter] = useState("all");
 
@@ -19,7 +19,7 @@ export default function BudgetTargetsHistoryPage() {
   const categoriesLoading = useBudgetStore((state) => state.loading);
 
   const { data: budgetsData = [], isLoading: budgetsLoading } = useQuery({
-    queryKey: ["category-budgets", user?.id ?? "guest", "history"],
+    queryKey: ["category-budgets", user?.id ?? "anon", "history"],
     enabled: Boolean(user),
     queryFn: async () => {
       if (!user) return [];
@@ -104,10 +104,10 @@ export default function BudgetTargetsHistoryPage() {
     );
   }
 
-  if (isGuest) {
+  if (isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <LockWidget message="Masuk untuk melihat histori target." />
+        <LockWidget message="Histori target tersedia setelah Anda login." />
       </div>
     );
   }

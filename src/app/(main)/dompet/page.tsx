@@ -364,7 +364,7 @@ function buildSuggestion(rows: BudgetRow[], goals: GoalRow[], avgSavings: number
 }
 
 export default function BudgetsPage() {
-  const { user, isGuest, loading: authLoading } = useAuth();
+  const { user, isAnonymous, loading: authLoading } = useAuth();
   const { currentMonth } = useTransactionStore();
   const queryClient = useQueryClient();
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -402,7 +402,7 @@ export default function BudgetsPage() {
   );
 
   const { data: budgetsData = [], isLoading: budgetsLoading } = useQuery({
-    queryKey: ["category-budgets", user?.id ?? "guest", currentKey],
+    queryKey: ["category-budgets", user?.id ?? "anon", currentKey],
     enabled: Boolean(user),
     queryFn: async () => {
       if (!user) return [];
@@ -417,7 +417,7 @@ export default function BudgetsPage() {
   });
 
   const { data: goalsData = [], isLoading: goalsLoading } = useQuery({
-    queryKey: ["goals", user?.id ?? "guest"],
+    queryKey: ["goals", user?.id ?? "anon"],
     enabled: Boolean(user),
     queryFn: async () => {
       if (!user) return [];
@@ -434,7 +434,7 @@ export default function BudgetsPage() {
   const budgetLoading = useBudgetStore((state) => state.loading);
 
   const { data: transactionsData = [], isLoading: transactionsLoading } = useQuery({
-    queryKey: ["transactions", "budget", user?.id ?? "guest", start, end],
+    queryKey: ["transactions", "budget", user?.id ?? "anon", start, end],
     enabled: Boolean(user),
     queryFn: async () => {
       if (!user) return [];
@@ -927,10 +927,10 @@ export default function BudgetsPage() {
     );
   }
 
-  if (isGuest) {
+  if (isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <LockWidget message="Masuk untuk melihat anggaran." />
+        <LockWidget message="Anggaran & goals tersedia setelah Anda login." />
       </div>
     );
   }

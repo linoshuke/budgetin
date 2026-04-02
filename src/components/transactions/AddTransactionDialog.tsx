@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,24 +8,27 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/u
 import Input from "@/components/ui/Input";
 import Button from "@/components/ui/Button";
 import { useUIStore } from "@/stores/uiStore";
+import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 
 const schema = z.object({
   description: z.string().min(1, "Deskripsi wajib diisi"),
   amount: z.coerce.number().positive("Nominal harus lebih dari 0"),
   type: z.enum(["income", "expense"]),
+  categoryId: z.string().min(1, "Kategori wajib dipilih"),
 });
 
 type FormValues = z.infer<typeof schema>;
 
 interface AddTransactionDialogProps {
   walletId: string;
-  walletBalance: number;
 }
 
-export default function AddTransactionDialog({ walletId, walletBalance }: AddTransactionDialogProps) {
+export default function AddTransactionDialog({ walletId }: AddTransactionDialogProps) {
   const open = useUIStore((state) => state.modals.addTransaction);
   const closeModal = useUIStore((state) => state.closeModal);
   const pushToast = useUIStore((state) => state.pushToast);
+  const categories = useBudgetStore((state) => state.categories);
+  const loading = useBudgetStore((state) => state.loading);
 
   const {
     register,
@@ -35,33 +39,37 @@ export default function AddTransactionDialog({ walletId, walletBalance }: AddTra
     formState: { errors, isSubmitting },
   } = useForm<FormValues>({
     resolver: zodResolver(schema),
-    defaultValues: { type: "expense" },
+    defaultValues: { type: "expense", categoryId: "" },
   });
 
   const typeValue = watch("type");
+  const categoryValue = watch("categoryId");
+  const categoryRegister = register("categoryId");
+
+  const filteredCategories = useMemo(
+    () => categories.filter((item) => item.type === "both" || item.type === typeValue),
+    [categories, typeValue],
+  );
+
+  useEffect(() => {
+    if (!filteredCategories.length) return;
+    const exists = filteredCategories.some((item) => item.id === categoryValue);
+    if (!exists) {
+      setValue("categoryId", filteredCategories[0].id);
+    }
+  }, [categoryValue, filteredCategories, setValue]);
 
   const onSubmit = async (values: FormValues) => {
     try {
       const date = new Date();
-
-      const response = await fetch("/api/transactions", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
-        body: JSON.stringify({
-          walletId,
-          categoryId: null,
-          type: values.type,
-          amount: values.amount,
-          note: values.description,
-          date: date.toISOString().slice(0, 10),
-        }),
+      await budgetActions.addTransaction({
+        walletId,
+        categoryId: values.categoryId,
+        type: values.type,
+        amount: values.amount,
+        note: values.description,
+        date: date.toISOString().slice(0, 10),
       });
-
-      if (!response.ok) {
-        const payload = await response.json().catch(() => ({}));
-        throw new Error((payload as { error?: string }).error ?? `HTTP ${response.status}`);
-      }
 
       pushToast({ title: "Transaksi tersimpan", variant: "success" });
       reset();
@@ -110,6 +118,32 @@ export default function AddTransactionDialog({ walletId, walletBalance }: AddTra
             >
               Pemasukan
             </Button>
+          </div>
+          <div>
+            <label className="text-xs text-[var(--text-dimmed)]">Kategori</label>
+            <select
+              {...categoryRegister}
+              value={categoryValue}
+              onChange={(event) => {
+                categoryRegister.onChange(event);
+                setValue("categoryId", event.target.value);
+              }}
+              className="mt-1 w-full rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-2 text-sm text-[var(--text-primary)]"
+              disabled={isSubmitting || loading || filteredCategories.length === 0}
+              required
+            >
+              {filteredCategories.map((item) => (
+                <option key={item.id} value={item.id}>
+                  {item.name}
+                </option>
+              ))}
+            </select>
+            {filteredCategories.length === 0 ? (
+              <p className="mt-1 text-xs text-rose-300">Belum ada kategori untuk tipe ini.</p>
+            ) : null}
+            {errors.categoryId ? (
+              <p className="mt-1 text-xs text-rose-300">{errors.categoryId.message}</p>
+            ) : null}
           </div>
           <div className="flex justify-end gap-2">
             <Button variant="ghost" type="button" onClick={() => closeModal("addTransaction")}>

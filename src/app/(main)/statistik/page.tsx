@@ -32,18 +32,18 @@ function buildChartData(transactions: Transaction[]) {
 
   return Object.entries(totals)
     .sort((a, b) => Number(a[0]) - Number(b[0]))
-    .map(([day, value]) => ({ day, ...value }));
+    .map(([day, value]) => ({ day, income: value.income, expense: -value.expense, items: value.items }));
 }
 
 export default function StatisticsPage() {
-  const { wallets, isGuest } = useWallets();
+  const { wallets, isAnonymous } = useWallets();
   const { user } = useAuth();
   const { currentMonth } = useTransactionStore();
   const [activeIndex, setActiveIndex] = useState(0);
   const [activeWalletId, setActiveWalletId] = useState<string | null>(null);
 
   const { data } = useQuery({
-    queryKey: ["transactions", "stats", user?.id ?? "guest", currentMonth.year, currentMonth.month],
+    queryKey: ["transactions", "stats", user?.id ?? "anon", currentMonth.year, currentMonth.month],
     queryFn: async () => {
       if (!user) return [];
       const { start, end } = getMonthRange(currentMonth.year, currentMonth.month);
@@ -100,10 +100,10 @@ export default function StatisticsPage() {
   const showTabs = walletCards.length > 2;
   const activeWallet = walletCards.find((wallet) => wallet.id === activeWalletId) ?? walletCards[0];
 
-  if (isGuest) {
+  if (isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
-        <LockWidget message="Masuk untuk melihat laporan lengkap." />
+        <LockWidget message="Laporan lengkap tersedia setelah Anda login." />
       </div>
     );
   }

@@ -5,7 +5,7 @@ import { useWalletStore } from "@/stores/walletStore";
 import type { Wallet } from "@/types/wallet";
 
 export function useWallets() {
-  const { isGuest } = useAuth();
+  const { isAnonymous } = useAuth();
   const wallets = useBudgetStore((state) => state.wallets) as Wallet[];
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
   const setTotalBalance = useWalletStore((state) => state.setTotalBalance);
@@ -39,7 +39,7 @@ export function useWallets() {
     wallets,
     selectedWallets,
     selectedWalletIds,
-    isGuest,
+    isAnonymous,
     createWallet,
     deleteWallet,
     updateWallet,

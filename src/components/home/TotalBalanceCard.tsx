@@ -83,14 +83,25 @@ export default function TotalBalanceCard() {
           openDialog();
         }
       }}
-      className="group relative overflow-hidden rounded-xl bg-gradient-to-br from-[#1a202a] to-[#0e141d] p-8 text-left shadow-2xl shadow-[#080e18]/50 transition-transform hover:-translate-y-1"
+      className="group/card relative overflow-visible rounded-xl bg-gradient-to-br from-[#1a202a] to-[#0e141d] p-8 text-left shadow-2xl shadow-[#080e18]/50 transition-transform hover:-translate-y-1"
     >
-      <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-primary/10 blur-[80px] transition-colors group-hover:bg-primary/20" />
+      <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-primary/10 blur-[80px] transition-colors group-hover/card:bg-primary/20" />
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div>
           <div className="flex items-center space-x-2 text-sm font-medium text-on-surface-variant">
             <span>Total Net Worth</span>
-            <span className="material-symbols-outlined text-[16px]">info</span>
+            <div className="relative">
+              <button
+                type="button"
+                className="group/info flex h-6 w-6 items-center justify-center rounded-full border border-outline-variant/40 text-[12px] text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary"
+                aria-label="Info total net worth"
+              >
+                i
+                <span className="pointer-events-none absolute left-full top-1/2 z-[9999] ml-2 w-56 -translate-y-1/2 rounded-lg border border-outline-variant/30 bg-surface-container px-3 py-2 text-[10px] text-on-surface-variant opacity-0 shadow-xl transition-opacity group-hover/info:opacity-100 group-focus-visible/info:opacity-100">
+                  Total saldo dari semua dompet terpilih, dihitung dari pemasukan dan pengeluaran.
+                </span>
+              </button>
+            </div>
           </div>
           <h1 className="tnum mt-2 text-4xl font-extrabold tracking-tighter text-on-surface md:text-5xl">
             {formatCurrency(totalBalance)}
