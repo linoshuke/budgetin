@@ -42,3 +42,20 @@ export const UpdateProfileSchema = z.object({
     }).optional(),
 });
 
+export const CreateGoalSchema = z.object({
+    name: z.string().min(1, "Nama goals wajib diisi.").max(100, "Nama goals maksimal 100 karakter."),
+    targetAmount: z
+        .number({ message: "Target harus berupa angka." })
+        .positive("Target harus lebih dari 0.")
+        .max(999_999_999, "Target terlalu besar."),
+    currentAmount: z
+        .number({ message: "Nominal saat ini harus berupa angka." })
+        .min(0, "Nominal saat ini tidak boleh negatif.")
+        .max(999_999_999, "Nominal saat ini terlalu besar.")
+        .optional()
+        .default(0),
+    targetDate: z.string().date("Format tanggal harus YYYY-MM-DD.").optional().nullable(),
+});
+
+export const UpdateGoalSchema = CreateGoalSchema.partial();
+

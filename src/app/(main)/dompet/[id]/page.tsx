@@ -69,7 +69,7 @@ export default function WalletDetailPage() {
       <div className="space-y-4">
         <div className="rounded-2xl bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 p-6 text-white">
           <p className="text-xs text-white/70">Saldo Dompet</p>
-          <p className="text-3xl font-semibold">{formatCurrency(wallet.balance)}</p>
+          <p className="text-3xl font-semibold">{formatCurrency(Number(wallet.balance ?? 0))}</p>
           <div className="mt-4 flex gap-2">
             <Button
               variant={dateRange === "daily" ? "primary" : "outline"}

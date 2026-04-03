@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useMemo, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
+import { useNonceStyle } from "@/hooks/useNonceStyle";
 import { useBudgetStore } from "@/store/budgetStore";
 import { useTransactionStore } from "@/stores/transactionStore";
 import LockWidget from "@/components/LockWidget";
@@ -38,6 +39,12 @@ const statusStyles = {
 } as const;
 
 const GOAL_ACCENTS = ["primary", "tertiary", "secondary"] as const;
+
+function ProgressBar({ percent, className }: { percent: number; className: string }) {
+  const clamped = Math.min(Math.max(percent * 100, 0), 100);
+  const widthClass = useNonceStyle(`width: ${clamped}%;`);
+  return <div className={`absolute left-0 top-0 h-full rounded-full ${className} ${widthClass}`} />;
+}
 
 type BudgetStatus = keyof typeof statusStyles;
 
@@ -538,12 +545,12 @@ export default function BudgetsPage() {
   );
 
   const hasGoalBaseline = wallets.length > 0 && transactions.length > 0;
-  const suggestedGoals = useMemo(
+  const suggestedGoals = useMemo<GoalRow[]>(
     () => (hasGoalBaseline ? buildGoals(wallets, averages.avgExpense, averages.avgSavings) : []),
     [averages.avgExpense, averages.avgSavings, hasGoalBaseline, wallets],
   );
 
-  const storedGoals = useMemo(() => {
+  const storedGoals = useMemo<GoalRow[]>(() => {
     return goalsData.map((goal, index) => {
       const target = Math.max(0, toNumber(goal.target_amount));
       const saved = Math.max(0, toNumber(goal.current_amount));
@@ -564,7 +571,7 @@ export default function BudgetsPage() {
     });
   }, [goalsData]);
 
-  const activeGoals = useMemo(() => {
+  const activeGoals = useMemo<GoalRow[]>(() => {
     if (storedGoals.length) return storedGoals;
     return suggestedGoals.map((goal) => ({ ...goal, isSuggested: true }));
   }, [storedGoals, suggestedGoals]);
@@ -1058,10 +1065,7 @@ export default function BudgetsPage() {
                             </div>
                           </div>
                           <div className="relative h-3 w-full overflow-hidden rounded-full bg-surface-container">
-                            <div
-                              className={`absolute left-0 top-0 h-full rounded-full ${style.bar}`}
-                              style={{ width: `${Math.min(row.percent * 100, 100)}%` }}
-                            />
+                            <ProgressBar percent={row.percent} className={style.bar} />
                           </div>
                           <div className="flex flex-wrap items-center justify-between gap-2 text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
                             <span>{percentLabel}</span>

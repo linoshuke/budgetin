@@ -497,12 +497,9 @@ export default function TransactionsPage() {
                           <td className="px-6 py-6">
                             <div className="flex items-center gap-3">
                               <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-surface-container-highest text-primary">
-                                <span
-                                  className="material-symbols-outlined"
-                                  style={{ fontVariationSettings: '"FILL" 1' }}
-                                >
-                                  {iconName}
-                                </span>
+                                  <span className="material-symbols-outlined icon-fill">
+                                    {iconName}
+                                  </span>
                               </div>
                               <div className="flex flex-col">
                                 <span className="font-medium text-on-surface">{description}</span>

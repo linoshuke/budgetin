@@ -7,7 +7,7 @@ import {
     mapRowsToWallets,
     mapDTOToInsertRow,
 } from "@/app/api/wallets/models/wallet.model";
-import { ServiceError } from "@/lib/service-error";
+import { ServiceError, mapDbError } from "@/lib/service-error";
 
 export async function getAllWallets(
     supabase: SupabaseClient,
@@ -20,7 +20,7 @@ export async function getAllWallets(
         .order("created_at", { ascending: true });
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 
     return mapRowsToWallets(data ?? []);
@@ -40,10 +40,10 @@ export async function getWalletById(
 
     if (error) {
         const notFound = error.code === "PGRST116";
-        throw new ServiceError(
-            notFound ? "Dompet tidak ditemukan." : error.message,
-            notFound ? 404 : 500,
-        );
+        if (notFound) {
+            throw new ServiceError("Dompet tidak ditemukan.", 404);
+        }
+        throw mapDbError(error);
     }
 
     return mapRowToWallet(data);
@@ -79,12 +79,10 @@ export async function createWallet(
         .single();
 
     if (error) {
-        const normalized = error.message.toLowerCase();
-        const isDuplicate = normalized.includes("duplicate") || normalized.includes("unique");
-        if (isDuplicate) {
+        if (error.code === "23505") {
             throw new ServiceError("Nama dompet sudah digunakan.", 409);
         }
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 
     return mapRowToWallet(data);
@@ -126,16 +124,14 @@ export async function updateWallet(
         .single();
 
     if (error) {
-        const normalized = error.message.toLowerCase();
-        const isDuplicate = normalized.includes("duplicate") || normalized.includes("unique");
-        if (isDuplicate) {
+        if (error.code === "23505") {
             throw new ServiceError("Nama dompet sudah digunakan.", 409);
         }
         const notFound = error.code === "PGRST116";
-        throw new ServiceError(
-            notFound ? "Dompet tidak ditemukan." : error.message,
-            notFound ? 404 : 500,
-        );
+        if (notFound) {
+            throw new ServiceError("Dompet tidak ditemukan.", 404);
+        }
+        throw mapDbError(error);
     }
 
     if (!data) {
@@ -162,6 +158,6 @@ export async function deleteWallet(
         .eq("user_id", userId);
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 }

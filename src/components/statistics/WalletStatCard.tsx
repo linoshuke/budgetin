@@ -1,7 +1,8 @@
 "use client";
 
-import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
 import { formatCurrency } from "@/utils/format";
+import { useElementSize } from "@/hooks/useElementSize";
 
 interface WalletStatCardProps {
   walletName: string;
@@ -45,15 +46,17 @@ function CustomTooltip({ active, payload, label }: { active?: boolean; payload?:
 }
 
 export default function WalletStatCard({ walletName, data }: WalletStatCardProps) {
+  const { ref, size } = useElementSize<HTMLDivElement>();
+
   return (
     <div className="glass-panel flex flex-col gap-4 p-5">
       <div>
         <p className="text-xs text-[var(--text-dimmed)]">Statistik Dompet</p>
         <h3 className="text-lg font-semibold text-[var(--text-primary)]">{walletName}</h3>
       </div>
-      <div className="h-[220px]">
-        <ResponsiveContainer width="100%" height="100%">
-          <BarChart data={data} barGap={8}>
+      <div ref={ref} className="h-[220px]">
+        {size.width > 0 && size.height > 0 ? (
+          <BarChart data={data} barGap={8} width={size.width} height={size.height}>
             <XAxis dataKey="day" stroke="#94a3b8" fontSize={12} />
             <YAxis
               stroke="#94a3b8"
@@ -65,7 +68,7 @@ export default function WalletStatCard({ walletName, data }: WalletStatCardProps
             <Bar dataKey="income" fill="#22c55e" radius={[6, 6, 0, 0]} />
             <Bar dataKey="expense" fill="#f43f5e" radius={[0, 0, 6, 6]} />
           </BarChart>
-        </ResponsiveContainer>
+        ) : null}
       </div>
     </div>
   );

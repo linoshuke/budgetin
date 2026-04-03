@@ -4,6 +4,8 @@ import { getAuthUser } from "@/lib/auth";
 import { getAllWallets, createWallet } from "@/app/api/wallets/service/wallet.service";
 import { CreateWalletSchema } from "@/lib/validators";
 import { ANON_LIMITS, enforceAnonCountLimit } from "@/lib/anonymous";
+import { rateLimit } from "@/lib/rate-limit";
+import { withNoStore } from "@/lib/http";
 
 export async function GET() {
   try {
@@ -19,6 +21,18 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
+    const limiter = await rateLimit({
+      request,
+      key: `wallets:create:${user.id}`,
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Terlalu banyak permintaan. Coba lagi sebentar." },
+        { status: 429, headers: withNoStore(limiter.headers) },
+      );
+    }
     await enforceAnonCountLimit({
       supabase,
       user,

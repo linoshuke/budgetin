@@ -4,6 +4,8 @@ import { getAuthUser } from "@/lib/auth";
 import { createTransaction, getTransactionsByFilter } from "@/app/api/transactions/service/transaction.service";
 import { CreateTransactionSchema } from "@/lib/validators";
 import { ANON_LIMITS, enforceAnonCountLimit } from "@/lib/anonymous";
+import { rateLimit } from "@/lib/rate-limit";
+import { withNoStore } from "@/lib/http";
 
 function parseList(value: string | null) {
   if (!value) return [];
@@ -66,6 +68,18 @@ export async function GET(request: Request) {
 export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
+    const limiter = await rateLimit({
+      request,
+      key: `transactions:create:${user.id}`,
+      limit: 30,
+      windowMs: 60_000,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Terlalu banyak transaksi. Coba lagi sebentar." },
+        { status: 429, headers: withNoStore(limiter.headers) },
+      );
+    }
     await enforceAnonCountLimit({
       supabase,
       user,
@@ -78,21 +92,12 @@ export async function POST(request: Request) {
     const transaction = await createTransaction(supabase, user.id, dto);
 
     const delta = dto.type === "expense" ? -dto.amount : dto.amount;
-    const { data: wallet } = await supabase
-      .from("wallets")
-      .select("id, balance")
-      .eq("id", dto.walletId)
-      .eq("user_id", user.id)
-      .single();
-
-    if (wallet) {
-      const nextBalance = Number(wallet.balance ?? 0) + delta;
-      await supabase
-        .from("wallets")
-        .update({ balance: nextBalance })
-        .eq("id", wallet.id)
-        .eq("user_id", user.id);
-    }
+    const { error: balanceError } = await supabase.rpc("update_wallet_balance", {
+      p_wallet_id: dto.walletId,
+      p_user_id: user.id,
+      p_delta: delta,
+    });
+    if (balanceError) throw balanceError;
 
     const dateValue = new Date(dto.date);
     const year = dateValue.getFullYear();

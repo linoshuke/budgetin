@@ -1,5 +1,5 @@
 import type { SupabaseClient, User } from "@supabase/supabase-js";
-import { ServiceError } from "@/lib/service-error";
+import { ServiceError, mapDbError } from "@/lib/service-error";
 
 export const ANON_LIMITS = {
   wallets: 2,
@@ -28,7 +28,7 @@ export async function enforceAnonCountLimit(options: {
     .eq("user_id", user.id);
 
   if (error) {
-    throw new ServiceError(error.message);
+    throw mapDbError(error);
   }
 
   if ((count ?? 0) >= limit) {

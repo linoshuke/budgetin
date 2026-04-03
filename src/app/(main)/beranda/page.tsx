@@ -188,9 +188,8 @@ export default function HomePage() {
                     <div className="tnum text-xl font-bold">{bill.amount}</div>
                     {bill.action === "check_circle" ? (
                       <span
-                        className="material-symbols-outlined text-secondary-container"
+                        className="material-symbols-outlined icon-fill text-secondary-container"
                         data-icon="check_circle"
-                        style={{ fontVariationSettings: '"FILL" 1' }}
                       >
                         check_circle
                       </span>

@@ -1,4 +1,7 @@
+"use client";
+
 import { formatCurrency } from "@/lib/utils";
+import { useNonceStyle } from "@/hooks/useNonceStyle";
 
 interface Props {
   income: number;
@@ -53,11 +56,14 @@ function SummaryBar({
         <span className="font-semibold text-[var(--text-primary)]">{value}</span>
       </div>
       <div className="h-3 rounded-full bg-[var(--bg-card-muted)]">
-        <div
-          className={`h-3 rounded-full bg-gradient-to-r ${barClass}`}
-          style={{ width: `${Math.max(percent, 2)}%` }}
-        />
+        <SummaryFill percent={percent} barClass={barClass} />
       </div>
     </div>
   );
+}
+
+function SummaryFill({ percent, barClass }: { percent: number; barClass: string }) {
+  const width = Math.max(percent, 2);
+  const widthClass = useNonceStyle(`width: ${width}%;`);
+  return <div className={`h-3 rounded-full bg-gradient-to-r ${barClass} ${widthClass}`} />;
 }

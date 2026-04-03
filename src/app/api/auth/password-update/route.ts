@@ -1,18 +1,38 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { rateLimit } from "@/lib/rate-limit";
+import { withNoStore } from "@/lib/http";
 
 export async function POST(request: Request) {
+  const limiter = await rateLimit({ request, key: "auth:password-update", limit: 3, windowMs: 60_000 });
+  if (!limiter.ok) {
+    return NextResponse.json(
+      { error: "Terlalu banyak percobaan. Coba lagi sebentar." },
+      { status: 429, headers: withNoStore(limiter.headers) },
+    );
+  }
+
   const supabase = await createServerSupabase();
   const { password } = (await request.json().catch(() => ({}))) as { password?: string };
 
-  if (!password || password.length < 8) {
-    return NextResponse.json({ error: "Kata sandi minimal 8 karakter." }, { status: 400 });
+  const passwordPolicy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+  if (!password || !passwordPolicy.test(password)) {
+    return NextResponse.json(
+      { error: "Kata sandi minimal 8 karakter dengan huruf besar, huruf kecil, dan angka." },
+      { status: 400, headers: withNoStore(limiter.headers) },
+    );
   }
 
   const { error } = await supabase.auth.updateUser({ password });
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json(
+      { error: error.message },
+      { status: 400, headers: withNoStore(limiter.headers) },
+    );
   }
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json(
+    { ok: true },
+    { status: 200, headers: withNoStore(limiter.headers) },
+  );
 }

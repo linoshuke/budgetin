@@ -1,4 +1,7 @@
+"use client";
+
 import { formatCurrency } from "@/lib/utils";
+import { useNonceStyle } from "@/hooks/useNonceStyle";
 import type { CategoryBreakdown } from "@/lib/budget";
 
 interface ExpenseChartProps {
@@ -29,17 +32,17 @@ export default function ExpenseChart({ rows }: ExpenseChartProps) {
               </span>
             </div>
             <div className="h-3 rounded-full bg-[var(--bg-card-muted)]">
-              <div
-                className="h-3 rounded-full"
-                style={{
-                  width: `${Math.max(row.percent, 4)}%`,
-                  backgroundColor: row.category.color,
-                }}
-              />
+              <ExpenseBar percent={row.percent} color={row.category.color} />
             </div>
           </div>
         ))}
       </div>
     </section>
   );
+}
+
+function ExpenseBar({ percent, color }: { percent: number; color: string }) {
+  const width = Math.max(percent, 4);
+  const barClass = useNonceStyle(`width: ${width}%; background-color: ${color};`);
+  return <div className={`h-3 rounded-full ${barClass}`} />;
 }

@@ -3,6 +3,7 @@ import { Inter, Plus_Jakarta_Sans } from "next/font/google";
 import { Suspense } from "react";
 import Providers from "./providers";
 import "./globals.css";
+import { headers } from "next/headers";
 
 const headlineFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -27,17 +28,23 @@ export const metadata: Metadata = {
   },
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const headerList = await headers();
+  const csp = headerList.get("content-security-policy") ?? "";
+  const nonceMatch = csp.match(/'nonce-([^']+)'/);
+  const nonce = nonceMatch ? nonceMatch[1] : "";
+
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
+        {nonce ? <meta name="csp-nonce" content={nonce} /> : null}
         <link
           rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap"
+          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block"
         />
       </head>
       <body className={`${headlineFont.variable} ${bodyFont.variable} antialiased`}>

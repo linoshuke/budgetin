@@ -1,12 +1,19 @@
 "use client";
 
-import { PieChart, Pie, Cell, ResponsiveContainer } from "recharts";
+import { PieChart, Pie, Cell } from "recharts";
 import Skeleton from "@/components/ui/Skeleton";
 import { useExpenseByCategory } from "@/hooks/useTransactions";
 import { useWalletStore } from "@/stores/walletStore";
 import { formatCompactCurrency } from "@/utils/format";
+import { useNonceStyle } from "@/hooks/useNonceStyle";
 
 const COLORS = ["#7cebff", "#0064d4", "#ffb4ab", "#29d9f2", "#89ceff", "#adc6ff"];
+const CHART_SIZE = 192;
+
+function ColorDot({ color }: { color: string }) {
+  const dotClass = useNonceStyle(`background-color: ${color};`);
+  return <div className={`h-2 w-2 rounded-full ${dotClass}`} />;
+}
 
 export default function ExpenseChart() {
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
@@ -31,22 +38,20 @@ export default function ExpenseChart() {
     <div className="flex flex-col items-center justify-between rounded-xl bg-surface-container-low p-8">
       <h3 className="mb-6 w-full font-headline text-lg font-bold">Kategori Pengeluaran</h3>
       <div className="relative h-48 w-48">
-        <ResponsiveContainer width="100%" height="100%">
-          <PieChart>
-            <Pie
-              data={chartData}
-              dataKey="value"
-              nameKey="name"
-              innerRadius={62}
-              outerRadius={84}
-              paddingAngle={2}
-            >
-              {chartData.map((_, index) => (
-                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-              ))}
-            </Pie>
-          </PieChart>
-        </ResponsiveContainer>
+        <PieChart width={CHART_SIZE} height={CHART_SIZE}>
+          <Pie
+            data={chartData}
+            dataKey="value"
+            nameKey="name"
+            innerRadius={62}
+            outerRadius={84}
+            paddingAngle={2}
+          >
+            {chartData.map((_, index) => (
+              <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+            ))}
+          </Pie>
+        </PieChart>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-xs font-medium uppercase text-on-surface-variant">Total</span>
           <span className="tnum text-xl font-bold">{formatCompactCurrency(total)}</span>
@@ -56,7 +61,7 @@ export default function ExpenseChart() {
         {topItems.map((item) => (
           <div key={item.name} className="flex items-center justify-between">
             <div className="flex items-center space-x-2">
-              <div className="h-2 w-2 rounded-full" style={{ backgroundColor: item.color }} />
+              <ColorDot color={item.color} />
               <span className="text-xs font-medium">{item.name}</span>
             </div>
             <span className="tnum text-xs font-bold">{item.percentage}%</span>

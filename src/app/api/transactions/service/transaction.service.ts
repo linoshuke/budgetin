@@ -8,7 +8,7 @@ import {
     mapCreateDTOToInsertRow,
     mapUpdateDTOToUpdateRow,
 } from "@/app/api/transactions/models/transaction.model";
-import { ServiceError } from "@/lib/service-error";
+import { ServiceError, mapDbError } from "@/lib/service-error";
 
 export async function getAllTransactions(
     supabase: SupabaseClient,
@@ -21,7 +21,7 @@ export async function getAllTransactions(
         .order("date", { ascending: false });
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 
     return mapRowsToTransactions(data ?? []);
@@ -41,10 +41,10 @@ export async function getTransactionById(
 
     if (error) {
         const notFound = error.code === "PGRST116";
-        throw new ServiceError(
-            notFound ? "Transaksi tidak ditemukan." : error.message,
-            notFound ? 404 : 500,
-        );
+        if (notFound) {
+            throw new ServiceError("Transaksi tidak ditemukan.", 404);
+        }
+        throw mapDbError(error);
     }
 
     return mapRowToTransaction(data);
@@ -99,7 +99,7 @@ export async function getTransactionsByFilter(
     const { data, error } = await query;
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 
     return mapRowsToTransactions(data ?? []);
@@ -122,7 +122,7 @@ export async function createTransaction(
         .single();
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 
     return mapRowToTransaction(data);
@@ -145,7 +145,7 @@ export async function updateTransaction(
         .single();
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 
     return mapRowToTransaction(data);
@@ -163,6 +163,6 @@ export async function deleteTransaction(
         .eq("user_id", userId);
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 }

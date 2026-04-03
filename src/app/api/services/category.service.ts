@@ -1,5 +1,5 @@
 import type { SupabaseClient } from "@supabase/supabase-js";
-import { ServiceError } from "@/lib/service-error";
+import { ServiceError, mapDbError } from "@/lib/service-error";
 import type { Category } from "@/types/category";
 import {
     type CreateCategoryDTO,
@@ -14,12 +14,12 @@ export async function getAllCategories(
 ): Promise<Category[]> {
     const { data, error } = await supabase
         .from("categories")
-        .select("id, name, icon, color, type, is_default")
+        .select("id, user_id, name, icon, color, type, is_default, created_at")
         .eq("user_id", userId)
         .order("created_at", { ascending: true });
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 
     return mapRowsToCategories(data ?? []);
@@ -32,17 +32,17 @@ export async function getCategoryById(
 ): Promise<Category> {
     const { data, error } = await supabase
         .from("categories")
-        .select("id, name, icon, color, type, is_default")
+        .select("id, user_id, name, icon, color, type, is_default, created_at")
         .eq("id", id)
         .eq("user_id", userId)
         .single();
 
     if (error) {
         const notFound = error.code === "PGRST116";
-        throw new ServiceError(
-            notFound ? "Kategori tidak ditemukan." : error.message,
-            notFound ? 404 : 500,
-        );
+        if (notFound) {
+            throw new ServiceError("Kategori tidak ditemukan.", 404);
+        }
+        throw mapDbError(error);
     }
 
     return mapRowToCategory(data);
@@ -65,11 +65,11 @@ export async function createCategory(
     const { data, error } = await supabase
         .from("categories")
         .insert(insertRow)
-        .select("id, name, icon, color, type, is_default")
+        .select("id, user_id, name, icon, color, type, is_default, created_at")
         .single();
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 
     return mapRowToCategory(data);
@@ -92,6 +92,6 @@ export async function deleteCategory(
         .eq("user_id", userId);
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 }

@@ -5,7 +5,7 @@ import {
     mapRowToProfile,
     mapDTOToUpdateRow,
 } from "@/app/api/profiles/models/profile.model";
-import { ServiceError } from "@/lib/service-error";
+import { ServiceError, mapDbError } from "@/lib/service-error";
 
 export async function getProfile(
     supabase: SupabaseClient,
@@ -19,10 +19,10 @@ export async function getProfile(
 
     if (error) {
         const notFound = error.code === "PGRST116";
-        throw new ServiceError(
-            notFound ? "Profil tidak ditemukan." : error.message,
-            notFound ? 404 : 500,
-        );
+        if (notFound) {
+            throw new ServiceError("Profil tidak ditemukan.", 404);
+        }
+        throw mapDbError(error);
     }
 
     return mapRowToProfile(data);
@@ -47,7 +47,7 @@ export async function updateProfile(
         .single();
 
     if (error) {
-        throw new ServiceError(error.message);
+        throw mapDbError(error);
     }
 
     return mapRowToProfile(data);

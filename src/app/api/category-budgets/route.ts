@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { handleServiceError } from "@/lib/service-error";
 import { assertRegisteredUser } from "@/lib/anonymous";
+import { rateLimit } from "@/lib/rate-limit";
+import { withNoStore } from "@/lib/http";
 
 export async function GET(request: Request) {
   try {
@@ -37,6 +39,18 @@ export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
     assertRegisteredUser(user, "Fitur budget hanya tersedia untuk akun terdaftar.");
+    const limiter = await rateLimit({
+      request,
+      key: `category-budgets:upsert:${user.id}`,
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Terlalu banyak permintaan. Coba lagi sebentar." },
+        { status: 429, headers: withNoStore(limiter.headers) },
+      );
+    }
     const raw = (await request.json().catch(() => ({}))) as {
       entries?: Array<{ categoryId: string; monthKey: string; targetAmount: number }>;
       categoryId?: string;
@@ -84,6 +98,18 @@ export async function DELETE(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
     assertRegisteredUser(user, "Fitur budget hanya tersedia untuk akun terdaftar.");
+    const limiter = await rateLimit({
+      request,
+      key: `category-budgets:delete:${user.id}`,
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Terlalu banyak permintaan. Coba lagi sebentar." },
+        { status: 429, headers: withNoStore(limiter.headers) },
+      );
+    }
     const { searchParams } = new URL(request.url);
     const monthKey = searchParams.get("monthKey");
 

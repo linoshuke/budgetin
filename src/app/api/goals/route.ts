@@ -2,6 +2,9 @@ import { NextResponse } from "next/server";
 import { getAuthUser } from "@/lib/auth";
 import { handleServiceError } from "@/lib/service-error";
 import { assertRegisteredUser } from "@/lib/anonymous";
+import { CreateGoalSchema } from "@/lib/validators";
+import { rateLimit } from "@/lib/rate-limit";
+import { withNoStore } from "@/lib/http";
 
 export async function GET() {
   try {
@@ -24,25 +27,29 @@ export async function POST(request: Request) {
   try {
     const { user, supabase } = await getAuthUser();
     assertRegisteredUser(user, "Fitur goals hanya tersedia untuk akun terdaftar.");
-    const raw = (await request.json().catch(() => ({}))) as {
-      name?: string;
-      targetAmount?: number;
-      currentAmount?: number;
-      targetDate?: string | null;
-    };
-
-    if (!raw.name || !raw.targetAmount) {
-      return NextResponse.json({ error: "Nama dan target wajib diisi." }, { status: 400 });
+    const limiter = await rateLimit({
+      request,
+      key: `goals:create:${user.id}`,
+      limit: 20,
+      windowMs: 60_000,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Terlalu banyak permintaan. Coba lagi sebentar." },
+        { status: 429, headers: withNoStore(limiter.headers) },
+      );
     }
+    const raw = await request.json().catch(() => ({}));
+    const dto = CreateGoalSchema.parse(raw);
 
     const { data, error } = await supabase
       .from("goals")
       .insert({
         user_id: user.id,
-        name: raw.name,
-        target_amount: raw.targetAmount,
-        current_amount: raw.currentAmount ?? 0,
-        target_date: raw.targetDate ?? null,
+        name: dto.name,
+        target_amount: dto.targetAmount,
+        current_amount: dto.currentAmount ?? 0,
+        target_date: dto.targetDate ?? null,
       })
       .select("id, user_id, name, target_amount, current_amount, target_date, created_at")
       .single();
@@ -51,6 +58,12 @@ export async function POST(request: Request) {
 
     return NextResponse.json(data);
   } catch (error) {
+    if (error instanceof Error && error.name === "ZodError") {
+      return NextResponse.json(
+        { error: (error as import("zod").ZodError).issues.map((i) => i.message).join(", ") },
+        { status: 400 },
+      );
+    }
     const { body, status } = handleServiceError(error);
     return NextResponse.json(body, { status });
   }

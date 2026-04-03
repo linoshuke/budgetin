@@ -4,6 +4,8 @@ import { getAuthUser } from "@/lib/auth";
 import { getAllCategories, createCategory } from "@/app/api/services/category.service";
 import { CreateCategorySchema } from "@/lib/validators";
 import { assertRegisteredUser } from "@/lib/anonymous";
+import { rateLimit } from "@/lib/rate-limit";
+import { withNoStore } from "@/lib/http";
 
 export async function GET() {
     try {
@@ -20,6 +22,18 @@ export async function POST(request: Request) {
     try {
         const { user, supabase } = await getAuthUser();
         assertRegisteredUser(user, "Fitur kategori hanya tersedia untuk akun terdaftar.");
+        const limiter = await rateLimit({
+            request,
+            key: `categories:create:${user.id}`,
+            limit: 10,
+            windowMs: 60_000,
+        });
+        if (!limiter.ok) {
+            return NextResponse.json(
+                { error: "Terlalu banyak permintaan. Coba lagi sebentar." },
+                { status: 429, headers: withNoStore(limiter.headers) },
+            );
+        }
         const raw = await request.json();
         const dto = CreateCategorySchema.parse(raw);
         const category = await createCategory(supabase, user.id, dto);

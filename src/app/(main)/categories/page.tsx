@@ -3,8 +3,20 @@
 import { useMemo, useState } from "react";
 import LockWidget from "@/components/LockWidget";
 import { useAuth } from "@/hooks/useAuth";
+import { useNonceStyle } from "@/hooks/useNonceStyle";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import type { CategoryType } from "@/types/category";
+
+function CategoryBadge({ color, icon }: { color: string; icon: string }) {
+  const badgeClass = useNonceStyle(`background-color: ${color};`);
+  return (
+    <span
+      className={`inline-flex min-w-10 justify-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white ${badgeClass}`}
+    >
+      {icon}
+    </span>
+  );
+}
 
 export default function CategoriesPage() {
   const { isAnonymous } = useAuth();
@@ -144,12 +156,7 @@ export default function CategoriesPage() {
               >
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <span
-                      className="inline-flex min-w-10 justify-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"
-                      style={{ backgroundColor: category.color }}
-                    >
-                      {category.icon}
-                    </span>
+                    <CategoryBadge color={category.color} icon={category.icon} />
                     <div>
                       <p className="text-sm font-semibold text-on-surface">{category.name}</p>
                       <p className="text-xs text-on-surface-variant">

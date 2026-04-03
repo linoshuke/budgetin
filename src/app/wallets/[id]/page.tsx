@@ -122,9 +122,9 @@ export default function WalletDetailPage() {
         <div className="rounded-2xl bg-gradient-to-br from-blue-700 to-blue-900 p-5 text-white shadow-lg shadow-blue-900/30">
           <h1 className="text-lg font-semibold">{wallet.name}</h1>
           <p className="text-sm text-white/70">Total saldo</p>
-          <p className="mt-1 text-[30px] font-bold" style={{ letterSpacing: "1.1px" }}>
-            {formatCurrency(balance)}
-          </p>
+            <p className="mt-1 text-[30px] font-bold tracking-[1.1px]">
+              {formatCurrency(balance)}
+            </p>
 
           <div className="mt-4 rounded-xl bg-white/10 p-1">
             <div className="grid grid-cols-2 gap-1">

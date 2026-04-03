@@ -5,10 +5,22 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import LockWidget from "@/components/LockWidget";
 import { useAuth } from "@/hooks/useAuth";
+import { useNonceStyle } from "@/hooks/useNonceStyle";
 import { useBudgetStore } from "@/store/budgetStore";
 import { formatCurrency, getMonthLabel, toCsvRow } from "@/lib/utils";
 import type { CategoryBudget } from "@/types";
 import type { Category } from "@/types/category";
+
+function CategoryBadge({ color, label }: { color: string; label: string }) {
+  const badgeClass = useNonceStyle(`background-color: ${color};`);
+  return (
+    <span
+      className={`inline-flex min-w-10 justify-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white ${badgeClass}`}
+    >
+      {label}
+    </span>
+  );
+}
 
 export default function BudgetTargetsHistoryPage() {
   const { user, isAnonymous, loading: authLoading } = useAuth();
@@ -223,12 +235,10 @@ export default function BudgetTargetsHistoryPage() {
                     >
                       <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                          <span
-                            className="inline-flex min-w-10 justify-center rounded-md px-2 py-1 text-[10px] font-semibold uppercase tracking-wide text-white"
-                            style={{ backgroundColor: category?.color ?? "#64748b" }}
-                          >
-                            {(category?.name ?? "Kategori").slice(0, 3).toUpperCase()}
-                          </span>
+                          <CategoryBadge
+                            color={category?.color ?? "#64748b"}
+                            label={(category?.name ?? "Kategori").slice(0, 3).toUpperCase()}
+                          />
                           <div>
                             <p className="text-sm font-semibold text-on-surface">{category?.name ?? "Kategori"}</p>
                             <p className="text-xs text-on-surface-variant">Target bulan ini</p>

@@ -1,18 +1,37 @@
 import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
+import { rateLimit } from "@/lib/rate-limit";
+import { withNoStore } from "@/lib/http";
 
 export async function POST(request: Request) {
+  const limiter = await rateLimit({ request, key: "auth:resend", limit: 3, windowMs: 60_000 });
+  if (!limiter.ok) {
+    return NextResponse.json(
+      { error: "Terlalu banyak permintaan verifikasi. Coba lagi sebentar." },
+      { status: 429, headers: withNoStore(limiter.headers) },
+    );
+  }
+
   const supabase = await createServerSupabase();
   const { email } = (await request.json().catch(() => ({}))) as { email?: string };
 
   if (!email) {
-    return NextResponse.json({ error: "Email wajib diisi." }, { status: 400 });
+    return NextResponse.json(
+      { error: "Email wajib diisi." },
+      { status: 400, headers: withNoStore(limiter.headers) },
+    );
   }
 
   const { error } = await supabase.auth.resend({ type: "signup", email });
   if (error) {
-    return NextResponse.json({ error: error.message }, { status: 400 });
+    return NextResponse.json(
+      { error: error.message },
+      { status: 400, headers: withNoStore(limiter.headers) },
+    );
   }
 
-  return NextResponse.json({ ok: true }, { status: 200 });
+  return NextResponse.json(
+    { ok: true },
+    { status: 200, headers: withNoStore(limiter.headers) },
+  );
 }

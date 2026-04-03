@@ -37,7 +37,7 @@ export default function AddWalletDialog() {
       await createWallet({
         name: values.name,
         category: values.category,
-        location: values.location ?? null,
+        location: values.location ?? "",
       });
       pushToast({ title: "Dompet ditambahkan", variant: "success" });
       reset();

@@ -32,6 +32,7 @@ export default function ProfilePage() {
   const [savingAccount, setSavingAccount] = useState(false);
   const [accountNotice, setAccountNotice] = useState("");
   const [accountError, setAccountError] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -74,11 +75,14 @@ export default function ProfilePage() {
 
   const avatarUrl = getUserAvatarUrl(authUser);
   const provider = getProvider(authUser);
+  const providers = (authUser?.app_metadata?.providers as string[] | undefined) ?? [];
+  const isEmailProvider = providers.includes("email");
   const isAnonymous = Boolean(authUser?.is_anonymous);
   const isVerified = Boolean(authUser?.email_confirmed_at);
   const verificationLabel = isAnonymous ? "Anonim" : isVerified ? "Terverifikasi" : "Belum terverifikasi";
   const createdDate = authUser?.created_at ? formatDate(authUser.created_at, true) : "-";
   const nextParam = pathname && pathname !== "/" ? `?next=${encodeURIComponent(pathname)}` : "";
+  const emailChanged = Boolean(authUser?.email && email.trim() && email.trim() !== authUser.email);
 
   const exportCsv = async () => {
     try {
@@ -158,8 +162,27 @@ export default function ProfilePage() {
       if (metadataError) throw metadataError;
 
       if (nextEmail && nextEmail !== authUser.email) {
-        const { error: emailError } = await supabase.auth.updateUser({ email: nextEmail });
-        if (emailError) throw emailError;
+        if (isAnonymous) {
+          throw new Error("Akun anonim tidak dapat mengganti email. Silakan upgrade akun terlebih dahulu.");
+        }
+        if (!isEmailProvider) {
+          throw new Error("Perubahan email hanya tersedia untuk akun email/password.");
+        }
+        if (!currentPassword) {
+          throw new Error("Masukkan kata sandi saat ini untuk mengganti email.");
+        }
+
+        const response = await fetch("/api/auth/email-update", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          credentials: "include",
+          body: JSON.stringify({ email: nextEmail, currentPassword }),
+        });
+        const payload = (await response.json().catch(() => ({}))) as { error?: string };
+        if (!response.ok) {
+          throw new Error(payload.error ?? "Gagal memperbarui email.");
+        }
+
         setAccountNotice("Perubahan email dikirim. Cek email baru Anda untuk konfirmasi.");
       } else {
         setAccountNotice("Informasi akun berhasil diperbarui.");
@@ -180,6 +203,7 @@ export default function ProfilePage() {
       setAccountError(error instanceof Error ? error.message : "Gagal memperbarui akun.");
     } finally {
       setSavingAccount(false);
+      setCurrentPassword("");
     }
   };
 
@@ -188,9 +212,10 @@ export default function ProfilePage() {
     setPasswordError("");
     setPasswordNotice("");
 
-    if (newPassword.length < 8) {
+    const passwordPolicy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
+    if (!passwordPolicy.test(newPassword)) {
       setSavingPassword(false);
-      setPasswordError("Kata sandi baru minimal 8 karakter.");
+      setPasswordError("Kata sandi minimal 8 karakter dengan huruf besar, huruf kecil, dan angka.");
       return;
     }
 
@@ -200,13 +225,23 @@ export default function ProfilePage() {
       return;
     }
 
-    const { error } = await supabase.auth.updateUser({ password: newPassword });
-    setSavingPassword(false);
-
-    if (error) {
-      setPasswordError(error.message);
+    try {
+      const response = await fetch("/api/auth/password-update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ password: newPassword }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Gagal memperbarui kata sandi.");
+      }
+    } catch (error) {
+      setSavingPassword(false);
+      setPasswordError(error instanceof Error ? error.message : "Gagal memperbarui kata sandi.");
       return;
     }
+    setSavingPassword(false);
 
     setNewPassword("");
     setConfirmPassword("");
@@ -215,7 +250,7 @@ export default function ProfilePage() {
   };
 
   const handleUpgradeAccount = () => {
-    router.push(`/login${nextParam}`);
+    router.push((`/login${nextParam}`) as import("next").Route);
   };
 
   if (!authUser && !loadingUser) {
@@ -278,7 +313,7 @@ export default function ProfilePage() {
               disabled={loadingUser}
               className="mt-5 w-full rounded-lg bg-primary px-4 py-3 text-sm font-bold text-on-primary transition-colors hover:bg-primary/90 disabled:opacity-60"
             >
-              Ubah Nama
+              Ubah Profil
             </button>
           </section>
 
@@ -299,7 +334,7 @@ export default function ProfilePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => router.push(`/register${nextParam}`)}
+                    onClick={() => router.push((`/register${nextParam}`) as import("next").Route)}
                     className="rounded-lg border border-outline-variant/30 px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface"
                   >
                     Buat Akun Baru
@@ -375,7 +410,7 @@ export default function ProfilePage() {
 
       <Modal
         open={showEditName}
-        title="Ubah Nama"
+        title="Ubah Profil"
         onClose={() => setShowEditName(false)}
         sizeClassName="max-w-md"
       >
@@ -402,6 +437,40 @@ export default function ProfilePage() {
               disabled={loadingUser}
             />
           </div>
+          <div className="space-y-2">
+            <label className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">Email</label>
+            <input
+              type="email"
+              value={email}
+              onChange={(event) => setEmail(event.target.value)}
+              placeholder="nama@email.com"
+              className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface disabled:opacity-60"
+              disabled={loadingUser || isAnonymous || !isEmailProvider}
+            />
+            {!isAnonymous && !isEmailProvider ? (
+              <p className="text-xs text-on-surface-variant">
+                Akun OAuth mengelola email dari penyedia. Perubahan email tidak tersedia di sini.
+              </p>
+            ) : null}
+          </div>
+          {emailChanged ? (
+            <div className="space-y-2">
+              <label className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+                Kata Sandi Saat Ini
+              </label>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(event) => setCurrentPassword(event.target.value)}
+                placeholder="Masukkan kata sandi saat ini"
+                className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+                disabled={savingAccount || !isEmailProvider}
+              />
+              <p className="text-xs text-on-surface-variant">
+                Wajib diisi untuk mengganti email.
+              </p>
+            </div>
+          ) : null}
           <div className="flex flex-wrap gap-2">
             <button
               type="button"
@@ -448,7 +517,7 @@ export default function ProfilePage() {
               type="password"
               value={newPassword}
               onChange={(event) => setNewPassword(event.target.value)}
-              placeholder="Minimal 8 karakter"
+              placeholder="Min. 8 karakter + huruf besar & angka"
               className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
             />
           </div>

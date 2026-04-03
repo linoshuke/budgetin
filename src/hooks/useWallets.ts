@@ -26,7 +26,10 @@ export function useWallets() {
     await budgetActions.deleteWallet(walletId);
   };
 
-  const updateWallet = async (walletId: string, changes: Partial<Wallet>) => {
+  const updateWallet = async (
+    walletId: string,
+    changes: Pick<Wallet, "name"> & Partial<Pick<Wallet, "category" | "location">>,
+  ) => {
     await budgetActions.updateWallet(walletId, changes);
   };
 

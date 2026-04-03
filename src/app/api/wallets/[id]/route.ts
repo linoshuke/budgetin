@@ -3,6 +3,8 @@ import { handleServiceError } from "@/lib/service-error";
 import { getAuthUser } from "@/lib/auth";
 import { deleteWallet, updateWallet } from "@/app/api/wallets/service/wallet.service";
 import { UpdateWalletSchema } from "@/lib/validators";
+import { rateLimit } from "@/lib/rate-limit";
+import { withNoStore } from "@/lib/http";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -11,6 +13,18 @@ type RouteContext = {
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const { user, supabase } = await getAuthUser();
+    const limiter = await rateLimit({
+      request,
+      key: `wallets:update:${user.id}`,
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Terlalu banyak permintaan. Coba lagi sebentar." },
+        { status: 429, headers: withNoStore(limiter.headers) },
+      );
+    }
     const { id } = await context.params;
     const raw = await request.json();
     const dto = UpdateWalletSchema.parse(raw);
@@ -28,6 +42,18 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 export async function DELETE(_: NextRequest, context: RouteContext) {
   try {
     const { user, supabase } = await getAuthUser();
+    const limiter = await rateLimit({
+      request: _,
+      key: `wallets:delete:${user.id}`,
+      limit: 10,
+      windowMs: 60_000,
+    });
+    if (!limiter.ok) {
+      return NextResponse.json(
+        { error: "Terlalu banyak permintaan. Coba lagi sebentar." },
+        { status: 429, headers: withNoStore(limiter.headers) },
+      );
+    }
     const { id } = await context.params;
     await deleteWallet(supabase, user.id, id);
     return NextResponse.json({ status: "deleted" }, { status: 200 });
