@@ -9,7 +9,7 @@ import { withNoStore } from "@/lib/http";
 export async function GET() {
     try {
         const { user, supabase } = await getAuthUser();
-        const profile = await getProfile(supabase, user.id);
+        const profile = await getProfile(supabase, user);
         return NextResponse.json(profile);
     } catch (error) {
         const { body, status } = handleServiceError(error);
@@ -34,7 +34,7 @@ export async function PATCH(request: Request) {
         }
         const raw = await request.json();
         const dto = UpdateProfileSchema.parse(raw);
-        const profile = await updateProfile(supabase, user.id, dto);
+        const profile = await updateProfile(supabase, user, dto);
         return NextResponse.json(profile);
     } catch (error) {
         if (error instanceof Error && error.name === "ZodError") {

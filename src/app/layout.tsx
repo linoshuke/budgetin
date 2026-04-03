@@ -4,6 +4,8 @@ import { Suspense } from "react";
 import Providers from "./providers";
 import "./globals.css";
 import { headers } from "next/headers";
+import { Analytics } from "@vercel/analytics/react";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 const headlineFont = Plus_Jakarta_Sans({
   subsets: ["latin"],
@@ -37,15 +39,24 @@ export default async function RootLayout({
   const csp = headerList.get("content-security-policy") ?? "";
   const nonceMatch = csp.match(/'nonce-([^']+)'/);
   const nonce = nonceMatch ? nonceMatch[1] : "";
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
+  let supabaseOrigin = "";
+  try {
+    supabaseOrigin = supabaseUrl ? new URL(supabaseUrl).origin : "";
+  } catch {
+    supabaseOrigin = "";
+  }
 
   return (
     <html lang="id" suppressHydrationWarning>
       <head>
         {nonce ? <meta name="csp-nonce" content={nonce} /> : null}
-        <link
-          rel="stylesheet"
-          href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=block"
-        />
+        {supabaseOrigin ? (
+          <>
+            <link rel="preconnect" href={supabaseOrigin} />
+            <link rel="dns-prefetch" href={supabaseOrigin} />
+          </>
+        ) : null}
       </head>
       <body className={`${headlineFont.variable} ${bodyFont.variable} antialiased`}>
         <Suspense
@@ -57,6 +68,8 @@ export default async function RootLayout({
         >
           <Providers>{children}</Providers>
         </Suspense>
+        <Analytics />
+        <SpeedInsights />
       </body>
     </html>
   );

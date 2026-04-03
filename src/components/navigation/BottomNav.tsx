@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import type { Route } from "next";
 import { cn } from "@/lib/utils";
+import { useUIStore } from "@/stores/uiStore";
 
 const navItems = [
   { label: "Dashboard", href: "/beranda", icon: "dashboard" },
@@ -14,6 +15,7 @@ const navItems = [
 
 export default function BottomNav() {
   const pathname = usePathname();
+  const openModal = useUIStore((state) => state.openModal);
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-outline-variant/10 bg-[#0e141d]/90 backdrop-blur-lg md:hidden">
@@ -33,13 +35,18 @@ export default function BottomNav() {
             </Link>
           );
         })}
-        <Link href="/transactions" className="flex flex-col items-center -mt-8">
+        <button
+          type="button"
+          onClick={() => openModal("quickAddTransaction")}
+          className="flex flex-col items-center -mt-8"
+          aria-label="Tambah transaksi"
+        >
           <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-primary to-secondary-container shadow-lg shadow-primary/20">
             <span className="material-symbols-outlined text-on-primary" data-icon="add">
               add
             </span>
           </div>
-        </Link>
+        </button>
         {navItems.slice(2).map((item) => {
           const active = pathname.startsWith(item.href);
           return (

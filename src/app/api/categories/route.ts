@@ -11,7 +11,11 @@ export async function GET() {
     try {
         const { user, supabase } = await getAuthUser();
         const categories = await getAllCategories(supabase, user.id);
-        return NextResponse.json(categories);
+        return NextResponse.json(categories, {
+            headers: {
+                "Cache-Control": "private, max-age=30, stale-while-revalidate=60",
+            },
+        });
     } catch (error) {
         const { body, status } = handleServiceError(error);
         return NextResponse.json(body, { status });

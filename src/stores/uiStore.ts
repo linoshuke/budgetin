@@ -5,6 +5,7 @@ export type ModalKey =
   | "addWallet"
   | "deleteWallet"
   | "addTransaction"
+  | "quickAddTransaction"
   | "passwordReset"
   | "editName";
 
@@ -37,6 +38,7 @@ export const useUIStore = create<UIState>((set) => ({
     addWallet: false,
     deleteWallet: false,
     addTransaction: false,
+    quickAddTransaction: false,
     passwordReset: false,
     editName: false,
   },

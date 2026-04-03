@@ -17,6 +17,7 @@ import { calculateTotals } from "@/lib/budget";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Transaction } from "@/types/transaction";
 import { TRANSACTIONS_CHANGED_EVENT } from "@/lib/transaction-events";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
 
 const pageSize = 50;
 
@@ -57,6 +58,9 @@ function resolveActivityStatus(transaction: Transaction): ActivityTab {
 }
 
 export default function TransactionsPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
   const loading = useBudgetStore((state) => state.loading);
@@ -71,12 +75,14 @@ export default function TransactionsPage() {
   const loadingRef = useRef(false);
 
   const [showTransactionModal, setShowTransactionModal] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
   const [savingTransaction, setSavingTransaction] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [activeActivityTab, setActiveActivityTab] = useState<ActivityTab>("all");
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
+  const handledNewParamRef = useRef(false);
 
   const walletFilter = useWalletFilter();
   const filter = useTransactionsFilter(transactions, walletFilter.selectedWalletIds, defaultPeriod);
@@ -174,6 +180,25 @@ export default function TransactionsPage() {
     return () => window.removeEventListener(TRANSACTIONS_CHANGED_EVENT, handleChanged);
   }, [refreshTransactions]);
 
+  useEffect(() => {
+    const newParam = searchParams.get("new");
+    if (newParam === "1" && !handledNewParamRef.current) {
+      handledNewParamRef.current = true;
+      setEditingTransaction(null);
+      setShowTransactionModal(true);
+
+      const params = new URLSearchParams(searchParams.toString());
+      params.delete("new");
+      const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
+      router.replace(nextUrl, { scroll: false });
+      return;
+    }
+
+    if (newParam !== "1") {
+      handledNewParamRef.current = false;
+    }
+  }, [pathname, router, searchParams]);
+
   const categoryMap = useMemo(
     () => new Map(categories.map((item) => [item.id, item])),
     [categories],
@@ -266,8 +291,6 @@ export default function TransactionsPage() {
 
   const pagedTransactions = visibleTransactions;
 
-  const [editingTransaction, setEditingTransaction] = useState<Transaction | null>(null);
-
   const handleSubmit = async (payload: Omit<Transaction, "id">) => {
     try {
       setSavingTransaction(true);
@@ -291,7 +314,11 @@ export default function TransactionsPage() {
     <AuthGate>
       <div className="min-h-screen bg-surface text-on-surface">
         <Sidebar />
-        <main className={sidebarCollapsed ? "min-h-screen lg:ml-20" : "min-h-screen lg:ml-64"}>
+        <main
+          className={`min-h-screen transition-all duration-300 ease-in-out ${
+            sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+          }`}
+        >
           <MainHeader
             title="Transactions"
             tabs={[

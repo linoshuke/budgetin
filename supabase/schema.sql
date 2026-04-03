@@ -1,7 +1,7 @@
 
 -- 1. Tabel: profiles
 CREATE TABLE IF NOT EXISTS profiles (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  id         UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
   name       TEXT NOT NULL DEFAULT '',
   email      TEXT NOT NULL DEFAULT '',
   theme      TEXT NOT NULL DEFAULT 'dark',

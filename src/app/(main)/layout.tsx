@@ -48,7 +48,11 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-surface text-on-surface">
       <Sidebar />
-      <main className={sidebarCollapsed ? "min-h-screen lg:ml-20" : "min-h-screen lg:ml-64"}>
+      <main
+        className={`min-h-screen transition-all duration-300 ease-in-out ${
+          sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
+        }`}
+      >
         <MainHeader />
         <div className="px-6 pb-12 pt-6">
           <div className="w-full max-w-none">{content}</div>

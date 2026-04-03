@@ -1,9 +1,11 @@
+import BundleAnalyzer from "@next/bundle-analyzer";
+
 /** @type {import('next').NextConfig} */
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
-  { key: "X-DNS-Prefetch-Control", value: "off" },
+  { key: "X-DNS-Prefetch-Control", value: "on" },
   { key: "Strict-Transport-Security", value: "max-age=63072000; includeSubDomains; preload" },
   {
     key: "Permissions-Policy",
@@ -14,6 +16,11 @@ const securityHeaders = [
 
 const nextConfig = {
   reactStrictMode: true,
+  images: {
+    remotePatterns: [
+      { protocol: "https", hostname: "lh3.googleusercontent.com" },
+    ],
+  },
   async headers() {
     return [
       {
@@ -24,4 +31,6 @@ const nextConfig = {
   },
 };
 
-export default nextConfig;
+const withBundleAnalyzer = BundleAnalyzer({ enabled: process.env.ANALYZE === "true" });
+
+export default withBundleAnalyzer(nextConfig);

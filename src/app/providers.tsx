@@ -1,7 +1,6 @@
 "use client";
 
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AnimatePresence, motion } from "framer-motion";
 import { usePathname, useRouter } from "next/navigation";
 import { type ReactNode, useEffect, useMemo, useState } from "react";
 import ToastHost from "@/components/ui/ToastHost";
@@ -10,6 +9,7 @@ import type { User } from "@supabase/supabase-js";
 import AppSettingsSync from "@/components/shared/AppSettingsSync";
 import DataLoader from "@/components/shared/DataLoader";
 import TransactionsQuerySync from "@/components/shared/TransactionsQuerySync";
+import QuickAddTransactionModal from "@/components/transactions/QuickAddTransactionModal";
 
 function AnimatedSwitcher({ children }: { children: ReactNode }) {
   const pathname = usePathname();
@@ -18,18 +18,9 @@ function AnimatedSwitcher({ children }: { children: ReactNode }) {
     : "main";
 
   return (
-    <AnimatePresence mode="wait">
-      <motion.div
-        key={group}
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        transition={{ duration: 0.3, ease: "easeOut" }}
-        className="min-h-screen"
-      >
-        {children}
-      </motion.div>
-    </AnimatePresence>
+    <div key={group} className="min-h-screen animate-fade-in">
+      {children}
+    </div>
   );
 }
 
@@ -122,6 +113,8 @@ export default function Providers({ children }: { children: ReactNode }) {
           queries: {
             retry: 1,
             refetchOnWindowFocus: false,
+            staleTime: 30_000,
+            gcTime: 5 * 60_000,
           },
         },
       }),
@@ -136,6 +129,7 @@ export default function Providers({ children }: { children: ReactNode }) {
         <TransactionsQuerySync />
         <AuthGate>{content}</AuthGate>
       </SupabaseProvider>
+      <QuickAddTransactionModal />
       <AppSettingsSync />
       <ToastHost />
     </QueryClientProvider>

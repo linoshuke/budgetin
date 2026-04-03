@@ -141,7 +141,7 @@ export function useExpenseByCategory(walletIds: string[] = []) {
       if (!user) return [];
 
       const params = new URLSearchParams({
-        limit: "500",
+        limit: "100",
         offset: "0",
         dateFrom: start,
         dateTo: end,

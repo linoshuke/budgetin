@@ -4,13 +4,12 @@ import { useEffect, useState } from "react";
 import AuthGate from "@/components/shared/AuthGate";
 import Modal from "@/components/shared/Modal";
 import LockWidget from "@/components/LockWidget";
-import { supabase } from "@/lib/supabase/client";
 import { formatDate, toCsvRow } from "@/lib/utils";
-import { getUserAvatarUrl, getUserDisplayName, getUserInitials } from "@/lib/user-profile";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import type { Transaction } from "@/types/transaction";
 import type { User } from "@supabase/supabase-js";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useAuth } from "@/hooks/useAuth";
 
 function getProvider(user: User | null) {
   if (user?.is_anonymous) return "anonim";
@@ -21,11 +20,11 @@ function getProvider(user: User | null) {
 export default function ProfilePage() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
-
-  const [authUser, setAuthUser] = useState<User | null>(null);
-  const [loadingUser, setLoadingUser] = useState(true);
+  const { user: authUser, loading: authLoading, displayName, avatarUrl, initials, isAnonymous } = useAuth();
+  const loadingUser = authLoading;
 
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
@@ -33,6 +32,9 @@ export default function ProfilePage() {
   const [accountNotice, setAccountNotice] = useState("");
   const [accountError, setAccountError] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
+  const [linkingGoogle, setLinkingGoogle] = useState(false);
+  const [linkNotice, setLinkNotice] = useState("");
+  const [linkError, setLinkError] = useState("");
 
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,40 +46,32 @@ export default function ProfilePage() {
   const [showPasswordModal, setShowPasswordModal] = useState(false);
 
   useEffect(() => {
-    let active = true;
+    if (authLoading) return;
+    setName(displayName);
+    setEmail(authUser?.email ?? "");
+  }, [authLoading, authUser?.email, displayName]);
 
-    const hydrateUser = async () => {
-      const { data } = await supabase.auth.getUser();
-      if (!active) return;
+  useEffect(() => {
+    const linked = searchParams?.get("linked");
+    if (linked !== "google") return;
+    setLinkNotice("Google berhasil terhubung.");
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("linked");
+      router.replace(`${url.pathname}${url.search}` as import("next").Route);
+    } catch {
+      // ignore cleanup errors
+    }
+  }, [router, searchParams]);
 
-      const user = data.user ?? null;
-      setAuthUser(user);
-      setName(getUserDisplayName(user));
-      setEmail(user?.email ?? "");
-      setLoadingUser(false);
-    };
-
-    hydrateUser();
-
-    const { data: listener } = supabase.auth.onAuthStateChange((_event, session) => {
-      const user = session?.user ?? null;
-      setAuthUser(user);
-      setName(getUserDisplayName(user));
-      setEmail(user?.email ?? "");
-      setLoadingUser(false);
-    });
-
-    return () => {
-      active = false;
-      listener.subscription.unsubscribe();
-    };
-  }, []);
-
-  const avatarUrl = getUserAvatarUrl(authUser);
-  const provider = getProvider(authUser);
+  const provider = getProvider(authUser ?? null);
   const providers = (authUser?.app_metadata?.providers as string[] | undefined) ?? [];
   const isEmailProvider = providers.includes("email");
-  const isAnonymous = Boolean(authUser?.is_anonymous);
+  const identities = authUser?.identities ?? [];
+  const googleIdentity = identities.find((identity) => identity.provider === "google");
+  const hasGoogle = Boolean(googleIdentity) || providers.includes("google");
+  const canUnlinkGoogle = hasGoogle && isEmailProvider;
+  const canChangePassword = !isAnonymous && isEmailProvider;
   const isVerified = Boolean(authUser?.email_confirmed_at);
   const verificationLabel = isAnonymous ? "Anonim" : isVerified ? "Terverifikasi" : "Belum terverifikasi";
   const createdDate = authUser?.created_at ? formatDate(authUser.created_at, true) : "-";
@@ -153,13 +147,16 @@ export default function ProfilePage() {
       const nextName = name.trim();
       const nextEmail = email.trim();
 
-      const { error: metadataError } = await supabase.auth.updateUser({
-        data: {
-          name: nextName,
-          full_name: nextName,
-        },
+      const metadataResponse = await fetch("/api/auth/metadata-update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ name: nextName }),
       });
-      if (metadataError) throw metadataError;
+      if (!metadataResponse.ok) {
+        const payload = await metadataResponse.json().catch(() => ({}));
+        throw new Error((payload as { error?: string }).error ?? `HTTP ${metadataResponse.status}`);
+      }
 
       if (nextEmail && nextEmail !== authUser.email) {
         if (isAnonymous) {
@@ -194,16 +191,78 @@ export default function ProfilePage() {
         console.warn("Sinkronisasi profil lokal gagal:", err);
       }
 
-      const { data } = await supabase.auth.getUser();
-      setAuthUser(data.user ?? null);
-      setName(getUserDisplayName(data.user ?? null));
-      setEmail(data.user?.email ?? nextEmail);
+      window.dispatchEvent(new Event("auth:changed"));
+      setName(nextName || displayName);
+      setEmail(nextEmail);
       setShowEditName(false);
     } catch (error) {
       setAccountError(error instanceof Error ? error.message : "Gagal memperbarui akun.");
     } finally {
       setSavingAccount(false);
       setCurrentPassword("");
+    }
+  };
+
+  const handleLinkGoogle = async () => {
+    setLinkingGoogle(true);
+    setLinkError("");
+    setLinkNotice("");
+
+    try {
+      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+        "/profile?linked=google",
+      )}`;
+      const response = await fetch("/api/auth/link", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ provider: "google", redirectTo }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string; url?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Gagal memulai link Google.");
+      }
+      if (!payload.url) {
+        throw new Error("Tautan Google tidak tersedia.");
+      }
+      window.location.href = payload.url;
+    } catch (error) {
+      setLinkError(error instanceof Error ? error.message : "Gagal menghubungkan Google.");
+      setLinkingGoogle(false);
+    }
+  };
+
+  const handleUnlinkGoogle = async () => {
+    if (!googleIdentity?.identity_id) {
+      setLinkError("Identitas Google tidak ditemukan.");
+      return;
+    }
+    if (!canUnlinkGoogle) {
+      setLinkError("Tambahkan login email/password sebelum memutuskan Google.");
+      return;
+    }
+
+    setLinkingGoogle(true);
+    setLinkError("");
+    setLinkNotice("");
+
+    try {
+      const response = await fetch("/api/auth/unlink", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ identityId: googleIdentity.identity_id }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? "Gagal memutuskan Google.");
+      }
+      setLinkNotice("Google berhasil diputuskan.");
+      window.dispatchEvent(new Event("auth:changed"));
+    } catch (error) {
+      setLinkError(error instanceof Error ? error.message : "Gagal memutuskan Google.");
+    } finally {
+      setLinkingGoogle(false);
     }
   };
 
@@ -282,7 +341,7 @@ export default function ProfilePage() {
                   />
                 ) : (
                   <div className="flex h-20 w-20 items-center justify-center rounded-3xl bg-gradient-to-br from-primary to-secondary-container text-lg font-semibold text-on-primary">
-                    {getUserInitials(name, email)}
+                    {initials}
                   </div>
                 )}
               </div>
@@ -344,6 +403,16 @@ export default function ProfilePage() {
             ) : null}
             <div className="rounded-2xl border border-outline-variant/5 bg-surface-container-low p-6">
               <h2 className="font-headline text-lg font-bold text-on-surface">Account Management</h2>
+              {linkError ? (
+                <p className="mt-4 rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+                  {linkError}
+                </p>
+              ) : null}
+              {linkNotice ? (
+                <p className="mt-4 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+                  {linkNotice}
+                </p>
+              ) : null}
               <div className="mt-4 grid gap-3">
                 <button
                   type="button"
@@ -355,20 +424,39 @@ export default function ProfilePage() {
                 </button>
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high"
-                  onClick={() => alert("Link Google belum tersedia.")}
+                  className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-60"
+                  onClick={hasGoogle ? handleUnlinkGoogle : handleLinkGoogle}
+                  disabled={linkingGoogle}
                 >
-                  Link Google
+                  {hasGoogle ? "Putuskan Google" : "Hubungkan Google"}
                   <span className="text-on-surface-variant">&gt;</span>
                 </button>
+                {!hasGoogle ? (
+                  <p className="text-xs text-on-surface-variant">
+                    Hubungkan Google agar login lebih cepat tanpa kata sandi.
+                  </p>
+                ) : null}
+                {hasGoogle && !canUnlinkGoogle ? (
+                  <p className="text-xs text-on-surface-variant">
+                    Tambahkan login email/password sebelum memutuskan Google agar akses tetap aman.
+                  </p>
+                ) : null}
                 <button
                   type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high"
+                  className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-60"
                   onClick={() => setShowPasswordModal(true)}
+                  disabled={!canChangePassword}
                 >
                   Ubah Password
                   <span className="text-on-surface-variant">&gt;</span>
                 </button>
+                {!canChangePassword ? (
+                  <p className="text-xs text-on-surface-variant">
+                    {isAnonymous
+                      ? "Upgrade akun untuk mengatur kata sandi."
+                      : "Password hanya tersedia untuk akun email/password."}
+                  </p>
+                ) : null}
                 <button
                   type="button"
                   className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high"
@@ -381,7 +469,8 @@ export default function ProfilePage() {
                   type="button"
                   className="flex w-full items-center justify-between rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error transition-colors hover:bg-error/20"
                   onClick={async () => {
-                    await supabase.auth.signOut();
+                    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+                    window.dispatchEvent(new Event("auth:changed"));
                     router.replace("/login");
                   }}
                 >

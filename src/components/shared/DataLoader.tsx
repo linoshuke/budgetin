@@ -2,7 +2,8 @@
 
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import { usePathname } from "next/navigation";
-import { useEffect } from "react";
+import { useEffect, useRef, useState } from "react";
+import { useAuthStore } from "@/stores/authStore";
 
 function isAuthRoute(pathname: string) {
   return pathname === "/login" || pathname === "/register";
@@ -11,45 +12,62 @@ function isAuthRoute(pathname: string) {
 export default function DataLoader() {
   const loading = useBudgetStore((state) => state.loading);
   const pathname = usePathname();
+  const authLoading = useAuthStore((state) => state.loading);
+  const user = useAuthStore((state) => state.user);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [anonymousRequested, setAnonymousRequested] = useState(false);
+  const lastUserIdRef = useRef<string | null>(null);
 
   useEffect(() => {
     if (isAuthRoute(pathname)) return;
-
-    let active = true;
-
-    const loadSession = async () => {
-      const response = await fetch("/api/auth/session", { credentials: "include" });
-      const payload = (await response.json()) as { user: unknown | null };
-      return payload.user;
-    };
-
-    const hydrate = async () => {
-      if (!active) return;
-      let user = await loadSession();
-
-      if (!user) {
-        await fetch("/api/auth/anonymous", { method: "POST", credentials: "include" });
-        user = await loadSession();
-      }
-
-      budgetActions.setAuthState(Boolean(user));
-      await budgetActions.loadFromApi();
-    };
-
-    hydrate();
-
-    const handleAuthChange = () => {
-      if (!active || isAuthRoute(pathname)) return;
-      void hydrate();
-    };
-
+    const handleAuthChange = () => setRefreshKey((current) => current + 1);
     window.addEventListener("auth:changed", handleAuthChange);
-
     return () => {
-      active = false;
       window.removeEventListener("auth:changed", handleAuthChange);
     };
   }, [pathname]);
+
+  useEffect(() => {
+    if (isAuthRoute(pathname)) return;
+    if (authLoading) return;
+    if (user || anonymousRequested) return;
+
+    let active = true;
+
+    const createAnonymous = async () => {
+      try {
+        await fetch("/api/auth/anonymous", { method: "POST", credentials: "include" });
+        if (!active) return;
+        setAnonymousRequested(true);
+        window.dispatchEvent(new Event("auth:changed"));
+      } catch {
+        if (!active) return;
+        setAnonymousRequested(true);
+      }
+    };
+
+    void createAnonymous();
+
+    return () => {
+      active = false;
+    };
+  }, [anonymousRequested, authLoading, pathname, user]);
+
+  useEffect(() => {
+    if (isAuthRoute(pathname)) return;
+    if (authLoading) return;
+
+    if (!user) {
+      budgetActions.setAuthState(false);
+      return;
+    }
+
+    if (lastUserIdRef.current === user.id && refreshKey === 0) return;
+    lastUserIdRef.current = user.id;
+
+    budgetActions.setAuthState(true);
+    void budgetActions.loadFromApi();
+  }, [authLoading, pathname, refreshKey, user]);
 
   const showOverlay = !isAuthRoute(pathname) && loading;
   if (!showOverlay) return null;

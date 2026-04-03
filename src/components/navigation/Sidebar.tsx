@@ -27,6 +27,7 @@ export default function Sidebar() {
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const setSidebarCollapsed = useUIStore((state) => state.setSidebarCollapsed);
   const toggleSidebar = useUIStore((state) => state.toggleSidebar);
+  const openModal = useUIStore((state) => state.openModal);
 
   useEffect(() => {
     const stored = typeof window !== "undefined" ? localStorage.getItem(SIDEBAR_STORAGE_KEY) : null;
@@ -128,8 +129,9 @@ export default function Sidebar() {
         </div>
       </div>
       <div className="mt-auto">
-        <Link
-          href="/transactions"
+        <button
+          type="button"
+          onClick={() => openModal("quickAddTransaction")}
           className={cn(
             "flex w-full items-center justify-center rounded-xl bg-gradient-to-r from-primary to-secondary-container px-4 py-4 text-sm font-bold text-on-primary shadow-xl shadow-primary/10 transition-transform active:scale-95",
             sidebarCollapsed ? "space-x-0" : "space-x-2",
@@ -139,7 +141,7 @@ export default function Sidebar() {
             add_circle
           </span>
           <span className={sidebarCollapsed ? "sr-only" : undefined}>Add Transaction</span>
-        </Link>
+        </button>
       </div>
     </aside>
   );
