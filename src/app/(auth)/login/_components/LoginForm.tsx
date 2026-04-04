@@ -6,6 +6,7 @@ import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import type { Route } from "next";
 import { FormEvent, useState } from "react";
+import { getPublicOrigin } from "@/lib/public-url";
 
 interface LoginFormProps {
   nextPath: string;
@@ -46,7 +47,7 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
     setLoading(true);
     setError("");
 
-    const redirectTo = `${window.location.origin}/auth/callback${
+    const redirectTo = `${getPublicOrigin()}/auth/callback${
       nextPath && nextPath !== "/" ? `?next=${encodeURIComponent(nextPath)}` : ""
     }`;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({

@@ -4,6 +4,13 @@ import { rateLimit } from "@/lib/rate-limit";
 import { withNoStore } from "@/lib/http";
 
 export async function POST(request: Request) {
+  if (process.env.NEXT_PUBLIC_ALLOW_ANONYMOUS !== "true") {
+    return NextResponse.json(
+      { user: null, disabled: true },
+      { status: 200, headers: withNoStore() },
+    );
+  }
+
   const limiter = await rateLimit({ request, key: "auth:anonymous", limit: 10, windowMs: 60_000 });
   if (!limiter.ok) {
     return NextResponse.json(

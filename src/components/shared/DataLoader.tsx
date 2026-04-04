@@ -6,7 +6,12 @@ import { useEffect, useRef, useState } from "react";
 import { useAuthStore } from "@/stores/authStore";
 
 function isAuthRoute(pathname: string) {
-  return pathname === "/login" || pathname === "/register";
+  return (
+    pathname === "/login" ||
+    pathname === "/register" ||
+    pathname === "/signup" ||
+    pathname === "/verify-email"
+  );
 }
 
 export default function DataLoader() {
@@ -17,6 +22,7 @@ export default function DataLoader() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [anonymousRequested, setAnonymousRequested] = useState(false);
   const lastUserIdRef = useRef<string | null>(null);
+  const allowAnonymous = process.env.NEXT_PUBLIC_ALLOW_ANONYMOUS === "true";
 
   useEffect(() => {
     if (isAuthRoute(pathname)) return;
@@ -30,6 +36,7 @@ export default function DataLoader() {
   useEffect(() => {
     if (isAuthRoute(pathname)) return;
     if (authLoading) return;
+    if (!allowAnonymous) return;
     if (user || anonymousRequested) return;
 
     let active = true;

@@ -35,6 +35,7 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const isProd = process.env.NODE_ENV === "production";
   const headerList = await headers();
   const csp = headerList.get("content-security-policy") ?? "";
   const nonceMatch = csp.match(/'nonce-([^']+)'/);
@@ -68,8 +69,8 @@ export default async function RootLayout({
         >
           <Providers>{children}</Providers>
         </Suspense>
-        <Analytics />
-        <SpeedInsights />
+        {isProd ? <Analytics /> : null}
+        {isProd ? <SpeedInsights /> : null}
       </body>
     </html>
   );

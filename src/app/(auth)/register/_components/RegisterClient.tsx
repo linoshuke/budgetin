@@ -7,6 +7,7 @@ import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
 import { FormEvent, useEffect, useMemo, useState } from "react";
+import { getPublicOrigin } from "@/lib/public-url";
 
 /** Sanitasi redirect path untuk mencegah open redirect attack. */
 function sanitizeRedirect(path: string | null): string {
@@ -104,7 +105,7 @@ export default function RegisterClient() {
     setError("");
     setNotice("");
 
-    const redirectTo = `${window.location.origin}/auth/callback${
+    const redirectTo = `${getPublicOrigin()}/auth/callback${
       nextPath && nextPath !== "/" ? `?next=${encodeURIComponent(nextPath)}` : ""
     }`;
     const { error: oauthError } = await supabase.auth.signInWithOAuth({

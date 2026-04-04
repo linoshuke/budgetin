@@ -10,6 +10,7 @@ function createNonce() {
 }
 
 function buildCsp(nonce: string) {
+  const isDev = process.env.NODE_ENV !== "production";
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   let supabaseHost = "";
   try {
@@ -18,6 +19,23 @@ function buildCsp(nonce: string) {
     supabaseHost = "";
   }
 
+  const styleSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    "https://fonts.googleapis.com",
+    isDev ? "'unsafe-inline'" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
+  const scriptSrc = [
+    "'self'",
+    `'nonce-${nonce}'`,
+    !isDev ? "https://va.vercel-scripts.com" : "",
+  ]
+    .filter(Boolean)
+    .join(" ");
+
   return [
     "default-src 'self'",
     "base-uri 'self'",
@@ -25,12 +43,16 @@ function buildCsp(nonce: string) {
     "frame-ancestors 'none'",
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
-    `style-src 'self' 'nonce-${nonce}' https://fonts.googleapis.com`,
-    `script-src 'self' 'nonce-${nonce}'`,
+    `style-src ${styleSrc}`,
+    isDev ? "style-src-attr 'unsafe-inline'" : "",
+    `script-src ${scriptSrc}`,
+    `script-src-elem ${scriptSrc}`,
     `connect-src 'self' ${supabaseHost || "https://*.supabase.co"} https: wss:`,
     "frame-src 'self' https:",
     "media-src 'self' https:",
-  ].join("; ");
+  ]
+    .filter(Boolean)
+    .join("; ");
 }
 
 function hasSessionCookie(request: NextRequest) {

@@ -10,6 +10,7 @@ import type { Transaction } from "@/types/transaction";
 import type { User } from "@supabase/supabase-js";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
+import { getPublicOrigin } from "@/lib/public-url";
 
 function getProvider(user: User | null) {
   if (user?.is_anonymous) return "anonim";
@@ -209,7 +210,7 @@ export default function ProfilePage() {
     setLinkNotice("");
 
     try {
-      const redirectTo = `${window.location.origin}/auth/callback?next=${encodeURIComponent(
+      const redirectTo = `${getPublicOrigin()}/auth/callback?next=${encodeURIComponent(
         "/profile?linked=google",
       )}`;
       const response = await fetch("/api/auth/link", {

@@ -24,7 +24,23 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createServerSupabase();
-  const { error } = await supabase.auth.unlinkIdentity({ identity_id: identityId });
+  const { data: userData, error: userError } = await supabase.auth.getUser();
+  if (userError || !userData?.user) {
+    return NextResponse.json(
+      { error: userError?.message ?? "Pengguna tidak ditemukan." },
+      { status: 401, headers: withNoStore(limiter.headers) },
+    );
+  }
+
+  const identity = userData.user.identities?.find((item) => item.identity_id === identityId);
+  if (!identity) {
+    return NextResponse.json(
+      { error: "Identitas tidak ditemukan." },
+      { status: 404, headers: withNoStore(limiter.headers) },
+    );
+  }
+
+  const { error } = await supabase.auth.unlinkIdentity(identity);
 
   if (error) {
     return NextResponse.json(

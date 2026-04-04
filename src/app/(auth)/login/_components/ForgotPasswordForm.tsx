@@ -3,6 +3,7 @@
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { FormEvent, useState } from "react";
+import { getPublicOrigin } from "@/lib/public-url";
 
 interface ForgotPasswordFormProps {
   nextPath: string;
@@ -21,7 +22,9 @@ export default function ForgotPasswordForm({ nextPath, onBack }: ForgotPasswordF
     setError("");
     setNotice("");
 
-    const redirectTo = `${window.location.origin}/login?mode=reset${nextPath && nextPath !== "/" ? `&next=${encodeURIComponent(nextPath)}` : ""}`;
+    const redirectTo = `${getPublicOrigin()}/login?mode=reset${
+      nextPath && nextPath !== "/" ? `&next=${encodeURIComponent(nextPath)}` : ""
+    }`;
     setLoading(false);
     try {
       const response = await fetch("/api/auth/password-reset", {
