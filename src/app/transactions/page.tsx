@@ -18,6 +18,7 @@ import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Transaction } from "@/types/transaction";
 import { TRANSACTIONS_CHANGED_EVENT } from "@/lib/transaction-events";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { useI18n } from "@/hooks/useI18n";
 
 const pageSize = 50;
 
@@ -31,8 +32,8 @@ function isSameDay(date: Date, compare: Date) {
   );
 }
 
-function formatTime(value: string) {
-  return new Intl.DateTimeFormat("id-ID", {
+function formatTime(value: string, locale?: string) {
+  return new Intl.DateTimeFormat(locale ?? "id-ID", {
     hour: "2-digit",
     minute: "2-digit",
   }).format(new Date(value));
@@ -58,6 +59,7 @@ function resolveActivityStatus(transaction: Transaction): ActivityTab {
 }
 
 export default function TransactionsPage() {
+  const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
@@ -66,6 +68,7 @@ export default function TransactionsPage() {
   const loading = useBudgetStore((state) => state.loading);
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const defaultPeriod = useAppSettingsStore((state) => state.defaultPeriod);
+  const dateLocale = useAppSettingsStore((state) => state.dateLocale);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pageOffset, setPageOffset] = useState(0);
@@ -146,13 +149,13 @@ export default function TransactionsPage() {
           setPageOffset(reset ? items.length : offset + items.length);
         }
       } catch (error) {
-        setLoadError(error instanceof Error ? error.message : "Gagal memuat transaksi.");
+        setLoadError(error instanceof Error ? error.message : t("transactions.error.loadFailed"));
       } finally {
         loadingRef.current = false;
         setLoadingPage(false);
       }
     },
-    [buildDateRange, selectedCategoryIds, walletFilter.selectedWalletIds],
+    [buildDateRange, selectedCategoryIds, t, walletFilter.selectedWalletIds],
   );
 
   const refreshTransactions = useCallback(() => {
@@ -190,7 +193,7 @@ export default function TransactionsPage() {
       const params = new URLSearchParams(searchParams.toString());
       params.delete("new");
       const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.replace(nextUrl, { scroll: false });
+      router.replace(nextUrl as any, { scroll: false });
       return;
     }
 
@@ -320,11 +323,11 @@ export default function TransactionsPage() {
           }`}
         >
           <MainHeader
-            title="Transactions"
+            title={t("nav.transactions")}
             tabs={[
-              { key: "all", label: "All Activity" },
-              { key: "pending", label: "Pending" },
-              { key: "scheduled", label: "Scheduled" },
+              { key: "all", label: t("transactions.activity.all") },
+              { key: "pending", label: t("transactions.activity.pending") },
+              { key: "scheduled", label: t("transactions.activity.scheduled") },
             ]}
             activeTab={activeActivityTab}
             onTabChange={(key) => setActiveActivityTab(key as ActivityTab)}
@@ -333,12 +336,12 @@ export default function TransactionsPage() {
           <section className="flex flex-col gap-6 px-6 py-6 md:px-8">
             <div className="flex flex-col items-center gap-4 rounded-xl bg-surface-container-low p-4 md:flex-row md:justify-between">
               <div className="relative w-full md:w-96">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-lg text-slate-500">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant">
                   search
                 </span>
                 <input
-                  className="w-full rounded-lg border-none bg-surface-container py-3 pl-12 pr-4 text-on-surface placeholder-slate-500 transition-all focus:bg-surface-container-high focus:ring-1 focus:ring-primary"
-                  placeholder="Search transactions..."
+                  className="w-full rounded-lg border-none bg-surface-container py-3 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant transition-all focus:bg-surface-container-high focus:ring-1 focus:ring-primary"
+                  placeholder={t("transactions.searchPlaceholder")}
                   type="text"
                   value={searchQuery}
                   onChange={(event) => setSearchQuery(event.target.value)}
@@ -351,7 +354,7 @@ export default function TransactionsPage() {
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-outline-variant/10 bg-surface-container px-4 py-3 text-on-surface transition-all hover:bg-surface-container-highest md:flex-none"
                 >
                   <span className="material-symbols-outlined text-lg">calendar_today</span>
-                  <span className="text-sm font-medium">Date</span>
+                  <span className="text-sm font-medium">{t("transactions.filter.date")}</span>
                 </button>
                 <button
                   type="button"
@@ -359,14 +362,14 @@ export default function TransactionsPage() {
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-outline-variant/10 bg-surface-container px-4 py-3 text-on-surface transition-all hover:bg-surface-container-highest md:flex-none"
                 >
                   <span className="material-symbols-outlined text-lg">category</span>
-                  <span className="text-sm font-medium">Category</span>
+                  <span className="text-sm font-medium">{t("transactions.filter.category")}</span>
                 </button>
                 <button
                   type="button"
                   className="flex flex-1 items-center justify-center gap-2 rounded-lg border border-outline-variant/10 bg-surface-container px-4 py-3 text-on-surface transition-all hover:bg-surface-container-highest md:flex-none"
                 >
                   <span className="material-symbols-outlined text-lg">filter_list</span>
-                  <span className="text-sm font-medium">Amount</span>
+                  <span className="text-sm font-medium">{t("transactions.filter.amount")}</span>
                 </button>
               </div>
             </div>
@@ -385,7 +388,7 @@ export default function TransactionsPage() {
                       }`}
                       onClick={() => filter.setPeriod(mode)}
                     >
-                      {mode === "daily" ? "Harian" : mode === "monthly" ? "Bulanan" : "Rentang"}
+                      {t(`transactions.period.${mode}`)}
                     </button>
                   ))}
                 </div>
@@ -414,7 +417,7 @@ export default function TransactionsPage() {
                 {filter.period === "range" ? (
                   <div className="grid gap-3 sm:grid-cols-2">
                     <label className="space-y-1 text-sm text-on-surface-variant">
-                      Dari tanggal
+                      {t("transactions.range.from")}
                       <input
                         type="date"
                         value={filter.fromDate}
@@ -423,7 +426,7 @@ export default function TransactionsPage() {
                       />
                     </label>
                     <label className="space-y-1 text-sm text-on-surface-variant">
-                      Sampai tanggal
+                      {t("transactions.range.to")}
                       <input
                         type="date"
                         value={filter.toDate}
@@ -438,8 +441,8 @@ export default function TransactionsPage() {
 
             <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
               <div className="rounded-xl border border-outline-variant/5 bg-surface-container p-6">
-                <p className="mb-2 font-headline text-xs font-bold uppercase tracking-widest text-slate-500">
-                  Monthly Spending
+                <p className="mb-2 font-headline text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                  {t("transactions.stats.monthlySpending")}
                 </p>
                 <div className="flex items-end justify-between">
                   <h2 className="tnum font-headline text-3xl font-extrabold text-on-surface">
@@ -459,16 +462,16 @@ export default function TransactionsPage() {
               </div>
 
               <div className="rounded-xl border border-outline-variant/5 bg-surface-container p-6">
-                <p className="mb-2 font-headline text-xs font-bold uppercase tracking-widest text-slate-500">
-                  Largest Expense
+                <p className="mb-2 font-headline text-xs font-bold uppercase tracking-widest text-on-surface-variant">
+                  {t("transactions.stats.largestExpense")}
                 </p>
                 <div className="flex items-end justify-between">
                   <div>
                     <h2 className="tnum font-headline text-3xl font-extrabold text-on-surface">
                       {formatCurrency(largestExpense?.amount ?? 0)}
                     </h2>
-                    <p className="text-sm text-slate-400">
-                      {largestExpense ? categoryMap.get(largestExpense.categoryId)?.name ?? "Tanpa kategori" : "-"}
+                    <p className="text-sm text-on-surface-variant">
+                      {largestExpense ? categoryMap.get(largestExpense.categoryId)?.name ?? t("common.uncategorized") : "-"}
                     </p>
                   </div>
                   <span className="material-symbols-outlined text-3xl text-primary-container">home</span>
@@ -486,7 +489,7 @@ export default function TransactionsPage() {
                 <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 transition-transform group-hover:scale-110">
                   <span className="material-symbols-outlined text-primary">add</span>
                 </div>
-                <p className="font-headline font-bold text-primary">New Transaction</p>
+                <p className="font-headline font-bold text-primary">{t("transactions.newTransaction")}</p>
               </button>
             </div>
 
@@ -494,31 +497,33 @@ export default function TransactionsPage() {
               <div className="overflow-x-auto">
                 <table className="w-full border-collapse text-left">
                   <thead>
-                    <tr className="bg-[#1a202a]/50 text-xs font-bold uppercase tracking-wider text-slate-500">
-                      <th className="px-8 py-5">Date</th>
-                      <th className="px-6 py-5">Description</th>
-                      <th className="px-6 py-5">Category</th>
-                      <th className="px-6 py-5">Account</th>
-                      <th className="px-6 py-5 text-right">Amount</th>
-                      <th className="px-8 py-5 text-right">Actions</th>
+                    <tr className="bg-surface-container-high/60 text-xs font-bold uppercase tracking-wider text-on-surface-variant">
+                      <th className="px-8 py-5">{t("transactions.table.date")}</th>
+                      <th className="px-6 py-5">{t("transactions.table.description")}</th>
+                      <th className="px-6 py-5">{t("transactions.table.category")}</th>
+                      <th className="px-6 py-5">{t("transactions.table.account")}</th>
+                      <th className="px-6 py-5 text-right">{t("transactions.table.amount")}</th>
+                      <th className="px-8 py-5 text-right">{t("transactions.table.actions")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/5">
                         {pagedTransactions.map((transaction) => {
                           const category = categoryMap.get(transaction.categoryId);
-                          const walletName = walletMap.get(transaction.walletId) ?? "Tanpa dompet";
-                          const description = transaction.note || category?.name || "Transaksi";
-                          const subtitle = transaction.note ? category?.name ?? "Tanpa kategori" : "Activity";
+                          const walletName = walletMap.get(transaction.walletId) ?? t("common.noWallet");
+                          const description = transaction.note || category?.name || t("common.transaction");
+                          const subtitle = transaction.note
+                            ? category?.name ?? t("common.uncategorized")
+                            : t("transactions.subtitle.activity");
                           const iconName = resolveIcon(transaction.type);
                       const tone = transaction.type === "income" ? "primary" : "tertiary";
                       return (
-                        <tr key={transaction.id} className="group cursor-default transition-all hover:bg-[#1a202a]">
+                        <tr key={transaction.id} className="group cursor-default transition-all hover:bg-surface-container">
                           <td className="px-8 py-6">
                             <div className="flex flex-col">
                               <span className="tnum font-semibold text-on-surface">
                                 {formatDate(transaction.date, true)}
                               </span>
-                              <span className="text-xs text-slate-500">{formatTime(transaction.date)}</span>
+                              <span className="text-xs text-on-surface-variant">{formatTime(transaction.date, dateLocale ?? undefined)}</span>
                             </div>
                           </td>
                           <td className="px-6 py-6">
@@ -530,7 +535,7 @@ export default function TransactionsPage() {
                               </div>
                               <div className="flex flex-col">
                                 <span className="font-medium text-on-surface">{description}</span>
-                                <span className="text-xs text-slate-500">{subtitle}</span>
+                                <span className="text-xs text-on-surface-variant">{subtitle}</span>
                               </div>
                             </div>
                           </td>
@@ -542,13 +547,13 @@ export default function TransactionsPage() {
                                   : "border-tertiary/20 bg-tertiary/5 text-tertiary"
                               }`}
                             >
-                              {category?.name ?? "Uncategorized"}
+                              {category?.name ?? t("common.uncategorized")}
                             </span>
                           </td>
                           <td className="px-6 py-6">
                             <div className="flex items-center gap-2">
-                              <span className="material-symbols-outlined text-sm text-slate-400">credit_card</span>
-                              <span className="text-sm text-slate-400">{walletName}</span>
+                              <span className="material-symbols-outlined text-sm text-on-surface-variant">credit_card</span>
+                              <span className="text-sm text-on-surface-variant">{walletName}</span>
                             </div>
                           </td>
                           <td className="px-6 py-6 text-right">
@@ -565,7 +570,7 @@ export default function TransactionsPage() {
                             <div className="flex justify-end gap-2 opacity-0 transition-opacity group-hover:opacity-100">
                               <button
                                 type="button"
-                                className="p-2 text-slate-400 transition-colors hover:text-primary"
+                                className="p-2 text-on-surface-variant transition-colors hover:text-primary"
                                 onClick={() => {
                                   setEditingTransaction(transaction);
                                   setShowTransactionModal(true);
@@ -575,9 +580,9 @@ export default function TransactionsPage() {
                               </button>
                               <button
                                 type="button"
-                                className="p-2 text-slate-400 transition-colors hover:text-error"
+                                className="p-2 text-on-surface-variant transition-colors hover:text-error"
                                 onClick={async () => {
-                                  const confirmed = window.confirm("Hapus transaksi ini?");
+                                  const confirmed = window.confirm(t("transactions.confirmDelete"));
                                   if (!confirmed) return;
                                   await budgetActions.deleteTransaction(transaction.id);
                                 }}
@@ -595,8 +600,8 @@ export default function TransactionsPage() {
             </div>
 
             <div className="flex flex-wrap items-center justify-between gap-3 py-4">
-              <p className="text-sm font-medium text-slate-500">
-                Menampilkan {pagedTransactions.length} transaksi
+              <p className="text-sm font-medium text-on-surface-variant">
+                {t("transactions.showingPrefix")} {pagedTransactions.length} {t("transactions.showingSuffix")}
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 {loadError ? (
@@ -609,10 +614,10 @@ export default function TransactionsPage() {
                     disabled={loadingPage}
                     className="rounded-lg border border-primary/20 px-4 py-2 text-xs font-bold uppercase tracking-wider text-primary hover:bg-primary/10 disabled:opacity-60"
                   >
-                    {loadingPage ? "Memuat..." : "Load More"}
+                    {loadingPage ? t("transactions.loading") : t("transactions.loadMore")}
                   </button>
                 ) : (
-                  <span className="text-xs text-on-surface-variant">Semua data sudah ditampilkan</span>
+                  <span className="text-xs text-on-surface-variant">{t("transactions.allShown")}</span>
                 )}
               </div>
             </div>
@@ -631,14 +636,12 @@ export default function TransactionsPage() {
 
         <Modal
           open={showCategoryFilter}
-          title="Filter Kategori"
+          title={t("transactions.filterCategoryTitle")}
           onClose={() => setShowCategoryFilter(false)}
           sizeClassName="max-w-lg"
         >
           <div className="space-y-4">
-            <p className="text-sm text-[var(--text-dimmed)]">
-              Pilih kategori yang ingin ditampilkan. Kosongkan pilihan untuk menampilkan semua kategori.
-            </p>
+            <p className="text-sm text-on-surface-variant">{t("transactions.filterCategoryDesc")}</p>
             <div className="grid gap-2 sm:grid-cols-2">
               {categories.map((category) => {
                 const checked = selectedCategoryIds.includes(category.id);
@@ -671,14 +674,14 @@ export default function TransactionsPage() {
                 onClick={() => setSelectedCategoryIds([])}
                 className="rounded-lg border border-outline-variant/20 px-3 py-2 text-sm text-on-surface-variant hover:text-on-surface"
               >
-                Reset
+                {t("transactions.reset")}
               </button>
               <button
                 type="button"
                 onClick={() => setShowCategoryFilter(false)}
                 className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary"
               >
-                Terapkan
+                {t("transactions.apply")}
               </button>
             </div>
           </div>
@@ -686,7 +689,7 @@ export default function TransactionsPage() {
 
         <Modal
           open={showTransactionModal}
-          title={editingTransaction ? "Edit Transaksi" : "Catat Transaksi"}
+          title={editingTransaction ? t("transactions.modal.edit") : t("transactions.modal.add")}
           onClose={() => {
             setShowTransactionModal(false);
             setEditingTransaction(null);
@@ -699,7 +702,7 @@ export default function TransactionsPage() {
             wallets={wallets}
             onSubmit={handleSubmit}
             onCreateWallet={(payload) => budgetActions.addWallet(payload)}
-            submitLabel={editingTransaction ? "Simpan Perubahan" : "Simpan Transaksi"}
+            submitLabel={editingTransaction ? t("transactions.submit.edit") : t("transactions.submit.add")}
             onCancel={() => {
               setShowTransactionModal(false);
               setEditingTransaction(null);

@@ -2,13 +2,35 @@
 
 Use these rules when **not** using Upstash. Apply to production and preview.
 
+## This project (Budgetin)
+Server-side rate limiting in this repo uses Upstash when `UPSTASH_REDIS_REST_URL` and
+`UPSTASH_REDIS_REST_TOKEN` are set. If those env vars are missing, the app assumes
+rate limiting is enforced by your CDN/WAF layer (see `src/lib/rate-limit.ts`).
+
+To apply the Cloudflare rules programmatically, use:
+
+```bash
+node scripts/cloudflare/apply-rate-limits.mjs --dry-run
+node scripts/cloudflare/apply-rate-limits.mjs --apply
+```
+
+Required env vars:
+- `CLOUDFLARE_ZONE_ID`
+- `CLOUDFLARE_API_TOKEN`
+
+Note: Cloudflare rules only apply to hostnames that are actually proxied by Cloudflare (typically your custom domain).
+Default Vercel preview URLs (`*.vercel.app`) won't go through your Cloudflare zone unless you set up a preview domain
+under your zone.
+
 ## Target endpoints
 - /api/auth/login
 - /api/auth/register
 - /api/auth/password-reset
+- /api/auth/resend
 - /api/auth/mfa
 - /api/auth/email-update
 - /api/auth/password-update
+- /api/auth/metadata-update
 - /api/auth/anonymous
 - /api/auth/link
 - /api/auth/unlink
@@ -18,6 +40,14 @@ Use these rules when **not** using Upstash. Apply to production and preview.
 - Register: 3 requests / 60s, block 30m
 - Password reset/resend: 3 requests / 60s, block 30m
 - MFA verify: 6 requests / 5m, block 15m
+
+## Project defaults for other auth endpoints (per IP)
+These match the in-app `rateLimit(...)` configuration (when Upstash is enabled), with a reasonable WAF block timeout.
+- Email update: 3 requests / 60s, block 30m
+- Password update: 3 requests / 60s, block 30m
+- Anonymous sign-in: 10 requests / 60s, block 10m (or use managed challenge)
+- Link/unlink identity: 5 requests / 60s, block 10m
+- Metadata update: 5 requests / 60s, block 10m
 
 ## Cloudflare API snippets
 Replace placeholders: `CF_ZONE_ID`, `CF_API_TOKEN`.

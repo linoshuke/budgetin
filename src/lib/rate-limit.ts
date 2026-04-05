@@ -185,6 +185,6 @@ export async function rateLimit({
     }
   }
 
-  // No redis backend (e.g., handled at WAF/CDN) — return a pass result
+  // No redis backend (e.g., handled at WAF/CDN) -- return a pass result.
   return buildResult(limit, 0, Date.now() + windowMs);
 }

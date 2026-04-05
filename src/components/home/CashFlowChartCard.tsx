@@ -4,7 +4,9 @@ import { useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useWalletStore } from "@/stores/walletStore";
+import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import type { MonthlySummary } from "@/types";
+import { useI18n } from "@/hooks/useI18n";
 
 const MIN_Y = 6;
 const MAX_Y = 34;
@@ -15,9 +17,9 @@ function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
 }
 
-function buildMonths(count: number) {
+function buildMonths(count: number, locale: string) {
   const now = new Date();
-  const formatter = new Intl.DateTimeFormat("id-ID", { month: "short" });
+  const formatter = new Intl.DateTimeFormat(locale || "id-ID", { month: "short" });
   return Array.from({ length: count }, (_, index) => {
     const date = new Date(now.getFullYear(), now.getMonth() - (count - 1 - index), 1);
     return {
@@ -56,8 +58,10 @@ function calculateChange(current: number, previous: number) {
 }
 
 export default function CashFlowChartCard() {
+  const { t } = useI18n();
   const { user } = useAuth();
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
+  const dateLocale = useAppSettingsStore((state) => state.dateLocale);
   const [range, setRange] = useState<"6m" | "1y">("6m");
   const monthCount = range === "1y" ? 12 : 6;
 
@@ -80,7 +84,7 @@ export default function CashFlowChartCard() {
   });
 
   const { months, incomeSeries, expenseSeries, maxValue, trend } = useMemo(() => {
-    const months = buildMonths(monthCount);
+    const months = buildMonths(monthCount, dateLocale ?? "id-ID");
     const totals = new Map<string, { income: number; expense: number }>();
 
     summaryRows.forEach((row) => {
@@ -109,18 +113,18 @@ export default function CashFlowChartCard() {
     const trend = {
       income: {
         percent: incomeDelta,
-        label: `${incomeDelta >= 0 ? "Naik" : "Turun"} ${Math.abs(incomeDelta).toFixed(1)}%`,
+        label: `${incomeDelta >= 0 ? t("home.cashFlow.trendUp") : t("home.cashFlow.trendDown")} ${Math.abs(incomeDelta).toFixed(1)}%`,
         tone: incomeDelta >= 0 ? "primary" : "error",
       },
       expense: {
         percent: expenseDelta,
-        label: `${expenseDelta >= 0 ? "Naik" : "Turun"} ${Math.abs(expenseDelta).toFixed(1)}%`,
+        label: `${expenseDelta >= 0 ? t("home.cashFlow.trendUp") : t("home.cashFlow.trendDown")} ${Math.abs(expenseDelta).toFixed(1)}%`,
         tone: expenseDelta >= 0 ? "error" : "primary",
       },
     };
 
     return { months, incomeSeries, expenseSeries, maxValue, trend };
-  }, [monthCount, summaryRows]);
+  }, [dateLocale, monthCount, summaryRows, t]);
 
   const incomePath = useMemo(() => buildLinePath(incomeSeries, maxValue), [incomeSeries, maxValue]);
   const incomeArea = useMemo(() => buildAreaPath(incomeSeries, maxValue, MID_Y), [incomeSeries, maxValue]);
@@ -130,16 +134,16 @@ export default function CashFlowChartCard() {
     <div className="relative flex flex-col overflow-hidden rounded-xl bg-surface-container-low p-8 lg:col-span-2">
       <div className="mb-10 flex flex-wrap items-center justify-between gap-4">
         <div>
-          <h3 className="font-headline text-lg font-bold">Monthly Cash Flow</h3>
-          <p className="text-xs text-on-surface-variant">Pemasukan di atas garis tengah, pengeluaran di bawah.</p>
+          <h3 className="font-headline text-lg font-bold">{t("home.cashFlow.title")}</h3>
+          <p className="text-xs text-on-surface-variant">{t("home.cashFlow.desc")}</p>
           <div className="mt-2 flex items-center gap-4 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-[#7cebff]" />
-              Pemasukan
+              {t("common.income")}
             </span>
             <span className="flex items-center gap-2">
               <span className="h-2 w-2 rounded-full bg-[#adc6ff]" />
-              Pengeluaran
+              {t("common.expense")}
             </span>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2 text-[10px] font-semibold uppercase tracking-wider">
@@ -150,7 +154,7 @@ export default function CashFlowChartCard() {
                   : "bg-error/10 text-error"
               }`}
             >
-              Pemasukan {trend.income.label} vs bulan lalu
+              {t("common.income")} {trend.income.label} {t("home.vsLastMonth")}
             </span>
             <span
               className={`rounded-full px-2 py-1 ${
@@ -159,7 +163,7 @@ export default function CashFlowChartCard() {
                   : "bg-primary/10 text-primary"
               }`}
             >
-              Pengeluaran {trend.expense.label} vs bulan lalu
+              {t("common.expense")} {trend.expense.label} {t("home.vsLastMonth")}
             </span>
           </div>
         </div>
@@ -173,7 +177,7 @@ export default function CashFlowChartCard() {
                 : "text-on-surface-variant hover:bg-surface-container-high"
             }`}
           >
-            6 MONTHS
+            {t("home.cashFlow.range.6m")}
           </button>
           <button
             type="button"
@@ -184,7 +188,7 @@ export default function CashFlowChartCard() {
                 : "text-on-surface-variant hover:bg-surface-container-high"
             }`}
           >
-            YEARLY
+            {t("home.cashFlow.range.1y")}
           </button>
         </div>
       </div>

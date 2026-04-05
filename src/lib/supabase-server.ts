@@ -1,5 +1,8 @@
 import { createServerClient } from "@supabase/ssr";
 import { cookies } from "next/headers";
+import type { ResponseCookie } from "next/dist/compiled/@edge-runtime/cookies";
+
+type NextCookieOptions = Partial<ResponseCookie>;
 
 export async function createServerSupabase() {
     const cookieStore = await cookies();
@@ -15,8 +18,8 @@ export async function createServerSupabase() {
                 setAll(cookiesToSet) {
                     try {
                         cookiesToSet.forEach(({ name, value, options }) => {
-                            const nextOptions = {
-                                ...(options ?? {}),
+                            const nextOptions: NextCookieOptions = {
+                                ...((options ?? {}) as NextCookieOptions),
                                 httpOnly: true,
                                 sameSite: "strict",
                                 secure: true,

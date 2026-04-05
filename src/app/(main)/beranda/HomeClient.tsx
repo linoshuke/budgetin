@@ -3,12 +3,15 @@
 import { useMemo } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
+import type { Route } from "next";
 import TotalBalanceCard from "@/components/home/TotalBalanceCard";
 import MonthlySummary from "@/components/home/MonthlySummary";
 import WalletSelectionDialog from "@/components/modals/WalletSelectionDialog";
 import { useBudgetStore } from "@/store/budgetStore";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Category } from "@/types/category";
+import { useI18n } from "@/hooks/useI18n";
 
 const CashFlowChartCard = dynamic(() => import("@/components/home/CashFlowChartCard"), {
   ssr: false,
@@ -47,6 +50,8 @@ function resolveCategoryIcon(category: Category | undefined) {
 }
 
 export default function HomeClient() {
+  const { t, language } = useI18n();
+  const router = useRouter();
   const transactions = useBudgetStore((state) => state.transactions);
   const categories = useBudgetStore((state) => state.categories);
 
@@ -59,19 +64,19 @@ export default function HomeClient() {
 
     return sorted.slice(0, 5).map((item) => {
       const category = categoryMap.get(item.categoryId);
-      const title = (item.note ?? "").trim() || category?.name || "Transaksi";
+      const title = (item.note ?? "").trim() || category?.name || t("common.transaction");
       const amountValue = Math.abs(item.amount);
       return {
         title,
-        category: category?.name ?? "Tanpa kategori",
+        category: category?.name ?? t("common.uncategorized"),
         date: formatDate(item.date, true),
         amount: `${item.type === "income" ? "+" : "-"}${formatCurrency(amountValue)}`,
-        status: item.type === "income" ? "Pemasukan" : "Pengeluaran",
+        status: item.type === "income" ? t("common.income") : t("common.expense"),
         icon: resolveCategoryIcon(category),
         tone: item.type === "income" ? "primary" : "error",
       };
     });
-  }, [categoryMap, transactions]);
+  }, [categoryMap, t, transactions, language]);
 
   const upcomingBills = useMemo(() => {
     const today = new Date();
@@ -84,23 +89,27 @@ export default function HomeClient() {
 
     return upcoming.map((item) => {
       const category = categoryMap.get(item.categoryId);
-      const title = (item.note ?? "").trim() || category?.name || "Tagihan";
+      const title = (item.note ?? "").trim() || category?.name || t("home.upcomingBills");
       const dateValue = new Date(item.date);
       const diffDays = Math.max(0, Math.ceil((dateValue.getTime() - todayStart.getTime()) / DAY_MS));
       const meta =
-        diffDays === 0 ? "Jatuh tempo hari ini" : diffDays === 1 ? "Jatuh tempo besok" : `Jatuh tempo ${diffDays} hari lagi`;
+        diffDays === 0
+          ? t("home.dueToday")
+          : diffDays === 1
+            ? t("home.dueTomorrow")
+            : `${t("home.dueInPrefix")} ${diffDays} ${t("home.dueInSuffix")}`;
       const isUrgent = diffDays <= 1;
 
       return {
         title,
         meta,
         amount: formatCurrency(Math.abs(item.amount)),
-        status: isUrgent ? "Urgent" : "Pending",
+        status: isUrgent ? t("home.status.urgent") : t("home.status.pending"),
         tone: isUrgent ? "error" : "primary",
-        action: isUrgent ? "Bayar" : "Auto-pay",
+        action: isUrgent ? t("home.action.pay") : t("home.action.autopay"),
       };
     });
-  }, [categoryMap, transactions]);
+  }, [categoryMap, t, transactions, language]);
 
   return (
     <div className="space-y-8">
@@ -119,9 +128,13 @@ export default function HomeClient() {
       <section className="grid grid-cols-1 gap-8 xl:grid-cols-3">
         <div className="xl:col-span-2">
           <div className="mb-6 flex items-center justify-between">
-            <h3 className="font-headline text-xl font-bold">Recent Transactions</h3>
-            <button className="text-sm font-bold text-primary hover:underline" type="button">
-              View All
+            <h3 className="font-headline text-xl font-bold">{t("home.recentTransactions")}</h3>
+            <button
+              className="text-sm font-bold text-primary hover:underline"
+              type="button"
+              onClick={() => router.push("/transactions" as Route)}
+            >
+              {t("home.viewAll")}
             </button>
           </div>
           <div className="overflow-hidden rounded-xl bg-surface-container-low">
@@ -141,7 +154,7 @@ export default function HomeClient() {
                       <div>
                         <div className="text-sm font-bold text-on-surface">{item.title}</div>
                         <div className="text-xs text-on-surface-variant">
-                          {item.category} • {item.date}
+                          {item.category} - {item.date}
                         </div>
                       </div>
                     </div>
@@ -155,7 +168,7 @@ export default function HomeClient() {
                 ))
               ) : (
                 <div className="p-6 text-sm text-on-surface-variant">
-                  Belum ada transaksi untuk ditampilkan.
+                  {t("home.noRecentTransactions")}
                 </div>
               )}
             </div>
@@ -163,7 +176,7 @@ export default function HomeClient() {
         </div>
 
         <div>
-          <h3 className="mb-6 font-headline text-xl font-bold">Upcoming Bills</h3>
+          <h3 className="mb-6 font-headline text-xl font-bold">{t("home.upcomingBills")}</h3>
           <div className="space-y-4">
             {upcomingBills.length ? (
               upcomingBills.map((bill) => (
@@ -220,10 +233,10 @@ export default function HomeClient() {
               ))
             ) : (
               <div className="rounded-xl bg-surface-container-low p-5 text-sm text-on-surface-variant">
-                Belum ada tagihan terjadwal.
+                {t("home.noUpcomingBills")}
               </div>
             )}
-            <div className="group relative mt-8 overflow-hidden rounded-xl bg-[#1a202a] p-6">
+            <div className="group relative mt-8 overflow-hidden rounded-xl bg-surface-container-low p-6">
               <Image
                 alt="savings"
                 className="absolute inset-0 h-full w-full scale-110 object-cover opacity-20 transition-transform duration-700 group-hover:scale-100"
@@ -233,12 +246,12 @@ export default function HomeClient() {
                 loading="lazy"
               />
               <div className="relative z-10">
-                <div className="text-lg font-bold text-primary">Smart Savings</div>
+                <div className="text-lg font-bold text-primary">{t("home.smartSavings.title")}</div>
                 <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
-                  Based on your spending, you could save $450 more by optimizing your entertainment subscriptions.
+                  {t("home.smartSavings.body")}
                 </p>
                 <button className="group mt-4 flex items-center space-x-2 text-xs font-bold text-on-surface" type="button">
-                  <span>Learn how</span>
+                  <span>{t("home.smartSavings.cta")}</span>
                   <span className="material-symbols-outlined text-sm transition-transform group-hover:translate-x-1">
                     arrow_forward
                   </span>

@@ -13,6 +13,7 @@ const TEXT_SCALE_MAP: Record<"sm" | "md" | "lg", number> = {
 export default function AppSettingsSync() {
   const themeMode = useAppSettingsStore((state) => state.themeMode);
   const textScale = useAppSettingsStore((state) => state.textScale);
+  const language = useAppSettingsStore((state) => state.language);
   const privacyHideAmounts = useAppSettingsStore((state) => state.privacyHideAmounts);
   const defaultReportOffset = useAppSettingsStore((state) => state.defaultReportOffset);
   const setCurrentMonth = useTransactionStore((state) => state.setCurrentMonth);
@@ -41,6 +42,11 @@ export default function AppSettingsSync() {
     const scale = TEXT_SCALE_MAP[textScale] ?? 1;
     document.documentElement.style.setProperty("--app-text-scale", String(scale));
   }, [textScale]);
+
+  useEffect(() => {
+    document.documentElement.lang = language === "en" ? "en" : "id";
+    document.documentElement.dataset.lang = language;
+  }, [language]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("privacy-hide-amounts", privacyHideAmounts);

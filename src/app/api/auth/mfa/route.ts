@@ -6,7 +6,8 @@ import { withNoStore } from "@/lib/http";
 const GENERIC_ERROR = { error: "Permintaan MFA tidak dapat diproses." };
 
 export async function POST(request: Request) {
-  const limiter = await rateLimit({ request, key: "auth:mfa", limit: 5, windowMs: 60_000 });
+  // Align with WAF/CDN playbook defaults: 6 req / 5m.
+  const limiter = await rateLimit({ request, key: "auth:mfa", limit: 6, windowMs: 300_000 });
   if (!limiter.ok) {
     return NextResponse.json(
       { error: "Terlalu banyak permintaan MFA. Coba lagi sebentar." },

@@ -5,6 +5,7 @@ import { useMonthlySummary } from "@/hooks/useTransactions";
 import { useWalletStore } from "@/stores/walletStore";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { formatCurrency } from "@/utils/format";
+import { useI18n } from "@/hooks/useI18n";
 
 function calculateChange(current: number, previous: number) {
   if (previous === 0) {
@@ -14,6 +15,7 @@ function calculateChange(current: number, previous: number) {
 }
 
 export default function MonthlySummary() {
+  const { t } = useI18n();
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
   const { currentMonth } = useTransactionStore();
   const summary = useMonthlySummary(selectedWalletIds);
@@ -40,8 +42,8 @@ export default function MonthlySummary() {
   const expenseDelta = calculateChange(expense, prevExpense);
   const incomeTone = incomeDelta >= 0 ? "primary" : "error";
   const expenseTone = expenseDelta >= 0 ? "error" : "primary";
-  const incomeLabel = `${incomeDelta >= 0 ? "+" : ""}${incomeDelta.toFixed(1)}% vs bulan lalu`;
-  const expenseLabel = `${expenseDelta >= 0 ? "+" : ""}${expenseDelta.toFixed(1)}% vs bulan lalu`;
+  const incomeLabel = `${incomeDelta >= 0 ? "+" : ""}${incomeDelta.toFixed(1)}% ${t("home.vsLastMonth")}`;
+  const expenseLabel = `${expenseDelta >= 0 ? "+" : ""}${expenseDelta.toFixed(1)}% ${t("home.vsLastMonth")}`;
   const incomeIcon = incomeDelta >= 0 ? "arrow_upward" : "arrow_downward";
   const expenseIcon = expenseDelta >= 0 ? "arrow_upward" : "arrow_downward";
 
@@ -66,7 +68,7 @@ export default function MonthlySummary() {
           </span>
         </div>
         <div className="mt-4">
-          <div className="text-xs font-medium text-on-surface-variant">Pemasukan Bulan Ini</div>
+          <div className="text-xs font-medium text-on-surface-variant">{t("home.incomeThisMonth")}</div>
           <div className="tnum mt-1 text-2xl font-bold text-on-surface">{formatCurrency(income)}</div>
         </div>
       </div>
@@ -89,7 +91,7 @@ export default function MonthlySummary() {
           </span>
         </div>
         <div className="mt-4">
-          <div className="text-xs font-medium text-on-surface-variant">Pengeluaran Bulan Ini</div>
+          <div className="text-xs font-medium text-on-surface-variant">{t("home.expenseThisMonth")}</div>
           <div className="tnum mt-1 text-2xl font-bold text-on-surface">{formatCurrency(expense)}</div>
         </div>
       </div>

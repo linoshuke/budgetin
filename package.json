@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "waf:cloudflare:dry-run": "node scripts/cloudflare/apply-rate-limits.mjs --dry-run",
+    "waf:cloudflare:apply": "node scripts/cloudflare/apply-rate-limits.mjs --apply"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

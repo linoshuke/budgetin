@@ -6,10 +6,12 @@ import { useUIStore } from "@/stores/uiStore";
 import { useBudgetStore } from "@/store/budgetStore";
 import { useMonthlySummary } from "@/hooks/useTransactions";
 import { formatCurrency } from "@/utils/format";
+import { useI18n } from "@/hooks/useI18n";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
 export default function TotalBalanceCard() {
+  const { t, language } = useI18n();
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
   const openModal = useUIStore((state) => state.openModal);
   const transactions = useBudgetStore((state) => state.transactions);
@@ -36,7 +38,7 @@ export default function TotalBalanceCard() {
       return {
         trendLabel: "+0.0%",
         trendTone: "primary" as const,
-        lastSyncLabel: "Belum ada data",
+        lastSyncLabel: t("home.noData"),
       };
     }
 
@@ -67,10 +69,14 @@ export default function TotalBalanceCard() {
       ? Math.max(0, Math.floor((todayStart.getTime() - latest.getTime()) / DAY_MS))
       : null;
     const lastSyncLabel =
-      diffDays === null ? "Belum ada data" : diffDays === 0 ? "Hari ini" : `${diffDays} hari lalu`;
+      diffDays === null
+        ? t("home.noData")
+        : diffDays === 0
+          ? t("home.today")
+          : `${diffDays} ${t("home.daysAgoSuffix")}`;
 
     return { trendLabel, trendTone, lastSyncLabel };
-  }, [currentSummary, prevSummary, transactions]);
+  }, [currentSummary, prevSummary, t, transactions, language]);
 
   return (
     <div
@@ -89,16 +95,16 @@ export default function TotalBalanceCard() {
       <div className="relative z-10 flex h-full flex-col justify-between">
         <div>
           <div className="flex items-center space-x-2 text-sm font-medium text-on-surface-variant">
-            <span>Total Net Worth</span>
+            <span>{t("home.totalNetWorth")}</span>
             <div className="relative">
               <button
                 type="button"
                 className="group/info flex h-6 w-6 items-center justify-center rounded-full border border-outline-variant/40 text-[12px] text-on-surface-variant transition-colors hover:border-primary/40 hover:text-primary"
-                aria-label="Info total net worth"
+                aria-label={t("home.totalNetWorth")}
               >
                 i
                 <span className="pointer-events-none absolute left-full top-1/2 z-[9999] ml-2 w-56 -translate-y-1/2 rounded-lg border border-outline-variant/30 bg-surface-container px-3 py-2 text-[10px] text-on-surface-variant opacity-0 shadow-xl transition-opacity group-hover/info:opacity-100 group-focus-visible/info:opacity-100">
-                  Total saldo dari semua dompet terpilih, dihitung dari pemasukan dan pengeluaran.
+                  {t("home.totalNetWorth_info")}
                 </span>
               </button>
             </div>
@@ -107,7 +113,9 @@ export default function TotalBalanceCard() {
             {formatCurrency(totalBalance)}
           </h1>
           <p className="mt-2 text-xs text-on-surface-variant">
-            {selectedWalletIds.length ? `${selectedWalletIds.length} dompet dipilih` : "Semua dompet"}
+            {selectedWalletIds.length
+              ? t("home.walletsSelected").replace("{count}", String(selectedWalletIds.length))
+              : t("home.allWallets")}
           </p>
         </div>
         <div className="mt-10 flex flex-wrap items-center gap-4">
@@ -125,11 +133,11 @@ export default function TotalBalanceCard() {
               {trendTone === "primary" ? "trending_up" : "trending_down"}
             </span>
             <span className={`text-sm font-bold ${trendTone === "primary" ? "text-primary" : "text-error"}`}>
-              {trendLabel} <span className="font-normal opacity-70">bulan ini</span>
+              {trendLabel} <span className="font-normal opacity-70">{t("home.thisMonth")}</span>
             </span>
           </div>
           <div className="text-xs font-medium uppercase tracking-widest text-on-surface-variant">
-            Terakhir sinkron: {lastSyncLabel}
+            {t("home.lastSync")}: {lastSyncLabel}
           </div>
         </div>
       </div>

@@ -5,15 +5,17 @@ import type { Route } from "next";
 import { HelpCircle, Info, Shield, Mail, ChevronRight } from "lucide-react";
 import Button from "@/components/ui/Button";
 import { useUIStore } from "@/stores/uiStore";
+import { useI18n } from "@/hooks/useI18n";
 
 const items = [
-  { label: "Bantuan", icon: HelpCircle },
-  { label: "Tentang Aplikasi", icon: Info },
-  { label: "Privasi & Kebijakan", icon: Shield },
-  { label: "Hubungi Kami", icon: Mail },
+  { labelKey: "more.help", icon: HelpCircle },
+  { labelKey: "more.about", icon: Info },
+  { labelKey: "more.privacy", icon: Shield },
+  { labelKey: "more.contact", icon: Mail },
 ];
 
 export default function MorePage() {
+  const { t } = useI18n();
   const router = useRouter();
   const setActiveTab = useUIStore((state) => state.setActiveTab);
   const pushToast = useUIStore((state) => state.pushToast);
@@ -23,28 +25,29 @@ export default function MorePage() {
       <div className="grid gap-3 desktop:grid-cols-2">
         {items.map((item) => {
           const Icon = item.icon;
+          const label = t(item.labelKey);
           return (
             <button
-              key={item.label}
+              key={item.labelKey}
               onClick={() =>
                 pushToast({
-                  title: item.label,
-                  description: "Fitur ini sedang disiapkan.",
+                  title: label,
+                  description: t("toast.feature_preparing"),
                   variant: "info",
                 })
               }
-              className="flex items-center justify-between rounded-2xl border border-white/10 bg-[var(--bg-card)] p-4 text-left transition hover:border-white/20"
+              className="flex items-center justify-between rounded-2xl border border-outline-variant/10 bg-surface-container-low p-4 text-left transition hover:border-outline-variant/20 hover:bg-surface-container"
             >
               <div className="flex items-center gap-3">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[var(--accent-indigo)]/10 text-[var(--accent-indigo)]">
+                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-primary">
                   <Icon size={18} />
                 </div>
                 <div>
-                  <p className="text-sm font-semibold text-[var(--text-primary)]">{item.label}</p>
-                  <p className="text-xs text-[var(--text-dimmed)]">Kelola informasi penting</p>
+                  <p className="text-sm font-semibold text-on-surface">{label}</p>
+                  <p className="text-xs text-on-surface-variant">{t("common.manageImportantInfo")}</p>
                 </div>
               </div>
-              <ChevronRight className="text-[var(--text-dimmed)]" size={18} />
+              <ChevronRight className="text-on-surface-variant" size={18} />
             </button>
           );
         })}
@@ -57,7 +60,7 @@ export default function MorePage() {
           router.push("/beranda" as Route);
         }}
       >
-        Kembali ke Beranda
+        {t("common.backToHome")}
       </Button>
     </div>
   );

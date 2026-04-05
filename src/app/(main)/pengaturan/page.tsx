@@ -5,6 +5,7 @@ import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import {
   getSerializableAppSettings,
   useAppSettingsStore,
+  type AppLanguage,
   type CurrencyCode,
   type LocaleCode,
   type ThemeMode,
@@ -14,6 +15,7 @@ import {
 } from "@/stores/appSettingsStore";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import { formatCompactCurrency } from "@/utils/format";
+import { useI18n } from "@/hooks/useI18n";
 
 const currencyOptions: Array<{ value: CurrencyCode; label: string }> = [
   { value: "IDR", label: "IDR - Rupiah" },
@@ -50,12 +52,14 @@ const reportOptions = [
 ];
 
 export default function SettingsPage() {
+  const { t } = useI18n();
   const wallets = useBudgetStore((state) => state.wallets);
   const categories = useBudgetStore((state) => state.categories);
 
   const {
     themeMode,
     textScale,
+    language,
     currency,
     numberLocale,
     dateLocale,
@@ -78,13 +82,13 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const walletOptions = useMemo(
-    () => [{ id: "", name: "Tanpa default" }, ...wallets.map((wallet) => ({ id: wallet.id, name: wallet.name }))],
-    [wallets],
+    () => [{ id: "", name: t("settings.noneDefault") }, ...wallets.map((wallet) => ({ id: wallet.id, name: wallet.name }))],
+    [t, wallets, language],
   );
 
   const categoryOptions = useMemo(
-    () => [{ id: "", name: "Tanpa default" }, ...categories.map((category) => ({ id: category.id, name: category.name }))],
-    [categories],
+    () => [{ id: "", name: t("settings.noneDefault") }, ...categories.map((category) => ({ id: category.id, name: category.name }))],
+    [categories, language, t],
   );
 
   const handleThemeChange = async (nextTheme: ThemeMode) => {
@@ -132,16 +136,46 @@ export default function SettingsPage() {
 
   return (
     <div className="space-y-8">
-      <header className="space-y-2">
-        <h1 className="font-headline text-3xl font-extrabold text-on-surface">Pengaturan Aplikasi</h1>
-        <p className="text-sm text-on-surface-variant">
-          Atur tampilan dan preferensi aplikasi tanpa mengubah data akun Anda.
-        </p>
+      <header className="relative overflow-hidden rounded-3xl border border-outline-variant/10 bg-surface-container-low p-6">
+        <div className="pointer-events-none absolute -right-24 -top-24 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+        <div className="pointer-events-none absolute -bottom-28 -left-28 h-72 w-72 rounded-full bg-tertiary/15 blur-3xl" />
+        <div className="relative space-y-2">
+          <h1 className="font-headline text-3xl font-extrabold text-on-surface">{t("settings.title")}</h1>
+          <p className="max-w-2xl text-sm text-on-surface-variant">{t("settings.subtitle")}</p>
+        </div>
       </header>
 
       <section className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6">
-        <h2 className="font-headline text-lg font-bold text-on-surface">Tampilan & Tema</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Sesuaikan tema dan ukuran teks.</p>
+        <h2 className="font-headline text-lg font-bold text-on-surface">{t("settings.section.language")}</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">{t("settings.section.language_desc")}</p>
+
+        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+          <label className="text-sm text-on-surface-variant">
+            {t("settings.language")}
+            <select
+              value={language}
+              onChange={(event) => {
+                const next = event.target.value as AppLanguage;
+                const nextLocale: LocaleCode = next === "en" ? "en-US" : "id-ID";
+                setSettings({
+                  language: next,
+                  numberLocale: nextLocale,
+                  dateLocale: nextLocale,
+                });
+              }}
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
+            >
+              <option value="id">{t("settings.language.id")}</option>
+              <option value="en">{t("settings.language.en")}</option>
+            </select>
+            <p className="mt-2 text-xs text-on-surface-variant/80">{t("settings.language_note")}</p>
+          </label>
+        </div>
+      </section>
+
+      <section className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6">
+        <h2 className="font-headline text-lg font-bold text-on-surface">{t("settings.section.appearance")}</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">{t("settings.section.appearance_desc")}</p>
 
         <div className="mt-4 flex flex-wrap gap-2">
           {(["system", "dark", "light"] as ThemeMode[]).map((mode) => (
@@ -156,23 +190,27 @@ export default function SettingsPage() {
                   : "border border-outline-variant/20 text-on-surface-variant hover:text-on-surface"
               }`}
             >
-              {mode === "system" ? "System" : mode === "dark" ? "Dark" : "Light"}
+              {mode === "system"
+                ? t("settings.theme.system")
+                : mode === "dark"
+                  ? t("settings.theme.dark")
+                  : t("settings.theme.light")}
             </button>
           ))}
-          {savingTheme ? <span className="self-center text-xs text-on-surface-variant">Menyimpan...</span> : null}
+          {savingTheme ? <span className="self-center text-xs text-on-surface-variant">{t("common.saving")}</span> : null}
         </div>
 
         <div className="mt-5 grid gap-3 sm:grid-cols-2">
           <label className="text-sm text-on-surface-variant">
-            Skala teks
+            {t("settings.textScale")}
             <select
               value={textScale}
               onChange={(event) => setSettings({ textScale: event.target.value as TextScale })}
-              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
             >
               {textScaleOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {t(`settings.textScale.${option.value}`)}
                 </option>
               ))}
             </select>
@@ -181,16 +219,16 @@ export default function SettingsPage() {
       </section>
 
       <section className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6">
-        <h2 className="font-headline text-lg font-bold text-on-surface">Preferensi Format</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Konsistensi format angka dan tanggal.</p>
+        <h2 className="font-headline text-lg font-bold text-on-surface">{t("settings.section.format")}</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">{t("settings.section.format_desc")}</p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="text-sm text-on-surface-variant">
-            Mata uang utama
+            {t("settings.currency")}
             <select
               value={currency}
               onChange={(event) => setSettings({ currency: event.target.value as CurrencyCode })}
-              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
             >
               {currencyOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -200,11 +238,11 @@ export default function SettingsPage() {
             </select>
           </label>
           <label className="text-sm text-on-surface-variant">
-            Format angka
+            {t("settings.numberLocale")}
             <select
               value={numberLocale}
               onChange={(event) => setSettings({ numberLocale: event.target.value as LocaleCode })}
-              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
             >
               {localeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -214,11 +252,11 @@ export default function SettingsPage() {
             </select>
           </label>
           <label className="text-sm text-on-surface-variant">
-            Format tanggal
+            {t("settings.dateLocale")}
             <select
               value={dateLocale}
               onChange={(event) => setSettings({ dateLocale: event.target.value as LocaleCode })}
-              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
             >
               {localeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
@@ -231,45 +269,45 @@ export default function SettingsPage() {
 
         <div className="mt-4 grid gap-3 rounded-xl border border-outline-variant/10 bg-surface-container p-4 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-on-surface-variant">Contoh nominal</span>
+            <span className="text-on-surface-variant">{t("settings.example.amount")}</span>
             <span className="tnum font-semibold text-on-surface">{formatCurrency(1250000)}</span>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-on-surface-variant">Contoh ringkas</span>
+            <span className="text-on-surface-variant">{t("settings.example.compact")}</span>
             <span className="tnum font-semibold text-on-surface">{formatCompactCurrency(1250000)}</span>
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
-            <span className="text-on-surface-variant">Contoh tanggal</span>
+            <span className="text-on-surface-variant">{t("settings.example.date")}</span>
             <span className="font-semibold text-on-surface">{formatDate(new Date().toISOString(), true)}</span>
           </div>
         </div>
       </section>
 
       <section className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6">
-        <h2 className="font-headline text-lg font-bold text-on-surface">Perilaku Transaksi</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Buat input transaksi lebih cepat.</p>
+        <h2 className="font-headline text-lg font-bold text-on-surface">{t("settings.section.transactionBehavior")}</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">{t("settings.section.transactionBehavior_desc")}</p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="text-sm text-on-surface-variant">
-            Default tipe transaksi
+            {t("settings.defaultTransactionType")}
             <select
               value={defaultTransactionType}
               onChange={(event) => setSettings({ defaultTransactionType: event.target.value as DefaultTransactionType })}
-              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
             >
               {typeOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {t(`settings.type.${option.value}`)}
                 </option>
               ))}
             </select>
           </label>
           <label className="text-sm text-on-surface-variant">
-            Default dompet
+            {t("settings.defaultWallet")}
             <select
               value={defaultWalletId ?? ""}
               onChange={(event) => setSettings({ defaultWalletId: event.target.value || null })}
-              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
             >
               {walletOptions.map((option) => (
                 <option key={option.id || "none"} value={option.id}>
@@ -279,11 +317,11 @@ export default function SettingsPage() {
             </select>
           </label>
           <label className="text-sm text-on-surface-variant">
-            Default kategori
+            {t("settings.defaultCategory")}
             <select
               value={defaultCategoryId ?? ""}
               onChange={(event) => setSettings({ defaultCategoryId: event.target.value || null })}
-              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
             >
               {categoryOptions.map((option) => (
                 <option key={option.id || "none"} value={option.id}>
@@ -296,36 +334,36 @@ export default function SettingsPage() {
       </section>
 
       <section className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6">
-        <h2 className="font-headline text-lg font-bold text-on-surface">Filter & Periode Default</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Atur tampilan awal halaman transaksi dan laporan.</p>
+        <h2 className="font-headline text-lg font-bold text-on-surface">{t("settings.section.defaultFilters")}</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">{t("settings.section.defaultFilters_desc")}</p>
 
         <div className="mt-4 grid gap-4 sm:grid-cols-2">
           <label className="text-sm text-on-surface-variant">
-            Default periode transaksi
+            {t("settings.defaultPeriod")}
             <select
               value={defaultPeriod}
               onChange={(event) => setSettings({ defaultPeriod: event.target.value as DefaultPeriod })}
-              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
             >
               {periodOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {t(`settings.period.${option.value}`)}
                 </option>
               ))}
             </select>
           </label>
           <label className="text-sm text-on-surface-variant">
-            Default bulan laporan
+            {t("settings.defaultReportMonth")}
             <select
               value={defaultReportOffset}
               onChange={(event) =>
                 setSettings({ defaultReportOffset: Number(event.target.value) as 0 | -1 })
               }
-              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+              className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface focus:border-primary/40 focus:outline-none"
             >
               {reportOptions.map((option) => (
                 <option key={option.value} value={option.value}>
-                  {option.label}
+                  {option.value === 0 ? t("settings.report.thisMonth") : t("settings.report.lastMonth")}
                 </option>
               ))}
             </select>
@@ -334,80 +372,80 @@ export default function SettingsPage() {
       </section>
 
       <section className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6">
-        <h2 className="font-headline text-lg font-bold text-on-surface">Notifikasi</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Kelola pengingat agar konsisten.</p>
+        <h2 className="font-headline text-lg font-bold text-on-surface">{t("settings.section.notifications")}</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">{t("settings.section.notifications_desc")}</p>
 
         <div className="mt-4 grid gap-3">
           <label className="flex items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container p-4 text-sm">
-            Ringkasan harian
+            {t("settings.notifications.daily")}
             <input
               type="checkbox"
               checked={notificationsDaily}
               onChange={(event) => setSettings({ notificationsDaily: event.target.checked })}
-              className="h-4 w-4"
+              className="h-4 w-4 accent-primary"
             />
           </label>
           <label className="flex items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container p-4 text-sm">
-            Ringkasan mingguan
+            {t("settings.notifications.weekly")}
             <input
               type="checkbox"
               checked={notificationsWeekly}
               onChange={(event) => setSettings({ notificationsWeekly: event.target.checked })}
-              className="h-4 w-4"
+              className="h-4 w-4 accent-primary"
             />
           </label>
           <label className="flex items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container p-4 text-sm">
-            Pengingat limit anggaran
+            {t("settings.notifications.budgetAlerts")}
             <input
               type="checkbox"
               checked={notificationsBudgetAlerts}
               onChange={(event) => setSettings({ notificationsBudgetAlerts: event.target.checked })}
-              className="h-4 w-4"
+              className="h-4 w-4 accent-primary"
             />
           </label>
         </div>
       </section>
 
       <section className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6">
-        <h2 className="font-headline text-lg font-bold text-on-surface">Privasi Lokal</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Lindungi data saat aplikasi dibuka di publik.</p>
+        <h2 className="font-headline text-lg font-bold text-on-surface">{t("settings.section.privacy")}</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">{t("settings.section.privacy_desc")}</p>
 
         <div className="mt-4 grid gap-3">
           <label className="flex items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container p-4 text-sm">
-            Sembunyikan nominal di layar
+            {t("settings.privacy.hideAmounts")}
             <input
               type="checkbox"
               checked={privacyHideAmounts}
               onChange={(event) => setSettings({ privacyHideAmounts: event.target.checked })}
-              className="h-4 w-4"
+              className="h-4 w-4 accent-primary"
             />
           </label>
           <label className="flex items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container p-4 text-sm">
-            Autolock (PIN/biometrik)
+            {t("settings.privacy.autoLock")}
             <input
               type="checkbox"
               checked={privacyAutoLock}
               onChange={(event) => setSettings({ privacyAutoLock: event.target.checked })}
-              className="h-4 w-4"
+              className="h-4 w-4 accent-primary"
             />
           </label>
         </div>
       </section>
 
       <section className="rounded-2xl border border-outline-variant/10 bg-surface-container-low p-6">
-        <h2 className="font-headline text-lg font-bold text-on-surface">Cadangan Lokal</h2>
-        <p className="mt-1 text-sm text-on-surface-variant">Ekspor atau impor pengaturan aplikasi.</p>
+        <h2 className="font-headline text-lg font-bold text-on-surface">{t("settings.section.backup")}</h2>
+        <p className="mt-1 text-sm text-on-surface-variant">{t("settings.section.backup_desc")}</p>
 
         <div className="mt-4 flex flex-wrap gap-2">
           <button
             type="button"
             onClick={handleExport}
-            className="rounded-lg border border-outline-variant/20 px-4 py-2 text-sm font-semibold text-on-surface-variant hover:text-on-surface"
+            className="rounded-lg border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
           >
-            Ekspor Pengaturan
+            {t("settings.export")}
           </button>
-          <label className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary">
-            Impor Pengaturan
+          <label className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:brightness-110">
+            {t("settings.import")}
             <input
               ref={fileInputRef}
               type="file"

@@ -7,12 +7,14 @@ export type ThemeMode = "light" | "dark" | "system";
 export type TextScale = "sm" | "md" | "lg";
 export type CurrencyCode = "IDR" | "USD" | "EUR" | "SGD";
 export type LocaleCode = "id-ID" | "en-US";
+export type AppLanguage = "id" | "en";
 export type DefaultPeriod = "daily" | "monthly" | "range";
 export type DefaultTransactionType = "income" | "expense";
 
 export interface AppSettingsState {
   themeMode: ThemeMode;
   textScale: TextScale;
+  language: AppLanguage;
   currency: CurrencyCode;
   numberLocale: LocaleCode;
   dateLocale: LocaleCode;
@@ -34,6 +36,7 @@ export interface AppSettingsState {
 const defaultSettings: AppSettingsState = {
   themeMode: "system",
   textScale: "md",
+  language: "id",
   currency: "IDR",
   numberLocale: "id-ID",
   dateLocale: "id-ID",
@@ -73,6 +76,7 @@ export const useAppSettingsStore = create<AppSettingsState>()(
       partialize: (state) => ({
         themeMode: state.themeMode,
         textScale: state.textScale,
+        language: state.language,
         currency: state.currency,
         numberLocale: state.numberLocale,
         dateLocale: state.dateLocale,
@@ -100,6 +104,7 @@ export function getSerializableAppSettings() {
   return {
     themeMode: state.themeMode,
     textScale: state.textScale,
+    language: state.language,
     currency: state.currency,
     numberLocale: state.numberLocale,
     dateLocale: state.dateLocale,

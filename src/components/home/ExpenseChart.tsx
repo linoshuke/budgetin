@@ -6,6 +6,7 @@ import { useExpenseByCategory } from "@/hooks/useTransactions";
 import { useWalletStore } from "@/stores/walletStore";
 import { formatCompactCurrency } from "@/utils/format";
 import { useNonceStyle } from "@/hooks/useNonceStyle";
+import { useI18n } from "@/hooks/useI18n";
 
 const COLORS = ["#7cebff", "#0064d4", "#ffb4ab", "#29d9f2", "#89ceff", "#adc6ff"];
 const CHART_SIZE = 192;
@@ -16,6 +17,7 @@ function ColorDot({ color }: { color: string }) {
 }
 
 export default function ExpenseChart() {
+  const { t } = useI18n();
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
   const { data, isLoading } = useExpenseByCategory(selectedWalletIds);
 
@@ -23,7 +25,7 @@ export default function ExpenseChart() {
     return <Skeleton className="h-[340px] w-full rounded-xl" />;
   }
 
-  const chartData = data?.length ? data : [{ name: "Belum ada data", value: 1 }];
+  const chartData = data?.length ? data : [{ name: t("home.noData"), value: 1 }];
   const total = chartData.reduce((acc, item) => acc + item.value, 0);
   const topItems = [...chartData]
     .sort((a, b) => b.value - a.value)
@@ -36,7 +38,7 @@ export default function ExpenseChart() {
 
   return (
     <div className="flex flex-col items-center justify-between rounded-xl bg-surface-container-low p-8">
-      <h3 className="mb-6 w-full font-headline text-lg font-bold">Kategori Pengeluaran</h3>
+      <h3 className="mb-6 w-full font-headline text-lg font-bold">{t("home.expenseCategories")}</h3>
       <div className="relative h-48 w-48">
         <PieChart width={CHART_SIZE} height={CHART_SIZE}>
           <Pie
@@ -53,7 +55,7 @@ export default function ExpenseChart() {
           </Pie>
         </PieChart>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
-          <span className="text-xs font-medium uppercase text-on-surface-variant">Total</span>
+          <span className="text-xs font-medium uppercase text-on-surface-variant">{t("home.total")}</span>
           <span className="tnum text-xl font-bold">{formatCompactCurrency(total)}</span>
         </div>
       </div>
