@@ -59,3 +59,9 @@ export const CreateGoalSchema = z.object({
 
 export const UpdateGoalSchema = CreateGoalSchema.partial();
 
+export const PasswordPolicy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\\d).{8,}$/;
+
+export function validatePassword(password: string) {
+    return PasswordPolicy.test(password);
+}
+

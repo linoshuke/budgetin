@@ -12,5 +12,7 @@ export async function POST() {
     );
   }
 
-  return NextResponse.json({ ok: true }, { status: 200, headers: withNoStore() });
+  const res = NextResponse.json({ ok: true }, { status: 200, headers: withNoStore() });
+  res.cookies.set("mfa_enrolled", "", { maxAge: 0, path: "/" });
+  return res;
 }

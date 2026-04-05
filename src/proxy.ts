@@ -67,11 +67,16 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const nonce = createNonce();
   const csp = buildCsp(nonce);
+  const cspHeaderName = process.env.CSP_REPORT_ONLY === "true"
+    ? "Content-Security-Policy-Report-Only"
+    : "Content-Security-Policy";
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("content-security-policy", csp);
+  requestHeaders.set("x-csp-nonce", nonce);
 
   const response = await refreshSession(request, requestHeaders);
-  response.headers.set("Content-Security-Policy", csp);
+  response.headers.set(cspHeaderName, csp);
+  response.headers.set("x-csp-nonce", nonce);
 
   if (AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
     return response;
@@ -83,7 +88,17 @@ export async function proxy(request: NextRequest) {
       loginUrl.searchParams.set("next", pathname);
     }
     const redirectResponse = NextResponse.redirect(loginUrl);
-    redirectResponse.headers.set("Content-Security-Policy", csp);
+    redirectResponse.headers.set(cspHeaderName, csp);
+    redirectResponse.headers.set("x-csp-nonce", nonce);
+    return redirectResponse;
+  }
+
+  const mfaFlag = request.cookies.get("mfa_enrolled")?.value;
+  if (mfaFlag === "false" && !pathname.startsWith("/mfa")) {
+    const setupUrl = new URL("/mfa/setup", request.url);
+    const redirectResponse = NextResponse.redirect(setupUrl);
+    redirectResponse.headers.set(cspHeaderName, csp);
+    redirectResponse.headers.set("x-csp-nonce", nonce);
     return redirectResponse;
   }
 

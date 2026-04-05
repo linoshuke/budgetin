@@ -5,6 +5,7 @@ import { deleteWallet, updateWallet } from "@/app/api/wallets/service/wallet.ser
 import { UpdateWalletSchema } from "@/lib/validators";
 import { rateLimit } from "@/lib/rate-limit";
 import { withNoStore } from "@/lib/http";
+import { requireRecentMfa } from "@/lib/mfa";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -42,6 +43,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 export async function DELETE(_: NextRequest, context: RouteContext) {
   try {
     const { user, supabase } = await getAuthUser();
+    requireRecentMfa(user);
     const limiter = await rateLimit({
       request: _,
       key: `wallets:delete:${user.id}`,

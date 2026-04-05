@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { withNoStore } from "@/lib/http";
+import { GENERIC_REQUEST_ERROR } from "@/lib/auth-errors";
 
 export async function POST(request: Request) {
   if (process.env.NEXT_PUBLIC_ALLOW_ANONYMOUS !== "true") {
@@ -22,8 +23,9 @@ export async function POST(request: Request) {
   const { data, error } = await supabase.auth.signInAnonymously();
 
   if (error) {
+    console.error("Anonymous sign-in failed:", error.message);
     return NextResponse.json(
-      { error: error.message },
+      GENERIC_REQUEST_ERROR,
       { status: 400, headers: withNoStore(limiter.headers) },
     );
   }

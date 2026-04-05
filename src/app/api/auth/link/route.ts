@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { withNoStore } from "@/lib/http";
+import { GENERIC_REQUEST_ERROR } from "@/lib/auth-errors";
 
 function sanitizeRedirectTo(request: Request, redirectTo?: string) {
   if (!redirectTo) return undefined;
@@ -54,8 +55,9 @@ export async function POST(request: Request) {
   });
 
   if (error) {
+    console.error("Link identity failed:", error.message);
     return NextResponse.json(
-      { error: error.message },
+      GENERIC_REQUEST_ERROR,
       { status: 400, headers: withNoStore(limiter.headers) },
     );
   }

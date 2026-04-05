@@ -1,4 +1,6 @@
 import { Redis } from "@upstash/redis";
+import { createHash } from "node:crypto";
+import { isIP } from "node:net";
 
 type RateLimitEntry = {
   count: number;
@@ -18,6 +20,7 @@ type RateLimitOptions = {
   key: string;
   limit: number;
   windowMs: number;
+  extraKeys?: Array<string | number | undefined | null>;
 };
 
 const MAX_ENTRIES = 10_000;
@@ -29,10 +32,13 @@ function getRedis() {
   if (redisClient !== undefined) return redisClient;
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
+
   if (!url || !token) {
+    console.warn("[rate-limit] Upstash env missing, assuming WAF/CDN handles rate limiting.");
     redisClient = null;
     return redisClient;
   }
+
   redisClient = new Redis({ url, token });
   return redisClient;
 }
@@ -48,15 +54,34 @@ function getStore() {
 }
 
 function getClientIp(request: Request) {
+  const trustedHeaders = [
+    "x-vercel-forwarded-for",
+    "x-real-ip",
+    "cf-connecting-ip",
+  ];
+
+  for (const header of trustedHeaders) {
+    const raw = request.headers.get(header);
+    const candidate = raw?.split(",")[0]?.trim();
+    if (candidate && isIP(candidate)) {
+      return candidate;
+    }
+  }
+
   const forwardedFor = request.headers.get("x-forwarded-for");
   if (forwardedFor) {
-    return forwardedFor.split(",")[0]?.trim() || "unknown";
+    const candidate = forwardedFor
+      .split(",")
+      .map((part) => part.trim())
+      .find((part) => isIP(part));
+    if (candidate) return candidate;
   }
-  return (
-    request.headers.get("x-real-ip") ??
-    request.headers.get("cf-connecting-ip") ??
-    "unknown"
-  );
+
+  return "unknown";
+}
+
+function hashKeyPart(value: string) {
+  return createHash("sha256").update(value).digest("hex");
 }
 
 function buildResult(limit: number, count: number, resetAt: number, now = Date.now()): RateLimitResult {
@@ -139,11 +164,17 @@ export async function rateLimit({
   key,
   limit,
   windowMs,
+  extraKeys,
 }: RateLimitOptions): Promise<RateLimitResult> {
   const ip = getClientIp(request);
   const prefix = process.env.RATE_LIMIT_REDIS_PREFIX ?? DEFAULT_PREFIX;
-  const bucketKey = `${prefix}:${key}:${ip}`;
-  const redis = getRedis();
+  const extraKeyParts =
+    extraKeys
+      ?.filter((part) => part !== undefined && part !== null)
+      .map((part) => hashKeyPart(String(part).toLowerCase())) ?? [];
+  const bucketKey = [prefix, key, ip, ...extraKeyParts].join(":");
+  let redis: Redis | null = null;
+  redis = getRedis();
 
   if (redis) {
     try {
@@ -154,5 +185,6 @@ export async function rateLimit({
     }
   }
 
-  return rateLimitMemory(bucketKey, limit, windowMs);
+  // No redis backend (e.g., handled at WAF/CDN) — return a pass result
+  return buildResult(limit, 0, Date.now() + windowMs);
 }

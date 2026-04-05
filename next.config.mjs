@@ -1,6 +1,20 @@
 import BundleAnalyzer from "@next/bundle-analyzer";
 
 /** @type {import('next').NextConfig} */
+const cspHeaderReportOnly = [
+  "default-src 'self'",
+  "base-uri 'self'",
+  "object-src 'none'",
+  "frame-ancestors 'none'",
+  "img-src 'self' data: blob: https:",
+  "font-src 'self' data: https://fonts.gstatic.com",
+  "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
+  "script-src 'self' 'unsafe-inline' https://va.vercel-scripts.com",
+  "connect-src 'self' https: wss:",
+  "frame-src 'self' https:",
+  "media-src 'self' https:",
+].join("; ");
+
 const securityHeaders = [
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "X-Frame-Options", value: "DENY" },
@@ -12,6 +26,7 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
+  { key: "Content-Security-Policy-Report-Only", value: cspHeaderReportOnly },
 ];
 
 const nextConfig = {

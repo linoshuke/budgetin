@@ -13,6 +13,17 @@ export async function POST(request: Request) {
   }
 
   const supabase = await createServerSupabase();
+  const {
+    data: { user },
+    error: authError,
+  } = await supabase.auth.getUser();
+  if (authError || !user) {
+    return NextResponse.json(
+      { error: "Unauthorized" },
+      { status: 401, headers: withNoStore(limiter.headers) },
+    );
+  }
+
   const { name } = (await request.json().catch(() => ({}))) as { name?: string };
 
   if (!name) {

@@ -15,7 +15,12 @@ export async function createServerSupabase() {
                 setAll(cookiesToSet) {
                     try {
                         cookiesToSet.forEach(({ name, value, options }) => {
-                            const nextOptions = { ...(options ?? {}), httpOnly: true };
+                            const nextOptions = {
+                                ...(options ?? {}),
+                                httpOnly: true,
+                                sameSite: "strict",
+                                secure: true,
+                            };
                             cookieStore.set(name, value, nextOptions);
                         });
                     } catch {

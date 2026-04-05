@@ -43,10 +43,7 @@ export async function POST(request: Request) {
     safeRedirect ? { redirectTo: safeRedirect } : undefined,
   );
   if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 400, headers: withNoStore(limiter.headers) },
-    );
+    console.error("Password reset request failed:", error.message);
   }
 
   return NextResponse.json(

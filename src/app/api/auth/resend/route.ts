@@ -24,9 +24,11 @@ export async function POST(request: Request) {
 
   const { error } = await supabase.auth.resend({ type: "signup", email });
   if (error) {
+    console.error("Resend email failed:", error.message);
+    // Return 200 to avoid user enumeration
     return NextResponse.json(
-      { error: error.message },
-      { status: 400, headers: withNoStore(limiter.headers) },
+      { ok: true },
+      { status: 200, headers: withNoStore(limiter.headers) },
     );
   }
 

@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { withNoStore } from "@/lib/http";
+import { requireRecentMfa } from "@/lib/mfa";
+import { AUTH_ERROR, GENERIC_REQUEST_ERROR } from "@/lib/auth-errors";
 
 export async function POST(request: Request) {
   const limiter = await rateLimit({ request, key: "auth:email-update", limit: 3, windowMs: 60_000 });
@@ -31,8 +33,17 @@ export async function POST(request: Request) {
   } = await supabase.auth.getUser();
   if (userError || !user?.email) {
     return NextResponse.json(
-      { error: "Sesi tidak valid. Silakan login ulang." },
+      GENERIC_REQUEST_ERROR,
       { status: 401, headers: withNoStore(limiter.headers) },
+    );
+  }
+
+  try {
+    requireRecentMfa(user);
+  } catch {
+    return NextResponse.json(
+      { error: "MFA diperlukan untuk mengganti email." },
+      { status: 403, headers: withNoStore(limiter.headers) },
     );
   }
 
@@ -57,7 +68,7 @@ export async function POST(request: Request) {
   });
   if (verifyError) {
     return NextResponse.json(
-      { error: "Kata sandi saat ini tidak sesuai." },
+      AUTH_ERROR,
       { status: 401, headers: withNoStore(limiter.headers) },
     );
   }
@@ -65,7 +76,7 @@ export async function POST(request: Request) {
   const { error } = await supabase.auth.updateUser({ email });
   if (error) {
     return NextResponse.json(
-      { error: error.message },
+      GENERIC_REQUEST_ERROR,
       { status: 400, headers: withNoStore(limiter.headers) },
     );
   }

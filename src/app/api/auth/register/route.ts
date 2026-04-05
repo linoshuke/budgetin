@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { withNoStore } from "@/lib/http";
+import { validatePassword } from "@/lib/validators";
+import { GENERIC_REQUEST_ERROR } from "@/lib/auth-errors";
 
 export async function POST(request: Request) {
   const limiter = await rateLimit({ request, key: "auth:register", limit: 3, windowMs: 60_000 });
@@ -26,6 +28,13 @@ export async function POST(request: Request) {
     );
   }
 
+  if (!validatePassword(password)) {
+    return NextResponse.json(
+      { error: "Kata sandi minimal 8 karakter dengan huruf besar, huruf kecil, dan angka." },
+      { status: 400, headers: withNoStore(limiter.headers) },
+    );
+  }
+
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
@@ -33,10 +42,11 @@ export async function POST(request: Request) {
   });
 
   if (error) {
-    return NextResponse.json(
-      { error: error.message },
-      { status: 400, headers: withNoStore(limiter.headers) },
-    );
+    console.error("Register failed:", error.message);
+    return NextResponse.json(GENERIC_REQUEST_ERROR, {
+      status: 400,
+      headers: withNoStore(limiter.headers),
+    });
   }
 
   return NextResponse.json(
