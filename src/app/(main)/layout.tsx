@@ -18,6 +18,7 @@ export default function MainLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const setActiveTab = useUIStore((state) => state.setActiveTab);
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
+  const isTransactions = pathname.startsWith("/transactions");
 
   useEffect(() => {
     setActiveTab(resolveTabIndex(pathname));
@@ -31,10 +32,16 @@ export default function MainLayout({ children }: { children: ReactNode }) {
           sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
         }`}
       >
-        <MainHeader />
-        <div className="px-6 pb-12 pt-6">
-          <div className="w-full max-w-none">{children}</div>
-        </div>
+        {isTransactions ? (
+          children
+        ) : (
+          <>
+            <MainHeader />
+            <div className="px-6 pb-24 pt-6 lg:pb-12">
+              <div className="w-full max-w-none">{children}</div>
+            </div>
+          </>
+        )}
       </main>
       <BottomNav />
     </div>

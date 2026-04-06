@@ -1,58 +1,22 @@
-import { useMemo, useState } from "react";
-import {
-  filterTransactionsByDateRange,
-  filterTransactionsByMonth,
-  sortTransactionsByDate,
-} from "@/lib/budget";
+import { useState } from "react";
 import { getMonthLabel, monthKey } from "@/lib/utils";
-import type { Transaction } from "@/types/transaction";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
 
 export type PeriodMode = "daily" | "monthly" | "range";
 
-function isSameDate(date: string, compare: Date) {
-  const d = new Date(date);
-  return (
-    d.getFullYear() === compare.getFullYear() &&
-    d.getMonth() === compare.getMonth() &&
-    d.getDate() === compare.getDate()
-  );
-}
-
-export function useTransactionsFilter(
-  transactions: Transaction[],
-  walletIds: string[] = [],
-  initialPeriod?: PeriodMode,
-) {
+/**
+ * Hook ini hanya mengelola STATE filter (period, selectedMonth, dateRange).
+ * Filtering data dilakukan secara terpisah di komponen pemanggil menggunakan useMemo
+ * agar tidak terjadi circular dependency: transactions → filter → fetchPage → transactions.
+ */
+export function useTransactionsFilter(initialPeriod?: PeriodMode) {
   const defaultPeriod = useAppSettingsStore((state) => state.defaultPeriod);
   const [period, setPeriod] = useState<PeriodMode>(initialPeriod ?? defaultPeriod ?? "daily");
-  const [selectedMonth, setSelectedMonth] = useState<Date>(new Date());
+  const [selectedMonth, setSelectedMonth] = useState<Date>(
+    () => new Date(),
+  );
   const [fromDate, setFromDate] = useState("");
   const [toDate, setToDate] = useState("");
-
-  const filteredTransactions = useMemo(() => {
-    let items = transactions;
-    if (walletIds.length > 0) {
-      items = items.filter((item) => walletIds.includes(item.walletId));
-    }
-
-    if (period === "daily") {
-      const today = new Date();
-      return items.filter((item) => isSameDate(item.date, today));
-    }
-
-    if (period === "monthly") {
-      const key = monthKey(selectedMonth);
-      return filterTransactionsByMonth(items, key);
-    }
-
-    return filterTransactionsByDateRange(items, fromDate, toDate);
-  }, [transactions, walletIds, period, selectedMonth, fromDate, toDate]);
-
-  const sortedTransactions = useMemo(
-    () => sortTransactionsByDate(filteredTransactions),
-    [filteredTransactions],
-  );
 
   const monthLabel = getMonthLabel(monthKey(selectedMonth));
   const nextMonth = new Date(selectedMonth.getFullYear(), selectedMonth.getMonth() + 1, 1);
@@ -82,6 +46,5 @@ export function useTransactionsFilter(
     canGoNext,
     goPrevMonth,
     goNextMonth,
-    filteredTransactions: sortedTransactions,
   };
 }

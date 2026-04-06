@@ -342,25 +342,3 @@ Basis: inspeksi kode + output `webpack-bundle-analyzer` (`.next/analyze/client.h
 5. Prioritas (High / Medium / Low)  
    Medium
 
----
-
-## RINGKASAN 3 BOTTLENECK TERBESAR
-
-1) Tab cache layout merender banyak tree sekaligus (C1)  
-2) Waterfall + duplikasi fetching (S2 + C2)  
-3) Supabase Auth hop per API request + bundle Supabase di auth pages (S1 + B1)
-
-## ESTIMASI DAMPAK PERFORMA (REALISTIS)
-
-- Perbaiki C1 (hapus tab cache render tersembunyi): INP bisa turun signifikan (sering 100–300ms pada device mid/low).  
-- Perbaiki C2 + S2 (hilangkan double fetch + paralel bootstrap): mengurangi 1–2 RTT pada load awal (terasa “lebih responsif” dan overlay loading lebih singkat).  
-- Perbaiki S1 + B1 (hilangkan auth hop + lazy load Supabase client): API latency turun per request, dan initial JS auth pages turun puluhan KB gzip.
-
-## ACTION PLAN EKSEKUSI CEPAT (MAX 5 LANGKAH)
-
-1) Hapus tab-cache render tersembunyi di `src/app/(main)/layout.tsx` (C1).  
-2) Hapus invalidate `["transactions"]` di `src/hooks/useTransactions.ts` (C2).  
-3) Paralelkan `budgetActions.loadFromApi()` dengan `Promise.allSettled` (S2).  
-4) Lazy load Supabase client pada tombol Google (B1) atau pindahkan start OAuth ke server route.  
-5) Audit `getAuthUser()` untuk menghilangkan `auth.getUser()` hop per endpoint (S1), lalu ukur dengan `Server-Timing`.
-

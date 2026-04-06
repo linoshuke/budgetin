@@ -1,20 +1,17 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import AuthGate from "@/components/shared/AuthGate";
+import { Suspense, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import dynamic from "next/dynamic";
 import MainHeader from "@/components/navigation/MainHeader";
-import Sidebar from "@/components/navigation/Sidebar";
-import BottomNav from "@/components/navigation/BottomNav";
 import WalletFilterModal from "@/components/shared/WalletFilterModal";
 import Modal from "@/components/shared/Modal";
-import TransactionForm from "@/components/shared/TransactionForm";
 import { useTransactionsFilter } from "@/hooks/useTransactionsFilter";
 import { useWalletFilter } from "@/hooks/useWalletFilter";
+import { useProgressiveRender } from "@/hooks/useProgressiveRender";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
-import { useUIStore } from "@/stores/uiStore";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
-import { calculateTotals } from "@/lib/budget";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { calculateTotals, filterTransactionsByDateRange, filterTransactionsByMonth, sortTransactionsByDate } from "@/lib/budget";
+import { monthKey } from "@/lib/utils";
 import type { Transaction } from "@/types/transaction";
 import { TRANSACTIONS_CHANGED_EVENT } from "@/lib/transaction-events";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
@@ -24,19 +21,17 @@ const pageSize = 50;
 
 type ActivityTab = "all" | "pending" | "scheduled";
 
+const TransactionForm = dynamic(() => import("@/components/shared/TransactionForm"), {
+  ssr: false,
+  loading: () => <div className="h-[520px] w-full rounded-2xl bg-surface-container-low/50" />,
+}) as typeof import("@/components/shared/TransactionForm").default;
+
 function isSameDay(date: Date, compare: Date) {
   return (
     date.getFullYear() === compare.getFullYear() &&
     date.getMonth() === compare.getMonth() &&
     date.getDate() === compare.getDate()
   );
-}
-
-function formatTime(value: string, locale?: string) {
-  return new Intl.DateTimeFormat(locale ?? "id-ID", {
-    hour: "2-digit",
-    minute: "2-digit",
-  }).format(new Date(value));
 }
 
 function resolveIcon(type: Transaction["type"]) {
@@ -58,7 +53,7 @@ function resolveActivityStatus(transaction: Transaction): ActivityTab {
   return "all";
 }
 
-export default function TransactionsPage() {
+function TransactionsPageInner() {
   const { t } = useI18n();
   const router = useRouter();
   const pathname = usePathname();
@@ -66,9 +61,34 @@ export default function TransactionsPage() {
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
   const loading = useBudgetStore((state) => state.loading);
-  const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const defaultPeriod = useAppSettingsStore((state) => state.defaultPeriod);
   const dateLocale = useAppSettingsStore((state) => state.dateLocale);
+  const currency = useAppSettingsStore((state) => state.currency);
+  const numberLocale = useAppSettingsStore((state) => state.numberLocale);
+  const privacyHideAmounts = useAppSettingsStore((state) => state.privacyHideAmounts);
+
+  const currencyFormatter = useMemo(() => {
+    return new Intl.NumberFormat(numberLocale ?? "id-ID", {
+      style: "currency",
+      currency: currency ?? "IDR",
+      maximumFractionDigits: 0,
+    });
+  }, [currency, numberLocale]);
+
+  const dateFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat(dateLocale ?? "id-ID", {
+      day: "2-digit",
+      month: "short",
+      year: "numeric",
+    });
+  }, [dateLocale]);
+
+  const timeFormatter = useMemo(() => {
+    return new Intl.DateTimeFormat(dateLocale ?? "id-ID", {
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  }, [dateLocale]);
 
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [pageOffset, setPageOffset] = useState(0);
@@ -88,24 +108,37 @@ export default function TransactionsPage() {
   const handledNewParamRef = useRef(false);
 
   const walletFilter = useWalletFilter();
-  const filter = useTransactionsFilter(transactions, walletFilter.selectedWalletIds, defaultPeriod);
+  // Pisahkan filter dari transactions — tidak meneruskan transactions ke hook
+  // agar perubahan data tidak memicu loop filter → fetch → data → filter
+  const filter = useTransactionsFilter(defaultPeriod);
 
-  const buildDateRange = useCallback(() => {
-    if (filter.period === "daily") {
-      const today = new Date().toISOString().slice(0, 10);
-      return { dateFrom: today, dateTo: today };
-    }
+  // Stable primitive keys untuk dipakai sebagai dependency (bukan object/array)
+  const walletIdsKey = walletFilter.selectedWalletIds.join("|");
+  const categoryIdsKey = selectedCategoryIds.join("|");
+  const selectedMonthKey = useMemo(
+    () => filter.selectedMonth.getFullYear() * 100 + filter.selectedMonth.getMonth(),
+    [filter.selectedMonth],
+  );
 
-    if (filter.period === "monthly") {
-      const year = filter.selectedMonth.getFullYear();
-      const month = filter.selectedMonth.getMonth();
-      const start = new Date(year, month, 1).toISOString().slice(0, 10);
-      const end = new Date(year, month + 1, 0).toISOString().slice(0, 10);
-      return { dateFrom: start, dateTo: end };
-    }
-
-    return { dateFrom: filter.fromDate, dateTo: filter.toDate };
-  }, [filter.fromDate, filter.period, filter.selectedMonth, filter.toDate]);
+  // Gunakan ref untuk nilai filter agar fetchPage tidak rebuild setiap filter berubah
+  const filterRef = useRef({
+    period: filter.period,
+    selectedMonth: filter.selectedMonth,
+    fromDate: filter.fromDate,
+    toDate: filter.toDate,
+    walletIds: walletFilter.selectedWalletIds,
+    categoryIds: selectedCategoryIds,
+  });
+  useEffect(() => {
+    filterRef.current = {
+      period: filter.period,
+      selectedMonth: filter.selectedMonth,
+      fromDate: filter.fromDate,
+      toDate: filter.toDate,
+      walletIds: walletFilter.selectedWalletIds,
+      categoryIds: selectedCategoryIds,
+    };
+  });
 
   const fetchPage = useCallback(
     async (offset: number, reset = false) => {
@@ -115,18 +148,35 @@ export default function TransactionsPage() {
       setLoadError("");
 
       try {
+        const { period, selectedMonth, fromDate, toDate, walletIds, categoryIds } = filterRef.current;
+
+        let dateFrom = "";
+        let dateTo = "";
+        if (period === "daily") {
+          const today = new Date().toISOString().slice(0, 10);
+          dateFrom = today;
+          dateTo = today;
+        } else if (period === "monthly") {
+          const year = selectedMonth.getFullYear();
+          const month = selectedMonth.getMonth();
+          dateFrom = new Date(year, month, 1).toISOString().slice(0, 10);
+          dateTo = new Date(year, month + 1, 0).toISOString().slice(0, 10);
+        } else {
+          dateFrom = fromDate;
+          dateTo = toDate;
+        }
+
         const params = new URLSearchParams({
           limit: String(pageSize),
           offset: String(offset),
         });
-        const { dateFrom, dateTo } = buildDateRange();
         if (dateFrom) params.set("dateFrom", dateFrom);
         if (dateTo) params.set("dateTo", dateTo);
-        if (walletFilter.selectedWalletIds.length) {
-          params.set("walletIds", walletFilter.selectedWalletIds.join(","));
+        if (walletIds.length) {
+          params.set("walletIds", walletIds.join(","));
         }
-        if (selectedCategoryIds.length) {
-          params.set("categoryIds", selectedCategoryIds.join(","));
+        if (categoryIds.length) {
+          params.set("categoryIds", categoryIds.join(","));
         }
 
         const response = await fetch(`/api/transactions?${params.toString()}`);
@@ -155,7 +205,8 @@ export default function TransactionsPage() {
         setLoadingPage(false);
       }
     },
-    [buildDateRange, selectedCategoryIds, t, walletFilter.selectedWalletIds],
+    // fetchPage tidak bergantung pada nilai filter — dibaca via ref
+    [t],
   );
 
   const refreshTransactions = useCallback(() => {
@@ -165,16 +216,17 @@ export default function TransactionsPage() {
     void fetchPage(0, true);
   }, [fetchPage]);
 
+  // Trigger refresh HANYA saat filter primitif berubah (bukan saat data berubah)
   useEffect(() => {
     refreshTransactions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
-    refreshTransactions,
     filter.period,
-    filter.selectedMonth,
+    selectedMonthKey,
     filter.fromDate,
     filter.toDate,
-    walletFilter.selectedWalletIds.join("|"),
-    selectedCategoryIds.join("|"),
+    walletIdsKey,
+    categoryIdsKey,
   ]);
 
   useEffect(() => {
@@ -211,9 +263,45 @@ export default function TransactionsPage() {
     [wallets],
   );
 
+  // Filtering data dilakukan di sini (bukan di hook) agar tidak ada circular dependency
+  const filteredTransactions = useMemo(() => {
+    let items = transactions;
+
+    if (walletFilter.selectedWalletIds.length > 0) {
+      items = items.filter((item) => walletFilter.selectedWalletIds.includes(item.walletId));
+    }
+
+    if (filter.period === "daily") {
+      const today = new Date();
+      return sortTransactionsByDate(
+        items.filter((item) => {
+          const d = new Date(item.date);
+          return (
+            d.getFullYear() === today.getFullYear() &&
+            d.getMonth() === today.getMonth() &&
+            d.getDate() === today.getDate()
+          );
+        }),
+      );
+    }
+
+    if (filter.period === "monthly") {
+      return sortTransactionsByDate(filterTransactionsByMonth(items, monthKey(filter.selectedMonth)));
+    }
+
+    return sortTransactionsByDate(filterTransactionsByDateRange(items, filter.fromDate, filter.toDate));
+  }, [
+    transactions,
+    walletIdsKey,
+    filter.period,
+    selectedMonthKey,
+    filter.fromDate,
+    filter.toDate,
+  ]);
+
   const totals = useMemo(
-    () => calculateTotals(filter.filteredTransactions),
-    [filter.filteredTransactions],
+    () => calculateTotals(filteredTransactions),
+    [filteredTransactions],
   );
 
   const spendingTrend = useMemo(() => {
@@ -258,14 +346,14 @@ export default function TransactionsPage() {
   }, [filter.period, filter.selectedMonth, selectedCategoryIds, transactions, walletFilter.selectedWalletIds]);
 
   const largestExpense = useMemo(() => {
-    const expenseItems = filter.filteredTransactions.filter((item) => item.type === "expense");
+    const expenseItems = filteredTransactions.filter((item) => item.type === "expense");
     if (!expenseItems.length) return null;
     return expenseItems.reduce((max, item) => (item.amount > max.amount ? item : max), expenseItems[0]);
-  }, [filter.filteredTransactions]);
+  }, [filteredTransactions]);
 
   const searchKey = searchQuery.trim().toLowerCase();
   const visibleTransactions = useMemo(() => {
-    let items = filter.filteredTransactions;
+    let items = filteredTransactions;
 
     if (activeActivityTab !== "all") {
       items = items.filter((item) => resolveActivityStatus(item) === activeActivityTab);
@@ -286,13 +374,42 @@ export default function TransactionsPage() {
   }, [
     activeActivityTab,
     categoryMap,
-    filter.filteredTransactions,
+    filteredTransactions,
     searchKey,
     selectedCategoryIds,
     walletMap,
   ]);
 
   const pagedTransactions = visibleTransactions;
+  const walletResetKey = walletFilter.selectedWalletIds.join(",");
+  const categoryResetKey = selectedCategoryIds.join(",");
+  const renderResetKey = useMemo(() => {
+    return [
+      activeActivityTab,
+      searchKey,
+      categoryResetKey,
+      walletResetKey,
+      filter.period,
+      filter.fromDate,
+      filter.toDate,
+      filter.selectedMonth.getTime(),
+    ].join("|");
+  }, [
+    activeActivityTab,
+    categoryResetKey,
+    filter.fromDate,
+    filter.period,
+    filter.selectedMonth,
+    filter.toDate,
+    searchKey,
+    walletResetKey,
+  ]);
+
+  const { rendered: renderedTransactions, canRenderMore, sentinelRef } = useProgressiveRender(pagedTransactions, {
+    initial: 60,
+    step: 60,
+    resetKey: renderResetKey,
+  });
 
   const handleSubmit = async (payload: Omit<Transaction, "id">) => {
     try {
@@ -314,39 +431,32 @@ export default function TransactionsPage() {
   const formDisabled = loading || savingTransaction;
 
   return (
-    <AuthGate>
-      <div className="min-h-screen bg-surface text-on-surface">
-        <Sidebar />
-        <main
-          className={`min-h-screen transition-all duration-300 ease-in-out ${
-            sidebarCollapsed ? "lg:ml-20" : "lg:ml-64"
-          }`}
-        >
-          <MainHeader
-            title={t("nav.transactions")}
-            tabs={[
-              { key: "all", label: t("transactions.activity.all") },
-              { key: "pending", label: t("transactions.activity.pending") },
-              { key: "scheduled", label: t("transactions.activity.scheduled") },
-            ]}
-            activeTab={activeActivityTab}
-            onTabChange={(key) => setActiveActivityTab(key as ActivityTab)}
-          />
+    <>
+      <MainHeader
+        title={t("nav.transactions")}
+        tabs={[
+          { key: "all", label: t("transactions.activity.all") },
+          { key: "pending", label: t("transactions.activity.pending") },
+          { key: "scheduled", label: t("transactions.activity.scheduled") },
+        ]}
+        activeTab={activeActivityTab}
+        onTabChange={(key) => setActiveActivityTab(key as ActivityTab)}
+      />
 
-          <section className="flex flex-col gap-6 px-6 py-6 md:px-8">
-            <div className="flex flex-col items-center gap-4 rounded-xl bg-surface-container-low p-4 md:flex-row md:justify-between">
-              <div className="relative w-full md:w-96">
-                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant">
-                  search
-                </span>
-                <input
-                  className="w-full rounded-lg border-none bg-surface-container py-3 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant transition-all focus:bg-surface-container-high focus:ring-1 focus:ring-primary"
-                  placeholder={t("transactions.searchPlaceholder")}
-                  type="text"
-                  value={searchQuery}
-                  onChange={(event) => setSearchQuery(event.target.value)}
-                />
-              </div>
+      <section className="flex flex-col gap-6 px-6 pb-28 pt-6 md:px-8 lg:pb-6">
+        <div className="flex flex-col items-center gap-4 rounded-xl bg-surface-container-low p-4 md:flex-row md:justify-between">
+          <div className="relative w-full md:w-96">
+            <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-lg text-on-surface-variant">
+              search
+            </span>
+            <input
+              className="w-full rounded-lg border-none bg-surface-container py-3 pl-12 pr-4 text-on-surface placeholder:text-on-surface-variant transition-all focus:bg-surface-container-high focus:ring-1 focus:ring-primary"
+              placeholder={t("transactions.searchPlaceholder")}
+              type="text"
+              value={searchQuery}
+              onChange={(event) => setSearchQuery(event.target.value)}
+            />
+          </div>
               <div className="flex w-full items-center gap-3 md:w-auto">
                 <button
                   type="button"
@@ -446,7 +556,7 @@ export default function TransactionsPage() {
                 </p>
                 <div className="flex items-end justify-between">
                   <h2 className="tnum font-headline text-3xl font-extrabold text-on-surface">
-                    {formatCurrency(totals.expense)}
+                    {privacyHideAmounts ? "****" : currencyFormatter.format(Math.abs(totals.expense))}
                   </h2>
                   <span
                     className={`flex items-center gap-1 text-sm font-bold ${
@@ -468,7 +578,7 @@ export default function TransactionsPage() {
                 <div className="flex items-end justify-between">
                   <div>
                     <h2 className="tnum font-headline text-3xl font-extrabold text-on-surface">
-                      {formatCurrency(largestExpense?.amount ?? 0)}
+                      {privacyHideAmounts ? "****" : currencyFormatter.format(Math.abs(largestExpense?.amount ?? 0))}
                     </h2>
                     <p className="text-sm text-on-surface-variant">
                       {largestExpense ? categoryMap.get(largestExpense.categoryId)?.name ?? t("common.uncategorized") : "-"}
@@ -486,8 +596,8 @@ export default function TransactionsPage() {
                 }}
                 className="group flex cursor-pointer flex-col items-center justify-center rounded-xl border border-outline-variant/5 bg-surface-container-low p-6 transition-all hover:bg-surface-container-highest"
               >
-                <div className="mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary/10 transition-transform group-hover:scale-110">
-                  <span className="material-symbols-outlined text-primary">add</span>
+                <div className="mb-2 flex h-16 w-16 items-center justify-center rounded-full bg-primary/10 transition-transform group-hover:scale-110">
+                  <span className="material-symbols-outlined text-3xl text-primary">add</span>
                 </div>
                 <p className="font-headline font-bold text-primary">{t("transactions.newTransaction")}</p>
               </button>
@@ -507,7 +617,7 @@ export default function TransactionsPage() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-outline-variant/5">
-                        {pagedTransactions.map((transaction) => {
+                        {renderedTransactions.map((transaction) => {
                           const category = categoryMap.get(transaction.categoryId);
                           const walletName = walletMap.get(transaction.walletId) ?? t("common.noWallet");
                           const description = transaction.note || category?.name || t("common.transaction");
@@ -515,15 +625,16 @@ export default function TransactionsPage() {
                             ? category?.name ?? t("common.uncategorized")
                             : t("transactions.subtitle.activity");
                           const iconName = resolveIcon(transaction.type);
+                          const dateValue = new Date(transaction.date);
                       const tone = transaction.type === "income" ? "primary" : "tertiary";
                       return (
                         <tr key={transaction.id} className="group cursor-default transition-all hover:bg-surface-container">
                           <td className="px-8 py-6">
                             <div className="flex flex-col">
                               <span className="tnum font-semibold text-on-surface">
-                                {formatDate(transaction.date, true)}
+                                {dateFormatter.format(dateValue)}
                               </span>
-                              <span className="text-xs text-on-surface-variant">{formatTime(transaction.date, dateLocale ?? undefined)}</span>
+                              <span className="text-xs text-on-surface-variant">{timeFormatter.format(dateValue)}</span>
                             </div>
                           </td>
                           <td className="px-6 py-6">
@@ -563,7 +674,7 @@ export default function TransactionsPage() {
                               }`}
                             >
                               {transaction.type === "income" ? "+" : "-"}
-                              {formatCurrency(transaction.amount)}
+                              {privacyHideAmounts ? "****" : currencyFormatter.format(Math.abs(transaction.amount))}
                             </span>
                           </td>
                           <td className="px-8 py-6 text-right">
@@ -594,6 +705,17 @@ export default function TransactionsPage() {
                         </tr>
                       );
                     })}
+                    {canRenderMore ? (
+                      <tr
+                        ref={(node) => {
+                          sentinelRef.current = node;
+                        }}
+                      >
+                        <td colSpan={6} className="px-8 py-5 text-center text-xs text-on-surface-variant">
+                          {t("transactions.loading")}
+                        </td>
+                      </tr>
+                    ) : null}
                   </tbody>
                 </table>
               </div>
@@ -601,7 +723,7 @@ export default function TransactionsPage() {
 
             <div className="flex flex-wrap items-center justify-between gap-3 py-4">
               <p className="text-sm font-medium text-on-surface-variant">
-                {t("transactions.showingPrefix")} {pagedTransactions.length} {t("transactions.showingSuffix")}
+                {t("transactions.showingPrefix")} {renderedTransactions.length} {t("transactions.showingSuffix")}
               </p>
               <div className="flex flex-wrap items-center gap-3">
                 {loadError ? (
@@ -621,25 +743,23 @@ export default function TransactionsPage() {
                 )}
               </div>
             </div>
-          </section>
-        </main>
-        <BottomNav />
+      </section>
 
-        <WalletFilterModal
-          open={walletFilter.open}
-          wallets={wallets}
-          draftWalletIds={walletFilter.draftWalletIds}
-          onToggle={walletFilter.toggleWallet}
-          onApply={walletFilter.applyFilter}
-          onClose={walletFilter.closeFilter}
-        />
+      <WalletFilterModal
+        open={walletFilter.open}
+        wallets={wallets}
+        draftWalletIds={walletFilter.draftWalletIds}
+        onToggle={walletFilter.toggleWallet}
+        onApply={walletFilter.applyFilter}
+        onClose={walletFilter.closeFilter}
+      />
 
-        <Modal
-          open={showCategoryFilter}
-          title={t("transactions.filterCategoryTitle")}
-          onClose={() => setShowCategoryFilter(false)}
-          sizeClassName="max-w-lg"
-        >
+      <Modal
+        open={showCategoryFilter}
+        title={t("transactions.filterCategoryTitle")}
+        onClose={() => setShowCategoryFilter(false)}
+        sizeClassName="max-w-lg"
+      >
           <div className="space-y-4">
             <p className="text-sm text-on-surface-variant">{t("transactions.filterCategoryDesc")}</p>
             <div className="grid gap-2 sm:grid-cols-2">
@@ -685,17 +805,17 @@ export default function TransactionsPage() {
               </button>
             </div>
           </div>
-        </Modal>
+      </Modal>
 
-        <Modal
-          open={showTransactionModal}
-          title={editingTransaction ? t("transactions.modal.edit") : t("transactions.modal.add")}
-          onClose={() => {
-            setShowTransactionModal(false);
-            setEditingTransaction(null);
-          }}
-          sizeClassName="max-w-4xl"
-        >
+      <Modal
+        open={showTransactionModal}
+        title={editingTransaction ? t("transactions.modal.edit") : t("transactions.modal.add")}
+        onClose={() => {
+          setShowTransactionModal(false);
+          setEditingTransaction(null);
+        }}
+        sizeClassName="max-w-4xl"
+      >
           <TransactionForm
             key={editingTransaction?.id ?? (showTransactionModal ? "transaction-modal" : "transaction-hidden")}
             categories={categories}
@@ -710,8 +830,15 @@ export default function TransactionsPage() {
             disabled={formDisabled}
             initialValue={editingTransaction ?? undefined}
           />
-        </Modal>
-      </div>
-    </AuthGate>
+      </Modal>
+    </>
+  );
+}
+
+export default function TransactionsPage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-surface" />}>
+      <TransactionsPageInner />
+    </Suspense>
   );
 }

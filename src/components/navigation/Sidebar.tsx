@@ -44,12 +44,21 @@ export default function Sidebar() {
   }, [sidebarCollapsed]);
 
   return (
-    <aside
-      className={cn(
-        "fixed left-0 top-0 z-40 hidden h-screen flex-col border-r border-outline-variant/10 bg-surface transition-all duration-300 lg:flex",
-        sidebarCollapsed ? "w-20 p-4" : "w-64 p-6",
+    <>
+      {/* Mobile Backdrop */}
+      {!sidebarCollapsed && (
+        <div
+          className="fixed inset-0 z-30 bg-surface/80 backdrop-blur-sm lg:hidden"
+          onClick={toggleSidebar}
+        />
       )}
-    >
+
+      <aside
+        className={cn(
+          "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-outline-variant/10 bg-surface transition-all duration-300 ease-in-out lg:z-40",
+          sidebarCollapsed ? "-translate-x-full lg:translate-x-0 lg:w-20 lg:p-4" : "translate-x-0 w-64 p-6 shadow-2xl lg:shadow-none",
+        )}
+      >
       <div>
         <div className="mb-8 flex items-center justify-between gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-primary to-secondary-container">
@@ -141,12 +150,13 @@ export default function Sidebar() {
             sidebarCollapsed ? "space-x-0" : "space-x-2",
           )}
         >
-          <span className="material-symbols-outlined" data-icon="add_circle">
+          <span className="material-symbols-outlined text-3xl" data-icon="add_circle">
             add_circle
           </span>
           <span className={sidebarCollapsed ? "sr-only" : undefined}>{t("nav.addTransaction")}</span>
         </button>
       </div>
     </aside>
+    </>
   );
 }

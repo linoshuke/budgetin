@@ -16,12 +16,13 @@ export interface CategoryBreakdown {
 }
 
 export function calculateTotals(transactions: Transaction[]): Totals {
-  const income = transactions
-    .filter((item) => item.type === "income")
-    .reduce((sum, item) => sum + item.amount, 0);
-  const expense = transactions
-    .filter((item) => item.type === "expense")
-    .reduce((sum, item) => sum + item.amount, 0);
+  let income = 0;
+  let expense = 0;
+
+  transactions.forEach((item) => {
+    if (item.type === "income") income += item.amount;
+    if (item.type === "expense") expense += item.amount;
+  });
 
   return {
     income,
@@ -31,11 +32,22 @@ export function calculateTotals(transactions: Transaction[]): Totals {
 }
 
 export function sortTransactionsByDate(transactions: Transaction[]) {
-  return [...transactions].sort((a, b) => {
-    const aValue = new Date(a.date).getTime();
-    const bValue = new Date(b.date).getTime();
-    return bValue - aValue;
+  const decorated = transactions.map((transaction, index) => {
+    const timestamp = Date.parse(transaction.date);
+    return {
+      index,
+      timestamp: Number.isFinite(timestamp) ? timestamp : 0,
+      transaction,
+    };
   });
+
+  decorated.sort((a, b) => {
+    const diff = b.timestamp - a.timestamp;
+    if (diff !== 0) return diff;
+    return a.index - b.index;
+  });
+
+  return decorated.map((item) => item.transaction);
 }
 
 export function getRecentTransactions(transactions: Transaction[], limit = 8) {
@@ -55,7 +67,8 @@ export function filterTransactionsByDateRange(
   const to = toDate ? new Date(toDate).getTime() : Number.POSITIVE_INFINITY;
 
   return transactions.filter((item) => {
-    const timestamp = new Date(item.date).getTime();
+    const timestamp = Date.parse(item.date);
+    if (!Number.isFinite(timestamp)) return false;
     return timestamp >= from && timestamp <= to;
   });
 }

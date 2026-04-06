@@ -60,9 +60,6 @@ export default function MainHeader({
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-outline-variant/10 bg-surface/80 px-6 py-4 backdrop-blur-xl md:px-8">
       <div className="flex items-center gap-4">
-        <button className="text-on-surface md:hidden" type="button">
-          <span className="material-symbols-outlined">menu</span>
-        </button>
         <div className="flex flex-col">
           <h1 className="font-headline text-2xl font-bold tracking-tighter text-primary">
             {resolvedTitle}

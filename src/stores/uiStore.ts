@@ -30,9 +30,21 @@ export interface UIState {
   removeToast: (id: string) => void;
 }
 
+const SIDEBAR_STORAGE_KEY = "budgetin:sidebar";
+
+function resolveInitialSidebarCollapsed() {
+  if (typeof window === "undefined") return false;
+
+  const stored = window.localStorage.getItem(SIDEBAR_STORAGE_KEY);
+  if (stored === "collapsed") return true;
+  if (stored === "expanded") return false;
+
+  return !window.matchMedia("(min-width: 1024px)").matches;
+}
+
 export const useUIStore = create<UIState>((set) => ({
   activeTab: 0,
-  sidebarCollapsed: false,
+  sidebarCollapsed: resolveInitialSidebarCollapsed(),
   modals: {
     walletSelection: false,
     addWallet: false,

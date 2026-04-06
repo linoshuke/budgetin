@@ -6,6 +6,7 @@ import { useQuery } from "@tanstack/react-query";
 import PageIndicator from "@/components/statistics/PageIndicator";
 import LockWidget from "@/components/LockWidget";
 import Button from "@/components/ui/Button";
+import ChartDeferred from "@/components/shared/ChartDeferred";
 import { useWallets } from "@/hooks/useWallets";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactionStore } from "@/stores/transactionStore";
@@ -134,7 +135,12 @@ export default function StatisticsClient() {
         >
           {walletCards.map((wallet) => (
             <div key={wallet.id} className="min-w-[85%] snap-center">
-              <WalletStatCard walletName={wallet.name} data={wallet.data} />
+              <ChartDeferred
+                className="w-full"
+                fallback={<div className="h-[260px] rounded-2xl bg-surface-container-low/50" />}
+              >
+                <WalletStatCard walletName={wallet.name} data={wallet.data} />
+              </ChartDeferred>
             </div>
           ))}
         </div>
@@ -156,13 +162,24 @@ export default function StatisticsClient() {
               ))}
             </div>
             {activeWallet ? (
-              <WalletStatCard walletName={activeWallet.name} data={activeWallet.data} />
+              <ChartDeferred
+                className="w-full"
+                fallback={<div className="h-[260px] rounded-2xl bg-surface-container-low/50" />}
+              >
+                <WalletStatCard walletName={activeWallet.name} data={activeWallet.data} />
+              </ChartDeferred>
             ) : null}
           </div>
         ) : (
           <div className="grid gap-6 desktop:grid-cols-2">
             {walletCards.map((wallet) => (
-              <WalletStatCard key={wallet.id} walletName={wallet.name} data={wallet.data} />
+              <ChartDeferred
+                key={wallet.id}
+                className="w-full"
+                fallback={<div className="h-[260px] rounded-2xl bg-surface-container-low/50" />}
+              >
+                <WalletStatCard walletName={wallet.name} data={wallet.data} />
+              </ChartDeferred>
             ))}
           </div>
         )}

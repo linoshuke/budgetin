@@ -8,6 +8,7 @@ import type { Route } from "next";
 import TotalBalanceCard from "@/components/home/TotalBalanceCard";
 import MonthlySummary from "@/components/home/MonthlySummary";
 import WalletSelectionDialog from "@/components/modals/WalletSelectionDialog";
+import ChartDeferred from "@/components/shared/ChartDeferred";
 import { useBudgetStore } from "@/store/budgetStore";
 import { formatCurrency, formatDate } from "@/lib/utils";
 import type { Category } from "@/types/category";
@@ -121,8 +122,18 @@ export default function HomeClient() {
       </section>
 
       <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-        <CashFlowChartCard />
-        <ExpenseChart />
+        <ChartDeferred
+          className="w-full"
+          fallback={<div className="h-[320px] rounded-xl bg-surface-container-low/50" />}
+        >
+          <CashFlowChartCard />
+        </ChartDeferred>
+        <ChartDeferred
+          className="w-full"
+          fallback={<div className="h-[340px] rounded-xl bg-surface-container-low/50" />}
+        >
+          <ExpenseChart />
+        </ChartDeferred>
       </section>
 
       <section className="grid grid-cols-1 gap-8 xl:grid-cols-3">
