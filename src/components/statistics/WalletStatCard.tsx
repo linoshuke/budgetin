@@ -1,9 +1,8 @@
 "use client";
 
-import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend } from "recharts";
-import { useElementSize } from "@/hooks/useElementSize";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import { useEffect, useMemo, useState } from "react";
+import { useNonceStyle } from "@/hooks/useNonceStyle";
 
 interface WalletStatCardProps {
   walletName: string;
@@ -14,24 +13,22 @@ function maskDigits(input: string) {
   return input.replace(/\d/g, "•");
 }
 
-function CustomTooltip({
-  active,
-  payload,
-  label,
+function DayTooltip({
+  day,
+  incomeValue,
+  expenseValue,
+  items,
   formatValue,
 }: {
-  active?: boolean;
-  payload?: any;
-  label?: string;
+  day: string;
+  incomeValue: number;
+  expenseValue: number;
+  items: Array<{ description: string; amount: number; type: string }>;
   formatValue: (value: number) => string;
 }) {
-  if (!active || !payload?.length) return null;
-  const incomeValue = payload.find((entry: any) => entry.dataKey === "income")?.value ?? 0;
-  const expenseValue = payload.find((entry: any) => entry.dataKey === "expense")?.value ?? 0;
-  const items = payload[0]?.payload?.items ?? [];
   return (
-    <div className="rounded-xl border border-white/10 bg-[var(--bg-card)] p-3 text-xs text-[var(--text-primary)] shadow-xl">
-      <p className="font-semibold">Hari {label}</p>
+    <div className="w-max max-w-[240px] rounded-xl border border-white/10 bg-[var(--bg-card)] p-3 text-xs text-[var(--text-primary)] shadow-xl">
+      <p className="font-semibold">Hari {day}</p>
       <div className="mt-2 grid gap-1">
         <div className="flex justify-between gap-4 text-emerald-300">
           <span>Pemasukan</span>
@@ -44,7 +41,7 @@ function CustomTooltip({
       </div>
       {items.length ? (
         <div className="mt-3 space-y-1">
-          {items.slice(0, 4).map((item: any, index: number) => (
+          {items.slice(0, 4).map((item, index) => (
             <div key={`${item.description}-${index}`} className="flex justify-between gap-4">
               <span className="truncate">{item.description}</span>
               <span className={item.type === "expense" ? "text-rose-300" : "text-emerald-300"}>
@@ -60,8 +57,30 @@ function CustomTooltip({
   );
 }
 
+function ExpenseBar({
+  percent,
+  highlight,
+}: {
+  percent: number;
+  highlight: boolean;
+}) {
+  const clamped = Math.min(Math.max(percent, 0), 100);
+  const heightClass = useNonceStyle(`height: ${clamped}%;`);
+
+  return (
+    <div
+      className={[
+        "min-h-[12px] w-full rounded-t-lg transition-all duration-500",
+        highlight
+          ? "bg-primary/30 hover:bg-primary/40 border-t-4 border-primary"
+          : "bg-primary/20 hover:bg-primary/30",
+        heightClass,
+      ].join(" ")}
+    />
+  );
+}
+
 export default function WalletStatCard({ walletName, data }: WalletStatCardProps) {
-  const { ref, size } = useElementSize<HTMLDivElement>();
   const privacyHideAmounts = useAppSettingsStore((state) => state.privacyHideAmounts);
   const currency = useAppSettingsStore((state) => state.currency);
   const numberLocale = useAppSettingsStore((state) => state.numberLocale);
@@ -93,6 +112,33 @@ export default function WalletStatCard({ walletName, data }: WalletStatCardProps
     };
   }, [formatter, privacyHideAmounts, reveal]);
 
+  const maxMagnitude = useMemo(() => {
+    const values = data.map((item) => {
+      const income = Math.abs(Number(item.income ?? 0));
+      const expense = Math.abs(Number(item.expense ?? 0));
+      return income + expense;
+    });
+    const max = values.length ? Math.max(...values) : 0;
+    return max > 0 ? max : 1;
+  }, [data]);
+
+  const maxMagnitudeDay = useMemo(() => {
+    let bestDay: string | null = null;
+    let bestValue = -1;
+    data.forEach((item) => {
+      const income = Math.abs(Number(item.income ?? 0));
+      const expense = Math.abs(Number(item.expense ?? 0));
+      const value = income + expense;
+      if (value > bestValue) {
+        bestValue = value;
+        bestDay = item.day;
+      }
+    });
+    return bestDay;
+  }, [data]);
+
+  const isCompact = data.length <= 10;
+
   return (
     <div className="glass-panel flex flex-col gap-4 p-5">
       <div className="flex items-start justify-between gap-3">
@@ -115,21 +161,40 @@ export default function WalletStatCard({ walletName, data }: WalletStatCardProps
           </button>
         ) : null}
       </div>
-      <div ref={ref} className="h-[220px]">
-        {size.width > 0 && size.height > 0 ? (
-          <BarChart data={data} barGap={8} width={size.width} height={size.height}>
-            <XAxis dataKey="day" stroke="#94a3b8" fontSize={12} />
-            <YAxis
-              stroke="#94a3b8"
-              fontSize={12}
-              tickFormatter={(value) => formatValue(Math.abs(Number(value)))}
-            />
-            <Tooltip content={<CustomTooltip formatValue={formatValue} />} />
-            <Legend />
-            <Bar dataKey="income" fill="#22c55e" radius={[6, 6, 0, 0]} />
-            <Bar dataKey="expense" fill="#f43f5e" radius={[0, 0, 6, 6]} />
-          </BarChart>
-        ) : null}
+      <div className="no-scrollbar h-[220px] overflow-x-auto pb-2">
+        <div className={`flex h-full items-end gap-2 ${isCompact ? "" : "min-w-max"}`}>
+          {data.map((item) => {
+            const incomeValue = Math.abs(Number(item.income ?? 0));
+            const expenseValue = Math.abs(Number(item.expense ?? 0));
+            const magnitude = incomeValue + expenseValue;
+            const percent = (magnitude / maxMagnitude) * 100;
+            const highlight = item.day === maxMagnitudeDay && magnitude > 0;
+            return (
+              <div
+                key={item.day}
+                className={`relative group flex h-full flex-col justify-end gap-3 ${isCompact ? "flex-1" : "w-12"}`}
+              >
+                <div className="relative flex h-[170px] items-end">
+                  <div className="absolute -top-12 left-1/2 z-10 -translate-x-1/2 opacity-0 transition-opacity duration-200 group-hover:opacity-100">
+                    <DayTooltip
+                      day={item.day}
+                      incomeValue={Number(item.income ?? 0)}
+                      expenseValue={Number(item.expense ?? 0)}
+                      items={item.items ?? []}
+                      formatValue={formatValue}
+                    />
+                  </div>
+                  <ExpenseBar percent={percent} highlight={highlight} />
+                </div>
+                <div className="flex justify-center">
+                  <span className="text-[10px] font-bold uppercase tracking-widest text-[var(--text-dimmed)]">
+                    {item.day}
+                  </span>
+                </div>
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );

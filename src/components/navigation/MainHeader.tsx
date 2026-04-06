@@ -14,7 +14,6 @@ const titles: Array<{ prefix: string; labelKey: string }> = [
   { prefix: "/riwayat", labelKey: "nav.transactions" },
   { prefix: "/transactions", labelKey: "nav.transactions" },
   { prefix: "/dompet", labelKey: "nav.budgets" },
-  { prefix: "/statistik", labelKey: "nav.reports" },
   { prefix: "/reports", labelKey: "nav.reports" },
   { prefix: "/categories", labelKey: "nav.categories" },
   { prefix: "/profile", labelKey: "nav.account" },

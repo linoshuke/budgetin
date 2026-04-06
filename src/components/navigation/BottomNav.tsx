@@ -20,7 +20,7 @@ export default function BottomNav() {
   const openModal = useUIStore((state) => state.openModal);
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-outline-variant/10 bg-surface/90 pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
+    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-outline-variant/10 bg-surface pb-[env(safe-area-inset-bottom)] backdrop-blur-lg lg:hidden">
       <div className="mx-auto grid h-[68px] max-w-2xl grid-cols-5 items-center px-3">
         {navItems.slice(0, 2).map((item) => {
           const active = pathname.startsWith(item.href);

@@ -1,7 +1,5 @@
-import StatisticsClient from "./StatisticsClient";
-
-export const revalidate = 300;
+import { redirect } from "next/navigation";
 
 export default function StatisticsPage() {
-  return <StatisticsClient />;
+  redirect("/reports");
 }

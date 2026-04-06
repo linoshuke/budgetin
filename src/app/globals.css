@@ -6,10 +6,23 @@
   box-sizing: border-box;
 }
 
+html {
+  background-color: #0e141d;
+  color-scheme: dark;
+}
+
 html,
 body {
   margin: 0;
   padding: 0;
+  overflow-x: clip;
+}
+
+@supports not (overflow: clip) {
+  html,
+  body {
+    overflow-x: hidden;
+  }
 }
 
 html {
@@ -74,6 +87,7 @@ a {
 
 ::-webkit-scrollbar {
   width: 6px;
+  height: 6px;
 }
 
 ::-webkit-scrollbar-track {
@@ -83,6 +97,10 @@ a {
 ::-webkit-scrollbar-thumb {
   background: #1a202a;
   border-radius: 10px;
+}
+
+::-webkit-scrollbar-corner {
+  background: #0e141d;
 }
 
 ::selection {

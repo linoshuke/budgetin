@@ -32,14 +32,40 @@ export default function Sidebar() {
   const openModal = useUIStore((state) => state.openModal);
 
   useEffect(() => {
-    const stored = typeof window !== "undefined" ? localStorage.getItem(SIDEBAR_STORAGE_KEY) : null;
-    if (stored === "collapsed") {
-      setSidebarCollapsed(true);
+    if (typeof window === "undefined") return undefined;
+
+    const media = window.matchMedia("(min-width: 1024px)");
+
+    const sync = () => {
+      if (!media.matches) {
+        setSidebarCollapsed(true);
+        return;
+      }
+
+      const stored = localStorage.getItem(SIDEBAR_STORAGE_KEY);
+      if (stored === "collapsed") setSidebarCollapsed(true);
+      if (stored === "expanded") setSidebarCollapsed(false);
+    };
+
+    sync();
+
+    const legacy = media as MediaQueryList & {
+      addListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+      removeListener?: (listener: (event: MediaQueryListEvent) => void) => void;
+    };
+
+    if (typeof media.addEventListener === "function") {
+      media.addEventListener("change", sync);
+      return () => media.removeEventListener("change", sync);
     }
+
+    legacy.addListener?.(sync);
+    return () => legacy.removeListener?.(sync);
   }, [setSidebarCollapsed]);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
+    if (!window.matchMedia("(min-width: 1024px)").matches) return;
     localStorage.setItem(SIDEBAR_STORAGE_KEY, sidebarCollapsed ? "collapsed" : "expanded");
   }, [sidebarCollapsed]);
 
@@ -55,8 +81,8 @@ export default function Sidebar() {
 
       <aside
         className={cn(
-          "fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-outline-variant/10 bg-surface transition-all duration-300 ease-in-out lg:z-40",
-          sidebarCollapsed ? "-translate-x-full lg:translate-x-0 lg:w-20 lg:p-4" : "translate-x-0 w-64 p-6 shadow-2xl lg:shadow-none",
+          "fixed inset-y-0 left-0 z-40 flex w-64 flex-col overflow-y-auto border-r border-outline-variant/10 bg-surface transition-all duration-300 ease-in-out lg:z-40",
+          sidebarCollapsed ? "-translate-x-full lg:w-20 lg:translate-x-0 lg:p-4" : "translate-x-0 p-6 shadow-2xl lg:shadow-none",
         )}
       >
       <div>

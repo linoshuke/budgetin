@@ -7,7 +7,7 @@ import Sidebar from "@/components/navigation/Sidebar";
 import MainHeader from "@/components/navigation/MainHeader";
 import { useUIStore } from "@/stores/uiStore";
 
-const tabPaths = ["/beranda", "/transactions", "/dompet", "/statistik", "/lainnya"];
+const tabPaths = ["/beranda", "/transactions", "/dompet", "/reports", "/lainnya"];
 
 function resolveTabIndex(pathname: string) {
   const match = tabPaths.findIndex((path) => pathname.startsWith(path));
@@ -17,12 +17,35 @@ function resolveTabIndex(pathname: string) {
 export default function MainLayout({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const setActiveTab = useUIStore((state) => state.setActiveTab);
+  const setSidebarCollapsed = useUIStore((state) => state.setSidebarCollapsed);
   const sidebarCollapsed = useUIStore((state) => state.sidebarCollapsed);
   const isTransactions = pathname.startsWith("/transactions");
 
   useEffect(() => {
     setActiveTab(resolveTabIndex(pathname));
   }, [pathname, setActiveTab]);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return undefined;
+
+    const enforceMobileCollapsed = () => {
+      if (!window.matchMedia("(min-width: 1024px)").matches) {
+        setSidebarCollapsed(true);
+      }
+    };
+
+    enforceMobileCollapsed();
+
+    window.addEventListener("resize", enforceMobileCollapsed);
+    window.addEventListener("orientationchange", enforceMobileCollapsed);
+    window.visualViewport?.addEventListener("resize", enforceMobileCollapsed);
+
+    return () => {
+      window.removeEventListener("resize", enforceMobileCollapsed);
+      window.removeEventListener("orientationchange", enforceMobileCollapsed);
+      window.visualViewport?.removeEventListener("resize", enforceMobileCollapsed);
+    };
+  }, [setSidebarCollapsed]);
 
   return (
     <div className="min-h-screen bg-surface text-on-surface">
