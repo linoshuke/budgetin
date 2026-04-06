@@ -11,7 +11,6 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import { Dialog, DialogContent } from "@/components/ui/Dialog";
 import WebViewScreen from "@/components/WebViewScreen";
-import { supabase } from "@/lib/supabase/client";
 import { useUIStore } from "@/stores/uiStore";
 import { getPublicOrigin } from "@/lib/public-url";
 
@@ -71,6 +70,7 @@ export default function SignupPage() {
 
   const handleGoogle = async () => {
     const redirectTo = `${getPublicOrigin()}/auth/callback`;
+    const { supabase } = await import("@/lib/supabase/client");
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: { redirectTo },

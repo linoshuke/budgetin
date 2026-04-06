@@ -64,18 +64,18 @@ export const budgetActions = {
     setState((c) => ({ ...c, loading: true }));
 
     try {
+      const walletsPromise = apiFetch<Wallet[]>("/api/wallets").catch((walletError) => {
+        console.warn("Wallet data is not available yet:", walletError);
+        return [] as Wallet[];
+      });
+
       const [transactionsPage, categories, profile] = await Promise.all([
         apiFetch<{ items: Transaction[] }>("/api/transactions?limit=" + DASHBOARD_TRANSACTION_LIMIT),
         apiFetch<Category[]>("/api/categories"),
         apiFetch<UserProfile>("/api/profiles"),
       ]);
 
-      let wallets: Wallet[] = [];
-      try {
-        wallets = await apiFetch<Wallet[]>("/api/wallets");
-      } catch (walletError) {
-        console.warn("Wallet data is not available yet:", walletError);
-      }
+      const wallets = await walletsPromise;
 
       setState((c) => ({
         ...c,

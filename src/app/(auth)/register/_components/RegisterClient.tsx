@@ -2,7 +2,6 @@
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
@@ -105,6 +104,7 @@ export default function RegisterClient() {
     setError("");
     setNotice("");
 
+    const { supabase } = await import("@/lib/supabase/client");
     const redirectTo = `${getPublicOrigin()}/auth/callback${
       nextPath && nextPath !== "/" ? `?next=${encodeURIComponent(nextPath)}` : ""
     }`;

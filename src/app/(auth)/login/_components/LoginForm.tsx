@@ -2,7 +2,6 @@
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { supabase } from "@/lib/supabase/client";
 import Link from "next/link";
 import type { Route } from "next";
 import { FormEvent, useState } from "react";
@@ -24,8 +23,6 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
     event.preventDefault();
     setLoading(true);
     setError("");
-
-    setLoading(false);
     try {
       const response = await fetch("/api/auth/login", {
         method: "POST",
@@ -47,6 +44,7 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
     setLoading(true);
     setError("");
 
+    const { supabase } = await import("@/lib/supabase/client");
     const redirectTo = `${getPublicOrigin()}/auth/callback${
       nextPath && nextPath !== "/" ? `?next=${encodeURIComponent(nextPath)}` : ""
     }`;

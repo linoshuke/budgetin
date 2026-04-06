@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from "react";
-import { useQuery, useQueryClient } from "@tanstack/react-query";
+import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useTransactionStore, type DateRange } from "@/stores/transactionStore";
 import { useWalletStore } from "@/stores/walletStore";
@@ -14,7 +14,6 @@ interface TransactionQueryOptions {
 
 export function useTransactions(options: TransactionQueryOptions = {}) {
   const { user, isAnonymous } = useAuth();
-  const queryClient = useQueryClient();
   const { dateRange, currentMonth, setTransactions } = useTransactionStore();
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
 
@@ -81,11 +80,6 @@ export function useTransactions(options: TransactionQueryOptions = {}) {
       setTransactions(query.data);
     }
   }, [query.data, setTransactions]);
-
-  useEffect(() => {
-    if (!user) return;
-    queryClient.invalidateQueries({ queryKey: ["transactions"] });
-  }, [queryClient, user]);
 
   return {
     query,

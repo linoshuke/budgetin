@@ -14,6 +14,7 @@ import QuickAddTransactionModal from "@/components/transactions/QuickAddTransact
 function AnimatedSwitcher({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const group = pathname.startsWith("/login") || pathname.startsWith("/signup") || pathname.startsWith("/verify-email")
+    || pathname.startsWith("/register")
     ? "auth"
     : "main";
 
@@ -29,6 +30,11 @@ function AuthGate({ children }: { children: ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
   const router = useRouter();
+  const isPublicAuthRoute =
+    pathname.startsWith("/login") ||
+    pathname.startsWith("/register") ||
+    pathname.startsWith("/signup") ||
+    pathname.startsWith("/verify-email");
 
   const isAnonymous = Boolean(user?.is_anonymous);
   const emailVerified = Boolean(
@@ -44,6 +50,10 @@ function AuthGate({ children }: { children: ReactNode }) {
     const email = user.email ?? "";
     router.replace(`/verify-email?email=${encodeURIComponent(email)}`);
   }, [emailVerified, isAnonymous, loading, pathname, router, user]);
+
+  if (isPublicAuthRoute) {
+    return <>{children}</>;
+  }
 
   if (loading) {
     return (
