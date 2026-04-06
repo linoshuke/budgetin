@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 import MainHeader from "@/components/navigation/MainHeader";
 import WalletFilterModal from "@/components/shared/WalletFilterModal";
 import Modal from "@/components/shared/Modal";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import { useTransactionsFilter } from "@/hooks/useTransactionsFilter";
 import { useWalletFilter } from "@/hooks/useWalletFilter";
 import { useProgressiveRender } from "@/hooks/useProgressiveRender";
@@ -556,7 +557,7 @@ function TransactionsPageInner() {
                 </p>
                 <div className="flex items-end justify-between">
                   <h2 className="tnum font-headline text-3xl font-extrabold text-on-surface">
-                    {privacyHideAmounts ? "****" : currencyFormatter.format(Math.abs(totals.expense))}
+                    <SensitiveCurrency value={Math.abs(totals.expense)} eyeClassName="h-6 w-6" />
                   </h2>
                   <span
                     className={`flex items-center gap-1 text-sm font-bold ${
@@ -578,7 +579,7 @@ function TransactionsPageInner() {
                 <div className="flex items-end justify-between">
                   <div>
                     <h2 className="tnum font-headline text-3xl font-extrabold text-on-surface">
-                      {privacyHideAmounts ? "****" : currencyFormatter.format(Math.abs(largestExpense?.amount ?? 0))}
+                      <SensitiveCurrency value={Math.abs(largestExpense?.amount ?? 0)} eyeClassName="h-6 w-6" />
                     </h2>
                     <p className="text-sm text-on-surface-variant">
                       {largestExpense ? categoryMap.get(largestExpense.categoryId)?.name ?? t("common.uncategorized") : "-"}
@@ -674,7 +675,12 @@ function TransactionsPageInner() {
                               }`}
                             >
                               {transaction.type === "income" ? "+" : "-"}
-                              {privacyHideAmounts ? "****" : currencyFormatter.format(Math.abs(transaction.amount))}
+                              <SensitiveCurrency
+                                value={Math.abs(transaction.amount)}
+                                className={transaction.type === "income" ? "text-primary" : "text-on-surface"}
+                                eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-surface-container"
+                                wrapperClassName="gap-1"
+                              />
                             </span>
                           </td>
                           <td className="px-8 py-6 text-right">

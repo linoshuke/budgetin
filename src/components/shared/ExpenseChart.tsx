@@ -1,8 +1,8 @@
 "use client";
 
-import { formatCurrency } from "@/lib/utils";
 import { useNonceStyle } from "@/hooks/useNonceStyle";
 import type { CategoryBreakdown } from "@/lib/budget";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 
 interface ExpenseChartProps {
   rows: CategoryBreakdown[];
@@ -27,8 +27,9 @@ export default function ExpenseChart({ rows }: ExpenseChartProps) {
           <div key={row.category.id}>
             <div className="mb-1 flex items-center justify-between text-sm">
               <span className="text-[var(--text-primary)]">{row.category.name}</span>
-              <span className="text-[var(--text-dimmed)]">
-                {formatCurrency(row.amount)} ({row.percent}%)
+              <span className="inline-flex items-center gap-2 text-[var(--text-dimmed)]">
+                <SensitiveCurrency value={row.amount} eyeClassName="h-6 w-6" />
+                <span>({row.percent}%)</span>
               </span>
             </div>
             <div className="h-3 rounded-full bg-[var(--bg-card-muted)]">

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { MoreVertical } from "lucide-react";
 import Badge from "@/components/ui/Badge";
 import DeleteWalletDialog from "@/components/wallets/DeleteWalletDialog";
-import { formatCurrency } from "@/utils/format";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import type { Wallet } from "@/types";
 
 interface WalletCardProps {
@@ -26,7 +26,9 @@ export default function WalletCard({ wallet }: WalletCardProps) {
       </div>
       <div>
         <p className="text-xs uppercase text-white/70">Saldo</p>
-        <p className="text-2xl font-semibold text-white">{formatCurrency(wallet.balance)}</p>
+        <p className="text-2xl font-semibold text-white">
+          <SensitiveCurrency value={wallet.balance} className="text-white" eyeClassName="h-7 w-7 border-white/20 bg-white/10 hover:bg-white/15" />
+        </p>
         {wallet.location ? (
           <div className="mt-3">
             <Badge className="border-white/30 bg-white/15 text-white">{wallet.location}</Badge>

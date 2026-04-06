@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useMemo, useState, type ReactNode } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
 import { useNonceStyle } from "@/hooks/useNonceStyle";
@@ -9,7 +9,8 @@ import { useBudgetStore } from "@/store/budgetStore";
 import { useTransactionStore } from "@/stores/transactionStore";
 import LockWidget from "@/components/LockWidget";
 import Modal from "@/components/shared/Modal";
-import { formatCurrency, monthKey } from "@/lib/utils";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
+import { monthKey } from "@/lib/utils";
 import { getMonthLabel } from "@/utils/date";
 import type { CategoryBudget, Goal, Transaction } from "@/types";
 import type { Category } from "@/types/category";
@@ -340,7 +341,11 @@ function buildGoals(wallets: Wallet[], avgExpense: number, avgSavings: number) {
   });
 }
 
-function buildSuggestion(rows: BudgetRow[], goals: GoalRow[], avgSavings: number) {
+function buildSuggestion(
+  rows: BudgetRow[],
+  goals: GoalRow[],
+  avgSavings: number,
+): { headline: ReactNode; detail: string } {
   if (!rows.length || !goals.length) {
     return {
       headline: "Belum ada data anggaran untuk dianalisis.",
@@ -365,7 +370,12 @@ function buildSuggestion(rows: BudgetRow[], goals: GoalRow[], avgSavings: number
   const names = underused.map((row) => row.name).join(" dan ");
 
   return {
-    headline: `Anda berpeluang mengalihkan ${formatCurrency(potential)} bulan ini.`,
+    headline: (
+      <>
+        Anda berpeluang mengalihkan{" "}
+        <SensitiveCurrency value={potential} eyeClassName="h-6 w-6" wrapperClassName="gap-1" /> bulan ini.
+      </>
+    ),
     detail: `Dengan mengoptimalkan pos ${names}, target ${targetGoal.name} bisa maju sekitar ${estimatedDays} hari.`,
   };
 }
@@ -991,8 +1001,8 @@ export default function BudgetsPage() {
                 <p className="text-sm text-on-surface-variant">Real-time consumption across core categories.</p>
               </div>
               <div className="text-right">
-                <span className="block font-headline text-2xl font-bold tnum">
-                  {formatCurrency(totalRemaining)}
+                <span className="block font-headline text-2xl font-bold">
+                  <SensitiveCurrency value={totalRemaining} eyeClassName="h-7 w-7" />
                 </span>
                 <span className="text-xs font-medium uppercase tracking-widest text-slate-500">Total Remaining</span>
               </div>
@@ -1040,9 +1050,15 @@ export default function BudgetsPage() {
                       const hasManualTarget = budgetMap.has(row.id);
                       const recommended = recommendedMap.get(row.id) ?? 0;
                       const canRecommend = recommended > 0;
-                      const previewTarget = targetInput
-                        ? formatCurrency(Number(targetInput.replace(/\D/g, "")))
-                        : formatCurrency(row.budget);
+                      const previewTarget = targetInput ? (
+                        <SensitiveCurrency
+                          value={Number(targetInput.replace(/\D/g, ""))}
+                          eyeClassName="h-6 w-6"
+                          wrapperClassName="gap-1"
+                        />
+                      ) : (
+                        <SensitiveCurrency value={row.budget} eyeClassName="h-6 w-6" wrapperClassName="gap-1" />
+                      );
                       return (
                         <div key={row.id} className="space-y-3">
                           <div className="flex items-center justify-between">
@@ -1055,12 +1071,18 @@ export default function BudgetsPage() {
                               <span className="text-lg font-bold">{row.name}</span>
                             </div>
                             <div className="text-right">
-                              <span className="text-lg font-bold tnum text-on-surface">
-                                {formatCurrency(row.spent)}
-                                <span className="text-sm font-medium text-on-surface-variant"> / {formatCurrency(row.budget)}</span>
-                              </span>
+                              <div className="flex flex-wrap items-center justify-end gap-2 text-lg font-bold text-on-surface">
+                                <SensitiveCurrency value={row.spent} eyeClassName="h-6 w-6" wrapperClassName="gap-1" />
+                                <span className="text-sm font-medium text-on-surface-variant">/</span>
+                                <SensitiveCurrency
+                                  value={row.budget}
+                                  className="text-on-surface-variant"
+                                  eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-surface-container"
+                                  wrapperClassName="gap-1"
+                                />
+                              </div>
                               <div className="text-xs text-on-surface-variant">
-                                Rekomendasi: <span className="tnum">{formatCurrency(recommended)}</span>
+                                Rekomendasi: <SensitiveCurrency value={recommended} eyeClassName="h-6 w-6" wrapperClassName="gap-1" />
                               </div>
                             </div>
                           </div>
@@ -1124,7 +1146,9 @@ export default function BudgetsPage() {
                                     className="w-full rounded-lg border border-outline-variant/10 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
                                     disabled={savingTarget}
                                   />
-                                  <p className="text-xs text-on-surface-variant">Preview: {previewTarget}</p>
+                                  <p className="text-xs text-on-surface-variant">
+                                    Preview: <span className="inline-flex items-center">{previewTarget}</span>
+                                  </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-2">
                                   <button
@@ -1243,8 +1267,24 @@ export default function BudgetsPage() {
                       ) : null}
                       <div className="w-full border-t border-outline-variant/10 pt-4">
                         <div className="flex justify-between text-xs font-bold uppercase tracking-tighter">
-                          <span className={strokeClass}>{formatCurrency(goal.saved)} Saved</span>
-                          <span className="text-on-surface-variant">{formatCurrency(goal.target)} Goal</span>
+                          <span className={strokeClass}>
+                            <SensitiveCurrency
+                              value={goal.saved}
+                              className={strokeClass}
+                              eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-surface-container"
+                              wrapperClassName="gap-1"
+                            />{" "}
+                            Saved
+                          </span>
+                          <span className="text-on-surface-variant">
+                            <SensitiveCurrency
+                              value={goal.target}
+                              className="text-on-surface-variant"
+                              eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-surface-container"
+                              wrapperClassName="gap-1"
+                            />{" "}
+                            Goal
+                          </span>
                         </div>
                       </div>
                       <div className="mt-4 flex w-full flex-wrap items-center justify-center gap-2 text-[10px] font-bold uppercase tracking-wider">
@@ -1367,9 +1407,14 @@ export default function BudgetsPage() {
                     <div className="space-y-1">
                       <p className="text-sm font-semibold text-on-surface">{category.name}</p>
                       <div className="flex flex-wrap items-center gap-2 text-xs text-on-surface-variant">
-                        <span>Terpakai: {formatCurrency(spent)}</span>
+                        <span className="inline-flex items-center gap-1">
+                          Terpakai: <SensitiveCurrency value={spent} eyeClassName="h-6 w-6" wrapperClassName="gap-1" />
+                        </span>
                         <span className="text-slate-500">•</span>
-                        <span>Rekomendasi: {formatCurrency(recommended)}</span>
+                        <span className="inline-flex items-center gap-1">
+                          Rekomendasi:{" "}
+                          <SensitiveCurrency value={recommended} eyeClassName="h-6 w-6" wrapperClassName="gap-1" />
+                        </span>
                         {manual !== undefined ? (
                           <span className="rounded-full bg-surface-container-highest px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
                             Manual
@@ -1391,9 +1436,15 @@ export default function BudgetsPage() {
                         disabled={savingBulk}
                       />
                       <span className="text-xs text-on-surface-variant">
-                        {draftTargets[category.id]
-                          ? formatCurrency(Number(draftTargets[category.id].replace(/\D/g, "")))
-                          : "Mode otomatis"}
+                        {draftTargets[category.id] ? (
+                          <SensitiveCurrency
+                            value={Number(draftTargets[category.id].replace(/\D/g, ""))}
+                            eyeClassName="h-6 w-6"
+                            wrapperClassName="gap-1"
+                          />
+                        ) : (
+                          "Mode otomatis"
+                        )}
                       </span>
                     </div>
                   </div>
@@ -1455,7 +1506,12 @@ export default function BudgetsPage() {
               disabled={savingGoal}
             />
             <p className="text-xs text-on-surface-variant">
-              Preview: {goalTargetInput ? formatCurrency(Number(goalTargetInput.replace(/\D/g, ""))) : "-"}
+              Preview:{" "}
+              {goalTargetInput ? (
+                <SensitiveCurrency value={Number(goalTargetInput.replace(/\D/g, ""))} eyeClassName="h-6 w-6" wrapperClassName="gap-1" />
+              ) : (
+                "-"
+              )}
             </p>
           </div>
           <div className="space-y-1">
@@ -1468,7 +1524,12 @@ export default function BudgetsPage() {
               disabled={savingGoal}
             />
             <p className="text-xs text-on-surface-variant">
-              Preview: {goalSavedInput ? formatCurrency(Number(goalSavedInput.replace(/\D/g, ""))) : "-"}
+              Preview:{" "}
+              {goalSavedInput ? (
+                <SensitiveCurrency value={Number(goalSavedInput.replace(/\D/g, ""))} eyeClassName="h-6 w-6" wrapperClassName="gap-1" />
+              ) : (
+                "-"
+              )}
             </p>
           </div>
           <div className="space-y-1">

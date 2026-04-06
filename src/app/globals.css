@@ -72,11 +72,6 @@ a {
   font-feature-settings: "tnum";
 }
 
-.privacy-hide-amounts .tnum {
-  filter: blur(6px);
-  user-select: none;
-}
-
 ::-webkit-scrollbar {
   width: 6px;
 }

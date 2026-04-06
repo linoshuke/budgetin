@@ -5,8 +5,8 @@ import { useWalletStore } from "@/stores/walletStore";
 import { useUIStore } from "@/stores/uiStore";
 import { useBudgetStore } from "@/store/budgetStore";
 import { useMonthlySummary } from "@/hooks/useTransactions";
-import { formatCurrency } from "@/utils/format";
 import { useI18n } from "@/hooks/useI18n";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -109,8 +109,11 @@ export default function TotalBalanceCard() {
               </button>
             </div>
           </div>
-          <h1 className="tnum mt-2 text-4xl font-extrabold tracking-tighter text-on-surface md:text-5xl">
-            {formatCurrency(totalBalance)}
+          <h1 className="mt-2 flex items-center gap-3 text-4xl font-extrabold tracking-tighter text-on-surface md:text-5xl">
+            <SensitiveCurrency
+              value={totalBalance}
+              eyeClassName="h-9 w-9 border-outline-variant/20 bg-surface-container-low/30 hover:bg-surface-container"
+            />
           </h1>
           <p className="mt-2 text-xs text-on-surface-variant">
             {selectedWalletIds.length

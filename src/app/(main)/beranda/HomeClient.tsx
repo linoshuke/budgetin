@@ -9,8 +9,9 @@ import TotalBalanceCard from "@/components/home/TotalBalanceCard";
 import MonthlySummary from "@/components/home/MonthlySummary";
 import WalletSelectionDialog from "@/components/modals/WalletSelectionDialog";
 import ChartDeferred from "@/components/shared/ChartDeferred";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import { useBudgetStore } from "@/store/budgetStore";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
 import type { Category } from "@/types/category";
 import { useI18n } from "@/hooks/useI18n";
 
@@ -71,7 +72,8 @@ export default function HomeClient() {
         title,
         category: category?.name ?? t("common.uncategorized"),
         date: formatDate(item.date, true),
-        amount: `${item.type === "income" ? "+" : "-"}${formatCurrency(amountValue)}`,
+        amount: amountValue,
+        type: item.type,
         status: item.type === "income" ? t("common.income") : t("common.expense"),
         icon: resolveCategoryIcon(category),
         tone: item.type === "income" ? "primary" : "error",
@@ -104,7 +106,7 @@ export default function HomeClient() {
       return {
         title,
         meta,
-        amount: formatCurrency(Math.abs(item.amount)),
+        amount: Math.abs(item.amount),
         status: isUrgent ? t("home.status.urgent") : t("home.status.pending"),
         tone: isUrgent ? "error" : "primary",
         action: isUrgent ? t("home.action.pay") : t("home.action.autopay"),
@@ -123,7 +125,7 @@ export default function HomeClient() {
 
       <section className="grid grid-cols-1 gap-8 lg:grid-cols-3">
         <ChartDeferred
-          className="w-full"
+          className="w-full lg:col-span-2"
           fallback={<div className="h-[320px] rounded-xl bg-surface-container-low/50" />}
         >
           <CashFlowChartCard />
@@ -170,8 +172,14 @@ export default function HomeClient() {
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className={`tnum text-sm font-bold ${item.tone === "primary" ? "text-primary" : "text-error"}`}>
-                        {item.amount}
+                      <div className={`inline-flex items-center gap-2 text-sm font-bold ${item.tone === "primary" ? "text-primary" : "text-error"}`}>
+                        <span>{item.type === "income" ? "+" : "-"}</span>
+                        <SensitiveCurrency
+                          value={item.amount}
+                          className={item.tone === "primary" ? "text-primary" : "text-error"}
+                          eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-surface-container"
+                          wrapperClassName="gap-1"
+                        />
                       </div>
                       <div className="text-[10px] font-medium uppercase text-on-surface-variant">{item.status}</div>
                     </div>
@@ -219,7 +227,9 @@ export default function HomeClient() {
                     </span>
                   </div>
                   <div className="flex items-end justify-between">
-                    <div className="tnum text-xl font-bold">{bill.amount}</div>
+                    <div className="text-xl font-bold">
+                      <SensitiveCurrency value={bill.amount} eyeClassName="h-7 w-7" />
+                    </div>
                     {bill.action === "check_circle" ? (
                       <span
                         className="material-symbols-outlined icon-fill text-secondary-container"

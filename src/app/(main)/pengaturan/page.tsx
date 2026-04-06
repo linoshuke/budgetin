@@ -2,6 +2,8 @@
 
 import { useMemo, useRef, useState } from "react";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
+import Modal from "@/components/shared/Modal";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import {
   getSerializableAppSettings,
   useAppSettingsStore,
@@ -13,8 +15,7 @@ import {
   type DefaultPeriod,
   type DefaultTransactionType,
 } from "@/stores/appSettingsStore";
-import { formatCurrency, formatDate } from "@/lib/utils";
-import { formatCompactCurrency } from "@/utils/format";
+import { formatDate } from "@/lib/utils";
 import { useI18n } from "@/hooks/useI18n";
 
 const currencyOptions: Array<{ value: CurrencyCode; label: string }> = [
@@ -79,6 +80,7 @@ export default function SettingsPage() {
   const importSettings = useAppSettingsStore((state) => state.importSettings);
 
   const [savingTheme, setSavingTheme] = useState(false);
+  const [confirmHideAmounts, setConfirmHideAmounts] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const walletOptions = useMemo(
@@ -132,6 +134,14 @@ export default function SettingsPage() {
     } finally {
       if (fileInputRef.current) fileInputRef.current.value = "";
     }
+  };
+
+  const handleHideAmountsToggle = (nextValue: boolean) => {
+    if (nextValue && !privacyHideAmounts) {
+      setConfirmHideAmounts(true);
+      return;
+    }
+    setSettings({ privacyHideAmounts: nextValue });
   };
 
   return (
@@ -270,11 +280,11 @@ export default function SettingsPage() {
         <div className="mt-4 grid gap-3 rounded-xl border border-outline-variant/10 bg-surface-container p-4 text-sm">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-on-surface-variant">{t("settings.example.amount")}</span>
-            <span className="tnum font-semibold text-on-surface">{formatCurrency(1250000)}</span>
+            <SensitiveCurrency value={1250000} className="font-semibold text-on-surface" eyeClassName="h-6 w-6" />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-on-surface-variant">{t("settings.example.compact")}</span>
-            <span className="tnum font-semibold text-on-surface">{formatCompactCurrency(1250000)}</span>
+            <SensitiveCurrency value={1250000} notation="compact" maximumFractionDigits={1} className="font-semibold text-on-surface" eyeClassName="h-6 w-6" />
           </div>
           <div className="flex flex-wrap items-center justify-between gap-2">
             <span className="text-on-surface-variant">{t("settings.example.date")}</span>
@@ -416,7 +426,7 @@ export default function SettingsPage() {
             <input
               type="checkbox"
               checked={privacyHideAmounts}
-              onChange={(event) => setSettings({ privacyHideAmounts: event.target.checked })}
+              onChange={(event) => handleHideAmountsToggle(event.target.checked)}
               className="h-4 w-4 accent-primary"
             />
           </label>
@@ -456,6 +466,42 @@ export default function SettingsPage() {
           </label>
         </div>
       </section>
+
+      <Modal
+        open={confirmHideAmounts}
+        title="Aktifkan penyamaran nominal?"
+        onClose={() => setConfirmHideAmounts(false)}
+        sizeClassName="max-w-lg"
+      >
+        <div className="space-y-4 text-sm text-on-surface-variant">
+          <p className="text-on-surface">
+            Fitur ini akan menyamarkan semua nominal (mis. saat Anda membuka aplikasi di tempat umum).
+          </p>
+          <ul className="list-disc space-y-1 pl-5">
+            <li>Nominal akan dimask, tapi formatnya tetap terlihat.</li>
+            <li>Anda bisa menekan ikon mata untuk melihat nominal sementara.</li>
+          </ul>
+          <div className="flex flex-wrap items-center justify-end gap-2 pt-2">
+            <button
+              type="button"
+              onClick={() => setConfirmHideAmounts(false)}
+              className="rounded-lg border border-outline-variant/20 bg-surface-container px-4 py-2 text-sm font-semibold text-on-surface-variant transition-colors hover:bg-surface-container-high hover:text-on-surface"
+            >
+              Tidak
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSettings({ privacyHideAmounts: true });
+                setConfirmHideAmounts(false);
+              }}
+              className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary transition hover:brightness-110"
+            >
+              Iya, aktifkan
+            </button>
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

@@ -1,7 +1,8 @@
-import { formatCurrency } from "@/lib/utils";
 import type { Totals } from "@/lib/budget";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import Link from "next/link";
 import type { Route } from "next";
+import type { ReactNode } from "react";
 
 interface SidebarProps {
   totals: Totals;
@@ -13,9 +14,9 @@ export default function Sidebar({ totals }: SidebarProps) {
       <div>
         <h2 className="text-sm font-semibold text-[var(--text-primary)]">Ringkasan Cepat</h2>
         <div className="mt-3 space-y-2 text-sm">
-          <SummaryRow label="Saldo Total" value={formatCurrency(totals.balance)} />
-          <SummaryRow label="Pemasukan" value={formatCurrency(totals.income)} valueClass="text-emerald-400" />
-          <SummaryRow label="Pengeluaran" value={formatCurrency(totals.expense)} valueClass="text-rose-400" />
+          <SummaryRow label="Saldo Total" value={<SensitiveCurrency value={totals.balance} eyeClassName="h-6 w-6" />} />
+          <SummaryRow label="Pemasukan" value={<SensitiveCurrency value={totals.income} className="text-emerald-400" eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-[var(--bg-card)]" />} />
+          <SummaryRow label="Pengeluaran" value={<SensitiveCurrency value={totals.expense} className="text-rose-400" eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-[var(--bg-card)]" />} />
         </div>
       </div>
 
@@ -37,7 +38,7 @@ function SummaryRow({
   valueClass,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   valueClass?: string;
 }) {
   return (

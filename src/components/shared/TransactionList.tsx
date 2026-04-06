@@ -1,5 +1,6 @@
 import Button from "@/components/ui/Button";
-import { formatCurrency, formatDate } from "@/lib/utils";
+import { formatDate } from "@/lib/utils";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import type { Category } from "@/types/category";
 import type { Transaction } from "@/types/transaction";
 import type { Wallet } from "@/types/wallet";
@@ -60,13 +61,14 @@ export default function TransactionList({
               </div>
 
               <div className="flex items-center gap-2">
-                <span
-                  className={`text-sm font-semibold ${
-                    transaction.type === "income" ? "text-emerald-400" : "text-rose-400"
-                  }`}
-                >
-                  {transaction.type === "income" ? "+" : "-"}
-                  {formatCurrency(transaction.amount)}
+                <span className={`inline-flex items-center gap-2 text-sm font-semibold ${transaction.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
+                  <span>{transaction.type === "income" ? "+" : "-"}</span>
+                  <SensitiveCurrency
+                    value={Math.abs(transaction.amount)}
+                    className={transaction.type === "income" ? "text-emerald-400" : "text-rose-400"}
+                    eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-[var(--bg-card-muted)]"
+                    wrapperClassName="gap-1"
+                  />
                 </span>
 
                 {onEdit ? (

@@ -11,7 +11,7 @@ import { useWallets } from "@/hooks/useWallets";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { useUIStore } from "@/stores/uiStore";
-import { formatCurrency } from "@/utils/format";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import { getMonthLabel } from "@/utils/date";
 
 export default function WalletDetailPage() {
@@ -69,7 +69,9 @@ export default function WalletDetailPage() {
       <div className="space-y-4">
         <div className="rounded-2xl bg-gradient-to-br from-blue-700 via-indigo-700 to-slate-900 p-6 text-white">
           <p className="text-xs text-white/70">Saldo Dompet</p>
-          <p className="text-3xl font-semibold">{formatCurrency(Number(wallet.balance ?? 0))}</p>
+          <p className="text-3xl font-semibold">
+            <SensitiveCurrency value={Number(wallet.balance ?? 0)} className="text-white" eyeClassName="h-8 w-8 border-white/20 bg-white/10 hover:bg-white/15" />
+          </p>
           <div className="mt-4 flex gap-2">
             <Button
               variant={dateRange === "daily" ? "primary" : "outline"}

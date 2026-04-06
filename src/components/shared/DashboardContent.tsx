@@ -7,7 +7,7 @@ import StatCard from "@/components/shared/StatCard";
 import MonthlySummary from "@/components/shared/MonthlySummary";
 import TransactionList from "@/components/shared/TransactionList";
 import ExpenseChart from "@/components/shared/ExpenseChart";
-import { formatCurrency } from "@/lib/utils";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import type { ReactNode } from "react";
 
 interface DashboardContentProps {
@@ -52,19 +52,19 @@ export default function DashboardContent({
       <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard
           title="Saldo Total"
-          value={formatCurrency(totals.balance)}
+          value={<SensitiveCurrency value={totals.balance} eyeClassName="h-6 w-6" />}
           helper="Pemasukan dikurangi pengeluaran"
           accent="teal"
         />
         <StatCard
           title="Pemasukan Bulan Ini"
-          value={formatCurrency(monthTotals.income)}
+          value={<SensitiveCurrency value={monthTotals.income} eyeClassName="h-6 w-6" />}
           helper={`${monthIncomeCount} transaksi`}
           accent="emerald"
         />
         <StatCard
           title="Pengeluaran Bulan Ini"
-          value={formatCurrency(monthTotals.expense)}
+          value={<SensitiveCurrency value={monthTotals.expense} eyeClassName="h-6 w-6" />}
           helper={`${monthExpenseCount} transaksi`}
           accent="rose"
         />

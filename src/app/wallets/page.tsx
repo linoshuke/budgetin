@@ -7,7 +7,7 @@ import AuthGate from "@/components/shared/AuthGate";
 import Modal from "@/components/shared/Modal";
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { formatCurrency } from "@/lib/utils";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import type { Wallet } from "@/types/wallet";
 import type { Route } from "next";
@@ -374,7 +374,9 @@ function WalletCard({
           ) : null}
         </div>
         <p className="mt-2 text-xs text-[var(--text-dimmed)]">Total saldo</p>
-        <p className="text-base font-semibold text-[var(--text-primary)]">{formatCurrency(balance)}</p>
+        <p className="text-base font-semibold text-[var(--text-primary)]">
+          <SensitiveCurrency value={balance} eyeClassName="h-6 w-6" />
+        </p>
       </Link>
 
       <div className="relative" ref={menuRef}>

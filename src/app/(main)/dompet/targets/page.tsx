@@ -7,7 +7,8 @@ import LockWidget from "@/components/LockWidget";
 import { useAuth } from "@/hooks/useAuth";
 import { useNonceStyle } from "@/hooks/useNonceStyle";
 import { useBudgetStore } from "@/store/budgetStore";
-import { formatCurrency, getMonthLabel, toCsvRow } from "@/lib/utils";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
+import { getMonthLabel, toCsvRow } from "@/lib/utils";
 import type { CategoryBudget } from "@/types";
 import type { Category } from "@/types/category";
 
@@ -244,7 +245,14 @@ export default function BudgetTargetsHistoryPage() {
                             <p className="text-xs text-on-surface-variant">Target bulan ini</p>
                           </div>
                         </div>
-                        <span className="text-xs font-bold text-primary">{formatCurrency(Number(item.target_amount))}</span>
+                        <span className="text-xs font-bold text-primary">
+                          <SensitiveCurrency
+                            value={Number(item.target_amount)}
+                            className="text-primary"
+                            eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-surface-container"
+                            wrapperClassName="gap-1"
+                          />
+                        </span>
                       </div>
                     </article>
                   );

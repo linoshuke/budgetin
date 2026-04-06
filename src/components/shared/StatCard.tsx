@@ -1,10 +1,11 @@
 import { cn } from "@/lib/utils";
+import type { ReactNode } from "react";
 
 type Accent = "teal" | "emerald" | "rose";
 
 interface Props {
   title: string;
-  value: string;
+  value: ReactNode;
   helper?: string;
   accent?: Accent;
 }
@@ -26,7 +27,7 @@ export default function StatCard({
       <div className={cn("absolute inset-0 bg-gradient-to-br blur-2xl", accentClass[accent])} />
       <div className="relative space-y-1">
         <p className="text-sm text-[var(--text-dimmed)]">{title}</p>
-        <p className="text-2xl font-semibold text-[var(--text-primary)]">{value}</p>
+        <div className="text-2xl font-semibold text-[var(--text-primary)]">{value}</div>
         {helper ? <p className="text-xs text-[var(--text-dimmed)]">{helper}</p> : null}
       </div>
     </article>

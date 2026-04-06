@@ -2,7 +2,8 @@
 
 import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
-import { formatCurrency, getIsoDateToday } from "@/lib/utils";
+import { getIsoDateToday } from "@/lib/utils";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import type { Category } from "@/types/category";
 import type { Transaction, TransactionType } from "@/types/transaction";
@@ -136,7 +137,10 @@ export default function TransactionForm({
             required
             disabled={disabled}
           />
-          <p className="text-xs text-[var(--text-dimmed)]">Preview: {formatCurrency(amount)}</p>
+          <div className="text-xs text-[var(--text-dimmed)]">
+            Preview:{" "}
+            <SensitiveCurrency value={amount} className="text-[var(--text-dimmed)]" eyeClassName="h-6 w-6" />
+          </div>
         </div>
 
         <div className="space-y-2">

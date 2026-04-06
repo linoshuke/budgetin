@@ -4,8 +4,8 @@ import Skeleton from "@/components/ui/Skeleton";
 import { useMonthlySummary } from "@/hooks/useTransactions";
 import { useWalletStore } from "@/stores/walletStore";
 import { useTransactionStore } from "@/stores/transactionStore";
-import { formatCurrency } from "@/utils/format";
 import { useI18n } from "@/hooks/useI18n";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 
 function calculateChange(current: number, previous: number) {
   if (previous === 0) {
@@ -69,7 +69,9 @@ export default function MonthlySummary() {
         </div>
         <div className="mt-4">
           <div className="text-xs font-medium text-on-surface-variant">{t("home.incomeThisMonth")}</div>
-          <div className="tnum mt-1 text-2xl font-bold text-on-surface">{formatCurrency(income)}</div>
+          <div className="mt-1 text-2xl font-bold text-on-surface">
+            <SensitiveCurrency value={income} eyeClassName="h-7 w-7 border-outline-variant/20 bg-surface-container-low/30 hover:bg-surface-container" />
+          </div>
         </div>
       </div>
       <div className="flex flex-col justify-between rounded-xl bg-surface-container-low p-6 transition-all hover:bg-surface-container">
@@ -92,7 +94,9 @@ export default function MonthlySummary() {
         </div>
         <div className="mt-4">
           <div className="text-xs font-medium text-on-surface-variant">{t("home.expenseThisMonth")}</div>
-          <div className="tnum mt-1 text-2xl font-bold text-on-surface">{formatCurrency(expense)}</div>
+          <div className="mt-1 text-2xl font-bold text-on-surface">
+            <SensitiveCurrency value={expense} eyeClassName="h-7 w-7 border-outline-variant/20 bg-surface-container-low/30 hover:bg-surface-container" />
+          </div>
         </div>
       </div>
     </div>

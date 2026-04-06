@@ -1,7 +1,8 @@
 "use client";
 
-import { formatCurrency } from "@/lib/utils";
 import { useNonceStyle } from "@/hooks/useNonceStyle";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
+import type { ReactNode } from "react";
 
 interface Props {
   income: number;
@@ -23,13 +24,13 @@ export default function MonthlySummary({ income, expense }: Props) {
       <div className="mt-4 space-y-4">
         <SummaryBar
           label="Pemasukan"
-          value={formatCurrency(income)}
+          value={<SensitiveCurrency value={income} className="font-semibold text-[var(--text-primary)]" eyeClassName="h-6 w-6" />}
           percent={incomePercent}
           barClass="from-emerald-500 to-emerald-400"
         />
         <SummaryBar
           label="Pengeluaran"
-          value={formatCurrency(expense)}
+          value={<SensitiveCurrency value={expense} className="font-semibold text-[var(--text-primary)]" eyeClassName="h-6 w-6" />}
           percent={expensePercent}
           barClass="from-rose-500 to-rose-400"
         />
@@ -45,7 +46,7 @@ function SummaryBar({
   barClass,
 }: {
   label: string;
-  value: string;
+  value: ReactNode;
   percent: number;
   barClass: string;
 }) {
@@ -53,7 +54,7 @@ function SummaryBar({
     <div>
       <div className="mb-2 flex items-center justify-between text-sm">
         <span className="text-[var(--text-dimmed)]">{label}</span>
-        <span className="font-semibold text-[var(--text-primary)]">{value}</span>
+        <div className="flex items-center justify-end">{value}</div>
       </div>
       <div className="h-3 rounded-full bg-[var(--bg-card-muted)]">
         <SummaryFill percent={percent} barClass={barClass} />

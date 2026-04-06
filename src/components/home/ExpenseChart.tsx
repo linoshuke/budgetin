@@ -4,9 +4,9 @@ import { PieChart, Pie, Cell } from "recharts";
 import Skeleton from "@/components/ui/Skeleton";
 import { useExpenseByCategory } from "@/hooks/useTransactions";
 import { useWalletStore } from "@/stores/walletStore";
-import { formatCompactCurrency } from "@/utils/format";
 import { useNonceStyle } from "@/hooks/useNonceStyle";
 import { useI18n } from "@/hooks/useI18n";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 
 const COLORS = ["#7cebff", "#0064d4", "#ffb4ab", "#29d9f2", "#89ceff", "#adc6ff"];
 const CHART_SIZE = 192;
@@ -56,7 +56,9 @@ export default function ExpenseChart() {
         </PieChart>
         <div className="absolute inset-0 flex flex-col items-center justify-center">
           <span className="text-xs font-medium uppercase text-on-surface-variant">{t("home.total")}</span>
-          <span className="tnum text-xl font-bold">{formatCompactCurrency(total)}</span>
+          <span className="text-xl font-bold">
+            <SensitiveCurrency value={total} notation="compact" maximumFractionDigits={1} eyeClassName="h-7 w-7" />
+          </span>
         </div>
       </div>
       <div className="mt-8 w-full space-y-3">

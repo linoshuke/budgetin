@@ -3,8 +3,9 @@
 import LockWidget from "@/app/_components/LockWidget";
 import Modal from "@/components/shared/Modal";
 import TransactionForm from "@/components/shared/TransactionForm";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 import { filterTransactionsByMonth, sortTransactionsByDate } from "@/lib/budget";
-import { formatCurrency, formatDate, getMonthLabel, monthKey } from "@/lib/utils";
+import { formatDate, getMonthLabel, monthKey } from "@/lib/utils";
 import { budgetActions, useBudgetStore } from "@/store/budgetStore";
 import type { Transaction } from "@/types/transaction";
 import { useParams, useRouter } from "next/navigation";
@@ -123,7 +124,7 @@ export default function WalletDetailPage() {
           <h1 className="text-lg font-semibold">{wallet.name}</h1>
           <p className="text-sm text-white/70">Total saldo</p>
             <p className="mt-1 text-[30px] font-bold tracking-[1.1px]">
-              {formatCurrency(balance)}
+              <SensitiveCurrency value={balance} className="text-white" eyeClassName="h-8 w-8 border-white/20 bg-white/10 hover:bg-white/15" />
             </p>
 
           <div className="mt-4 rounded-xl bg-white/10 p-1">
@@ -204,9 +205,14 @@ export default function WalletDetailPage() {
                     </p>
                     <p className="text-xs text-[var(--text-dimmed)]">{formatDate(item.date, true)}</p>
                   </div>
-                  <div className={`text-sm font-semibold ${item.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
-                    {item.type === "income" ? "+" : "-"}
-                    {formatCurrency(item.amount)}
+                  <div className={`inline-flex items-center gap-2 text-sm font-semibold ${item.type === "income" ? "text-emerald-400" : "text-rose-400"}`}>
+                    <span>{item.type === "income" ? "+" : "-"}</span>
+                    <SensitiveCurrency
+                      value={Math.abs(item.amount)}
+                      className={item.type === "income" ? "text-emerald-400" : "text-rose-400"}
+                      eyeClassName="h-6 w-6 border-transparent bg-transparent hover:bg-[var(--bg-card-muted)]"
+                      wrapperClassName="gap-1"
+                    />
                   </div>
                 </div>
               </div>
