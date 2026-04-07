@@ -37,9 +37,13 @@ export default async function RootLayout({
 }>) {
   const isProd = process.env.NODE_ENV === "production";
   const headerList = await headers();
-  const csp = headerList.get("content-security-policy") ?? "";
-  const nonceMatch = csp.match(/'nonce-([^']+)'/);
-  const nonce = nonceMatch ? nonceMatch[1] : "";
+  const nonce =
+    headerList.get("x-csp-nonce") ??
+    (() => {
+      const csp = headerList.get("content-security-policy") ?? "";
+      const nonceMatch = csp.match(/'nonce-([^']+)'/);
+      return nonceMatch ? nonceMatch[1] : "";
+    })();
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL ?? "";
   let supabaseOrigin = "";
   try {

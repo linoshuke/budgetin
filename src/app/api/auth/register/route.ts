@@ -4,6 +4,29 @@ import { rateLimit } from "@/lib/rate-limit";
 import { withNoStore } from "@/lib/http";
 import { validatePassword } from "@/lib/validators";
 import { GENERIC_REQUEST_ERROR } from "@/lib/auth-errors";
+import { getRequestOrigin } from "@/lib/request-origin";
+
+function getSupabaseRegisterErrorMessage(message: string) {
+  const lower = message.toLowerCase();
+
+  if (lower.includes("redirect") && (lower.includes("not allowed") || lower.includes("invalid"))) {
+    return "Redirect URL Supabase belum diizinkan. Tambahkan `http://localhost:3000/auth/callback` (dev) dan domain produksi `/auth/callback` ke Supabase → Authentication → URL Configuration → Redirect URLs.";
+  }
+
+  if (lower.includes("signup") && lower.includes("disabled")) {
+    return "Pendaftaran email sedang dimatikan di Supabase. Aktifkan di Supabase → Authentication → Providers → Email.";
+  }
+
+  if (lower.includes("rate limit") && lower.includes("email")) {
+    return "Terlalu banyak email verifikasi dikirim. Coba lagi beberapa menit.";
+  }
+
+  if (lower.includes("already") && (lower.includes("registered") || lower.includes("exists"))) {
+    return "Email sudah terdaftar. Silakan login atau gunakan fitur lupa password.";
+  }
+
+  return "";
+}
 
 export async function POST(request: Request) {
   const limiter = await rateLimit({ request, key: "auth:register", limit: 3, windowMs: 60_000 });
@@ -35,18 +58,36 @@ export async function POST(request: Request) {
     );
   }
 
+  const origin = getRequestOrigin(request);
+  const emailRedirectTo = origin ? `${origin}/auth/callback` : undefined;
   const { data, error } = await supabase.auth.signUp({
     email,
     password,
-    options: metadata ? { data: metadata } : undefined,
+    options: {
+      ...(metadata ? { data: metadata } : {}),
+      ...(emailRedirectTo ? { emailRedirectTo } : {}),
+    },
   });
 
   if (error) {
+    const isProd = process.env.NODE_ENV === "production";
+    const friendlyMessage = getSupabaseRegisterErrorMessage(error.message);
     console.error("Register failed:", error.message);
-    return NextResponse.json(GENERIC_REQUEST_ERROR, {
-      status: 400,
-      headers: withNoStore(limiter.headers),
-    });
+
+    return NextResponse.json(
+      isProd
+        ? GENERIC_REQUEST_ERROR
+        : {
+            error: friendlyMessage || error.message || GENERIC_REQUEST_ERROR.error,
+            debug: {
+              supabase_message: error.message,
+              status: (error as { status?: number }).status ?? undefined,
+              code: (error as { code?: string }).code ?? undefined,
+              emailRedirectTo,
+            },
+          },
+      { status: 400, headers: withNoStore(limiter.headers) },
+    );
   }
 
   return NextResponse.json(

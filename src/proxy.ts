@@ -21,12 +21,9 @@ function buildCsp(nonce: string) {
 
   const styleSrc = [
     "'self'",
-    `'nonce-${nonce}'`,
     "https://fonts.googleapis.com",
-    isDev ? "'unsafe-inline'" : "",
-  ]
-    .filter(Boolean)
-    .join(" ");
+    isDev ? "'unsafe-inline'" : `'nonce-${nonce}'`,
+  ].join(" ");
 
   const scriptSrc = [
     "'self'",

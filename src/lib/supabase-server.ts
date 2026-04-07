@@ -6,6 +6,7 @@ type NextCookieOptions = Partial<ResponseCookie>;
 
 export async function createServerSupabase() {
     const cookieStore = await cookies();
+    const isProd = process.env.NODE_ENV === "production";
 
     return createServerClient(
         process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -21,8 +22,8 @@ export async function createServerSupabase() {
                             const nextOptions: NextCookieOptions = {
                                 ...((options ?? {}) as NextCookieOptions),
                                 httpOnly: true,
-                                sameSite: "strict",
-                                secure: true,
+                                sameSite: "lax",
+                                secure: isProd,
                             };
                             cookieStore.set(name, value, nextOptions);
                         });

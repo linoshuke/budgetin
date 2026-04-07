@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { getPublicOrigin } from "@/lib/public-url";
+import { validatePassword } from "@/lib/validators";
 
 /** Sanitasi redirect path untuk mencegah open redirect attack. */
 function sanitizeRedirect(path: string | null): string {
@@ -56,9 +57,9 @@ export default function RegisterClient() {
     setError("");
     setNotice("");
 
-    if (password.length < 8) {
+    if (!validatePassword(password)) {
       setLoading(false);
-      setError("Kata sandi minimal 8 karakter.");
+      setError("Kata sandi minimal 8 karakter dengan huruf besar, huruf kecil, dan angka.");
       return;
     }
 

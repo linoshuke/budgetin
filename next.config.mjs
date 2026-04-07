@@ -1,6 +1,7 @@
 import BundleAnalyzer from "@next/bundle-analyzer";
 
 /** @type {import('next').NextConfig} */
+const isProd = process.env.NODE_ENV === "production";
 const cspHeaderReportOnly = [
   "default-src 'self'",
   "base-uri 'self'",
@@ -26,7 +27,7 @@ const securityHeaders = [
     value: "camera=(), microphone=(), geolocation=(), payment=(), usb=()",
   },
   { key: "Cross-Origin-Opener-Policy", value: "same-origin" },
-  { key: "Content-Security-Policy-Report-Only", value: cspHeaderReportOnly },
+  ...(isProd ? [{ key: "Content-Security-Policy-Report-Only", value: cspHeaderReportOnly }] : []),
 ];
 
 const nextConfig = {
