@@ -3,7 +3,6 @@
 import Skeleton from "@/components/ui/Skeleton";
 import { useMonthlySummary } from "@/hooks/useTransactions";
 import { useWalletStore } from "@/stores/walletStore";
-import { useTransactionStore } from "@/stores/transactionStore";
 import { useI18n } from "@/hooks/useI18n";
 import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 
@@ -14,15 +13,23 @@ function calculateChange(current: number, previous: number) {
   return ((current - previous) / Math.abs(previous)) * 100;
 }
 
+function calculateExpenseImprovement(currentExpense: number, previousExpense: number) {
+  if (previousExpense === 0) {
+    return currentExpense === 0 ? 0 : -100;
+  }
+  return ((previousExpense - currentExpense) / Math.abs(previousExpense)) * 100;
+}
+
 export default function MonthlySummary() {
   const { t } = useI18n();
   const selectedWalletIds = useWalletStore((state) => state.selectedWalletIds);
-  const { currentMonth } = useTransactionStore();
-  const summary = useMonthlySummary(selectedWalletIds);
-  const prevMonth =
-    currentMonth.month === 1
-      ? { year: currentMonth.year - 1, month: 12 }
-      : { year: currentMonth.year, month: currentMonth.month - 1 };
+
+  const now = new Date();
+  const currentMonth = { year: now.getFullYear(), month: now.getMonth() + 1 };
+  const prevMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMonth = { year: prevMonthDate.getFullYear(), month: prevMonthDate.getMonth() + 1 };
+
+  const summary = useMonthlySummary(selectedWalletIds, currentMonth);
   const prevSummary = useMonthlySummary(selectedWalletIds, prevMonth);
 
   if (summary.isLoading || prevSummary.isLoading) {
@@ -38,14 +45,17 @@ export default function MonthlySummary() {
   const expense = summary.data?.total_expense ?? 0;
   const prevIncome = prevSummary.data?.total_income ?? 0;
   const prevExpense = prevSummary.data?.total_expense ?? 0;
-  const incomeDelta = calculateChange(income, prevIncome);
-  const expenseDelta = calculateChange(expense, prevExpense);
-  const incomeTone = incomeDelta >= 0 ? "primary" : "error";
-  const expenseTone = expenseDelta >= 0 ? "error" : "primary";
-  const incomeLabel = `${incomeDelta >= 0 ? "+" : ""}${incomeDelta.toFixed(1)}% ${t("home.vsLastMonth")}`;
-  const expenseLabel = `${expenseDelta >= 0 ? "+" : ""}${expenseDelta.toFixed(1)}% ${t("home.vsLastMonth")}`;
-  const incomeIcon = incomeDelta >= 0 ? "arrow_upward" : "arrow_downward";
-  const expenseIcon = expenseDelta >= 0 ? "arrow_upward" : "arrow_downward";
+  const incomePercent = calculateChange(income, prevIncome);
+  const expensePercent = calculateExpenseImprovement(expense, prevExpense);
+
+  const incomeTone = incomePercent >= 0 ? "primary" : "error";
+  const expenseTone = expensePercent >= 0 ? "primary" : "error";
+
+  const incomeLabel = `${incomePercent >= 0 ? "+" : ""}${incomePercent.toFixed(1)}% ${t("home.fromLastMonth")}`;
+  const expenseLabel = `${expensePercent >= 0 ? "+" : ""}${expensePercent.toFixed(1)}% ${t("home.fromLastMonth")}`;
+
+  const incomeIcon = incomePercent >= 0 ? "arrow_upward" : "arrow_downward";
+  const expenseIcon = expensePercent >= 0 ? "arrow_downward" : "arrow_upward";
 
   return (
     <div className="space-y-6">

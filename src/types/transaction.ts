@@ -8,4 +8,5 @@ export interface Transaction {
   walletId: string;
   date: string;
   note?: string;
+  isBill?: boolean;
 }

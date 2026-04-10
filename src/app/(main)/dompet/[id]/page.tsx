@@ -8,6 +8,7 @@ import TransactionList from "@/components/history/TransactionList";
 import LockWidget from "@/components/LockWidget";
 import AddTransactionDialog from "@/components/transactions/AddTransactionDialog";
 import { useWallets } from "@/hooks/useWallets";
+import { useAuth } from "@/hooks/useAuth";
 import { useTransactions } from "@/hooks/useTransactions";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { useUIStore } from "@/stores/uiStore";
@@ -17,7 +18,8 @@ import { getMonthLabel } from "@/utils/date";
 export default function WalletDetailPage() {
   const params = useParams();
   const walletId = Array.isArray(params?.id) ? params.id[0] : (params?.id as string);
-  const { wallets, isAnonymous } = useWallets();
+  const { wallets } = useWallets();
+  const { user, isAnonymous, loading: authLoading } = useAuth();
   const { query } = useTransactions({ walletId });
   const transactions = useTransactionStore((state) => state.transactions);
   const dateRange = useTransactionStore((state) => state.dateRange);
@@ -48,7 +50,15 @@ export default function WalletDetailPage() {
     currentMonth.year > now.getFullYear() ||
     (currentMonth.year === now.getFullYear() && currentMonth.month >= now.getMonth() + 1);
 
-  if (isAnonymous) {
+  if (authLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+      </div>
+    );
+  }
+
+  if (!user || isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <LockWidget message="Detail dompet tersedia setelah Anda login." />

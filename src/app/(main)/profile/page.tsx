@@ -472,7 +472,7 @@ export default function ProfilePage() {
                   onClick={async () => {
                     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
                     window.dispatchEvent(new Event("auth:changed"));
-                    router.replace("/login");
+                    router.replace("/beranda");
                   }}
                 >
                   Logout

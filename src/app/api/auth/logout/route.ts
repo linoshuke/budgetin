@@ -12,7 +12,16 @@ export async function POST() {
     );
   }
 
-  const res = NextResponse.json({ ok: true }, { status: 200, headers: withNoStore() });
+  let anonymous = false;
+
+  const { data, error: anonymousError } = await supabase.auth.signInAnonymously();
+  if (anonymousError) {
+    console.error("Failed to create anonymous session after logout:", anonymousError.message);
+  } else {
+    anonymous = Boolean(data.user);
+  }
+
+  const res = NextResponse.json({ ok: true, anonymous }, { status: 200, headers: withNoStore() });
   res.cookies.set("mfa_enrolled", "", { maxAge: 0, path: "/" });
   return res;
 }

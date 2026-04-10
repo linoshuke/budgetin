@@ -86,7 +86,7 @@ export default function HomeClient() {
     const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
 
     const upcoming = transactions
-      .filter((item) => new Date(item.date).getTime() >= todayStart.getTime())
+      .filter((item) => item.isBill === true)
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 3);
 
@@ -267,7 +267,12 @@ export default function HomeClient() {
                 loading="lazy"
               />
               <div className="relative z-10">
-                <div className="text-lg font-bold text-primary">{t("home.smartSavings.title")}</div>
+                <div className="flex items-center gap-2">
+                  <div className="text-lg font-bold text-primary">{t("home.smartSavings.title")}</div>
+                  <span className="rounded-full bg-primary/10 px-2 py-0.5 text-[10px] font-bold uppercase text-primary">
+                    {t("home.smartSavings.status")}
+                  </span>
+                </div>
                 <p className="mt-1 text-xs leading-relaxed text-on-surface-variant">
                   {t("home.smartSavings.body")}
                 </p>

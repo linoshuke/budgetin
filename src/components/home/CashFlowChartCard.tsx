@@ -1,17 +1,26 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQuery } from "@tanstack/react-query";
+import {
+  Area,
+  AreaChart,
+  CartesianGrid,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
+  type TooltipProps,
+} from "recharts";
 import { useAuth } from "@/hooks/useAuth";
 import { useWalletStore } from "@/stores/walletStore";
 import { useAppSettingsStore } from "@/stores/appSettingsStore";
 import type { MonthlySummary } from "@/types";
 import { useI18n } from "@/hooks/useI18n";
+import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
 
-const MIN_Y = 6;
-const MAX_Y = 34;
-const MID_Y = (MIN_Y + MAX_Y) / 2;
-const HALF_RANGE = (MAX_Y - MIN_Y) / 2;
+const INCOME_COLOR = "#7cebff";
+const EXPENSE_COLOR = "#adc6ff";
 
 function monthKey(date: Date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, "0")}`;
@@ -29,32 +38,86 @@ function buildMonths(count: number, locale: string) {
   });
 }
 
-function buildLinePath(values: number[], maxValue: number) {
-  if (!values.length) return "";
-  const denom = maxValue || 1;
-  const step = values.length > 1 ? 100 / (values.length - 1) : 0;
-  return values
-    .map((value, index) => {
-      const x = step * index;
-      const y = MID_Y - (value / denom) * HALF_RANGE;
-      return `${index === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-    })
-    .join(" ");
-}
-
-function buildAreaPath(values: number[], maxValue: number, baselineY: number = MID_Y) {
-  if (!values.length) return "";
-  const step = values.length > 1 ? 100 / (values.length - 1) : 0;
-  const lastX = step * (values.length - 1);
-  const linePath = buildLinePath(values, maxValue);
-  return `${linePath} L${lastX.toFixed(2)},${baselineY.toFixed(2)} L0,${baselineY.toFixed(2)} Z`;
-}
-
 function calculateChange(current: number, previous: number) {
   if (previous === 0) {
     return current === 0 ? 0 : 100;
   }
   return ((current - previous) / Math.abs(previous)) * 100;
+}
+
+function usePrefersReducedMotion() {
+  const [prefersReducedMotion, setPrefersReducedMotion] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined" || !("matchMedia" in window)) return;
+    const media = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const update = () => setPrefersReducedMotion(Boolean(media.matches));
+    update();
+
+    if ("addEventListener" in media) {
+      media.addEventListener("change", update);
+      return () => media.removeEventListener("change", update);
+    }
+
+    // Safari < 14 fallback
+    if ("addListener" in media) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (media as any).addListener(update);
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return () => (media as any).removeListener(update);
+    }
+  }, []);
+
+  return prefersReducedMotion;
+}
+
+type CashFlowPoint = {
+  key: string;
+  label: string;
+  income: number;
+  expense: number;
+};
+
+type CashFlowTooltipContentProps = TooltipProps<number, string> & {
+  incomeLabel: string;
+  expenseLabel: string;
+};
+
+function CashFlowTooltip({
+  active,
+  payload,
+  label,
+  incomeLabel,
+  expenseLabel,
+}: CashFlowTooltipContentProps) {
+  if (!active || !payload?.length) return null;
+
+  const income = payload.find((entry) => entry.dataKey === "income")?.value ?? 0;
+  const expense = payload.find((entry) => entry.dataKey === "expense")?.value ?? 0;
+
+  return (
+    <div className="rounded-xl border border-outline-variant/20 bg-surface-container-high/90 px-4 py-3 shadow-xl shadow-black/20 backdrop-blur">
+      <div className="mb-2 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
+        {label}
+      </div>
+      <div className="space-y-1">
+        <div className="flex items-center justify-between gap-6 text-xs">
+          <span className="inline-flex items-center gap-2 text-on-surface-variant">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: INCOME_COLOR }} />
+            {incomeLabel}
+          </span>
+          <SensitiveCurrency value={Number(income)} showEye={false} className="text-on-surface" />
+        </div>
+        <div className="flex items-center justify-between gap-6 text-xs">
+          <span className="inline-flex items-center gap-2 text-on-surface-variant">
+            <span className="h-2 w-2 rounded-full" style={{ backgroundColor: EXPENSE_COLOR }} />
+            {expenseLabel}
+          </span>
+          <SensitiveCurrency value={Number(expense)} showEye={false} className="text-on-surface" />
+        </div>
+      </div>
+    </div>
+  );
 }
 
 export default function CashFlowChartCard() {
@@ -64,6 +127,7 @@ export default function CashFlowChartCard() {
   const dateLocale = useAppSettingsStore((state) => state.dateLocale);
   const [range, setRange] = useState<"6m" | "1y">("6m");
   const monthCount = range === "1y" ? 12 : 6;
+  const prefersReducedMotion = usePrefersReducedMotion();
 
   const { data: summaryRows = [] } = useQuery({
     queryKey: ["monthly-summary-series", user?.id ?? "anon", selectedWalletIds.join("-")],
@@ -83,7 +147,7 @@ export default function CashFlowChartCard() {
     },
   });
 
-  const { months, incomeSeries, expenseSeries, maxValue, trend } = useMemo(() => {
+  const { data, maxValue, trend } = useMemo(() => {
     const months = buildMonths(monthCount, dateLocale ?? "id-ID");
     const totals = new Map<string, { income: number; expense: number }>();
 
@@ -95,13 +159,14 @@ export default function CashFlowChartCard() {
       totals.set(key, record);
     });
 
-    const incomeSeries = months.map((month) => totals.get(month.key)?.income ?? 0);
-    const expenseSeries = months.map((month) => -((totals.get(month.key)?.expense ?? 0)));
-    const maxValue = Math.max(
-      1,
-      ...incomeSeries.map((value) => Math.abs(value)),
-      ...expenseSeries.map((value) => Math.abs(value)),
-    );
+    const data: CashFlowPoint[] = months.map((month) => ({
+      key: month.key,
+      label: month.label,
+      income: totals.get(month.key)?.income ?? 0,
+      expense: totals.get(month.key)?.expense ?? 0,
+    }));
+
+    const maxValue = Math.max(1, ...data.map((point) => Math.max(point.income, point.expense)));
 
     const last = months[months.length - 1];
     const previous = months[months.length - 2];
@@ -123,12 +188,8 @@ export default function CashFlowChartCard() {
       },
     };
 
-    return { months, incomeSeries, expenseSeries, maxValue, trend };
+    return { data, maxValue, trend };
   }, [dateLocale, monthCount, summaryRows, t]);
-
-  const incomePath = useMemo(() => buildLinePath(incomeSeries, maxValue), [incomeSeries, maxValue]);
-  const incomeArea = useMemo(() => buildAreaPath(incomeSeries, maxValue, MID_Y), [incomeSeries, maxValue]);
-  const expensePath = useMemo(() => buildLinePath(expenseSeries, maxValue), [expenseSeries, maxValue]);
 
   return (
     <div className="relative flex flex-col overflow-hidden rounded-xl bg-surface-container-low p-8 lg:col-span-2">
@@ -138,11 +199,11 @@ export default function CashFlowChartCard() {
           <p className="text-xs text-on-surface-variant">{t("home.cashFlow.desc")}</p>
           <div className="mt-2 flex items-center gap-4 text-[10px] font-semibold uppercase tracking-wider text-on-surface-variant">
             <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[#7cebff]" />
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: INCOME_COLOR }} />
               {t("common.income")}
             </span>
             <span className="flex items-center gap-2">
-              <span className="h-2 w-2 rounded-full bg-[#adc6ff]" />
+              <span className="h-2 w-2 rounded-full" style={{ backgroundColor: EXPENSE_COLOR }} />
               {t("common.expense")}
             </span>
           </div>
@@ -154,7 +215,7 @@ export default function CashFlowChartCard() {
                   : "bg-error/10 text-error"
               }`}
             >
-              {t("common.income")} {trend.income.label} {t("home.vsLastMonth")}
+              {t("common.income")} {trend.income.label} {t("home.fromLastMonth")}
             </span>
             <span
               className={`rounded-full px-2 py-1 ${
@@ -163,7 +224,7 @@ export default function CashFlowChartCard() {
                   : "bg-primary/10 text-primary"
               }`}
             >
-              {t("common.expense")} {trend.expense.label} {t("home.vsLastMonth")}
+              {t("common.expense")} {trend.expense.label} {t("home.fromLastMonth")}
             </span>
           </div>
         </div>
@@ -193,43 +254,53 @@ export default function CashFlowChartCard() {
         </div>
       </div>
       <div className="relative flex-grow">
-        <svg className="h-64 w-full" preserveAspectRatio="none" viewBox="0 0 100 40">
-          <line className="text-outline-variant/30" stroke="currentColor" strokeWidth="0.1" x1="0" x2="100" y1="0" y2="0" />
-          <line className="text-outline-variant/30" stroke="currentColor" strokeWidth="0.1" x1="0" x2="100" y1="10" y2="10" />
-          <line className="text-outline-variant/30" stroke="currentColor" strokeWidth="0.1" x1="0" x2="100" y1="20" y2="20" />
-          <line className="text-outline-variant/30" stroke="currentColor" strokeWidth="0.1" x1="0" x2="100" y1="30" y2="30" />
-          <line className="text-outline-variant/40" stroke="currentColor" strokeWidth="0.2" x1="0" x2="100" y1={MID_Y} y2={MID_Y} />
-          {incomeArea ? <path d={incomeArea} fill="url(#chart-glow)" opacity="0.15" /> : null}
-          {incomePath ? (
-            <path
-              d={incomePath}
-              fill="none"
-              stroke="#7cebff"
-              strokeLinecap="round"
-              strokeWidth="0.8"
-            />
-          ) : null}
-          {expensePath ? (
-            <path
-              d={expensePath}
-              fill="none"
-              opacity="0.6"
-              stroke="#adc6ff"
-              strokeLinecap="round"
-              strokeWidth="0.5"
-            />
-          ) : null}
-          <defs>
-            <linearGradient id="chart-glow" x1="0%" x2="0%" y1="0%" y2="100%">
-              <stop offset="0%" stopColor="#7cebff" />
-              <stop offset="100%" stopColor="#7cebff" stopOpacity="0" />
-            </linearGradient>
-          </defs>
-        </svg>
-        <div className="mt-4 flex justify-between text-[10px] font-medium uppercase tracking-tighter text-on-surface-variant">
-          {months.map((month) => (
-            <span key={month.key}>{month.label}</span>
-          ))}
+        <div className="h-72 w-full">
+          <ResponsiveContainer width="100%" height="100%">
+            <AreaChart data={data} margin={{ top: 8, right: 12, left: 0, bottom: 0 }}>
+              <defs>
+                <linearGradient id="cashflow-income-fill" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor={INCOME_COLOR} stopOpacity={0.22} />
+                  <stop offset="70%" stopColor={INCOME_COLOR} stopOpacity={0.06} />
+                  <stop offset="100%" stopColor={INCOME_COLOR} stopOpacity={0} />
+                </linearGradient>
+              </defs>
+              <CartesianGrid stroke="rgba(60,73,76,0.45)" strokeDasharray="0" vertical={false} />
+              <XAxis
+                dataKey="label"
+                axisLine={false}
+                tickLine={false}
+                tick={{ fill: "rgba(187,201,204,0.92)", fontSize: 10, fontWeight: 500 }}
+                minTickGap={16}
+                interval="preserveStartEnd"
+              />
+              <YAxis hide domain={[0, Math.max(1, maxValue) * 1.05]} />
+              <Tooltip
+                cursor={{ stroke: "rgba(60,73,76,0.5)", strokeWidth: 1 }}
+                content={<CashFlowTooltip incomeLabel={t("common.income")} expenseLabel={t("common.expense")} />}
+              />
+              <Area
+                type="monotone"
+                dataKey="income"
+                stroke={INCOME_COLOR}
+                fill="url(#cashflow-income-fill)"
+                strokeWidth={3}
+                dot={false}
+                activeDot={{ r: 4, fill: INCOME_COLOR, stroke: "transparent" }}
+                isAnimationActive={!prefersReducedMotion}
+              />
+              <Area
+                type="monotone"
+                dataKey="expense"
+                stroke={EXPENSE_COLOR}
+                fill="transparent"
+                strokeWidth={2}
+                strokeOpacity={0.6}
+                dot={false}
+                activeDot={{ r: 3, fill: EXPENSE_COLOR, stroke: "transparent" }}
+                isAnimationActive={!prefersReducedMotion}
+              />
+            </AreaChart>
+          </ResponsiveContainer>
         </div>
       </div>
     </div>

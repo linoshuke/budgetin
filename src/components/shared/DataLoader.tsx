@@ -66,6 +66,7 @@ export default function DataLoader() {
 
     if (!user) {
       budgetActions.setAuthState(false);
+      void budgetActions.loadSystemWallets();
       return;
     }
 

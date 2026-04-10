@@ -64,7 +64,7 @@ export const budgetActions = {
     setState((c) => ({ ...c, loading: true }));
 
     try {
-      const walletsPromise = apiFetch<Wallet[]>("/api/wallets").catch((walletError) => {
+      const walletsPromise = apiFetch<Wallet[]>("/api/wallets", { cache: "no-store" }).catch((walletError) => {
         console.warn("Wallet data is not available yet:", walletError);
         return [] as Wallet[];
       });
@@ -93,6 +93,15 @@ export const budgetActions = {
 
   setAuthState(isAuthenticated: boolean) {
     setState((c) => ({ ...c, isAuthenticated }));
+  },
+
+  async loadSystemWallets() {
+    try {
+      const wallets = await apiFetch<Wallet[]>("/api/wallets/system", { cache: "no-store" });
+      setState((c) => ({ ...c, wallets }));
+    } catch (err) {
+      console.warn("Gagal memuat dompet sistem:", err);
+    }
   },
 
   async addTransaction(payload: Omit<Transaction, "id">) {

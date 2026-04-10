@@ -33,7 +33,7 @@ export default function BudgetTargetsHistoryPage() {
 
   const { data: budgetsData = [], isLoading: budgetsLoading } = useQuery({
     queryKey: ["category-budgets", user?.id ?? "anon", "history"],
-    enabled: Boolean(user),
+    enabled: Boolean(user) && !isAnonymous,
     queryFn: async () => {
       if (!user) return [];
       const response = await fetch("/api/category-budgets?history=1", { credentials: "include" });
@@ -117,7 +117,7 @@ export default function BudgetTargetsHistoryPage() {
     );
   }
 
-  if (isAnonymous) {
+  if (!user || isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <LockWidget message="Histori target tersedia setelah Anda login." />

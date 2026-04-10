@@ -126,7 +126,7 @@ export const MESSAGES: Record<AppLanguage, Record<string, string>> = {
 
     "home.incomeThisMonth": "Pemasukan Bulan Ini",
     "home.expenseThisMonth": "Pengeluaran Bulan Ini",
-    "home.vsLastMonth": "vs bulan lalu",
+    "home.fromLastMonth": "dari bulan lalu",
 
     "home.recentTransactions": "Transaksi Terbaru",
     "home.viewAll": "Lihat Semua",
@@ -146,6 +146,7 @@ export const MESSAGES: Record<AppLanguage, Record<string, string>> = {
     "home.smartSavings.title": "Smart Savings",
     "home.smartSavings.body": "Berdasarkan pola belanjamu, kamu bisa menghemat lebih banyak dengan merapikan langganan hiburan.",
     "home.smartSavings.cta": "Pelajari caranya",
+    "home.smartSavings.status": "Segera Hadir",
 
     "home.cashFlow.title": "Arus Kas Bulanan",
     "home.cashFlow.desc": "Pemasukan di atas garis tengah, pengeluaran di bawah.",
@@ -318,7 +319,7 @@ export const MESSAGES: Record<AppLanguage, Record<string, string>> = {
 
     "home.incomeThisMonth": "Income This Month",
     "home.expenseThisMonth": "Expense This Month",
-    "home.vsLastMonth": "vs last month",
+    "home.fromLastMonth": "from last month",
 
     "home.recentTransactions": "Recent Transactions",
     "home.viewAll": "View All",
@@ -338,6 +339,7 @@ export const MESSAGES: Record<AppLanguage, Record<string, string>> = {
     "home.smartSavings.title": "Smart Savings",
     "home.smartSavings.body": "Based on your spending, you could save more by tightening up entertainment subscriptions.",
     "home.smartSavings.cta": "Learn how",
+    "home.smartSavings.status": "Coming Soon",
 
     "home.cashFlow.title": "Monthly Cash Flow",
     "home.cashFlow.desc": "Income above the midline, expenses below.",

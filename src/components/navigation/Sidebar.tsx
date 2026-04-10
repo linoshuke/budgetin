@@ -23,6 +23,11 @@ const quickItems = [
 
 const SIDEBAR_STORAGE_KEY = "budgetin:sidebar";
 
+function isActiveHref(pathname: string, href: string) {
+  if (href === "/") return pathname === "/";
+  return pathname === href || pathname.startsWith(`${href}/`);
+}
+
 export default function Sidebar() {
   const { t } = useI18n();
   const pathname = usePathname();
@@ -111,17 +116,18 @@ export default function Sidebar() {
         </div>
         <nav className="space-y-2">
           {navItems.map((item) => {
-            const active = pathname.startsWith(item.href);
+            const active = isActiveHref(pathname, item.href);
             const label = t(item.labelKey);
             return (
               <Link
                 key={item.href}
                 href={item.href as Route}
+                aria-current={active ? "page" : undefined}
                 className={cn(
-                  "flex items-center rounded-lg p-3 text-base font-medium transition-all",
+                  "relative flex items-center rounded-lg p-3 text-base font-medium transition-all",
                   sidebarCollapsed ? "justify-center" : "space-x-3",
                   active
-                    ? "bg-surface-container font-bold text-primary"
+                    ? "bg-gradient-to-r from-primary/25 via-primary/10 to-transparent font-bold text-on-surface ring-1 ring-inset ring-primary/30 shadow-sm shadow-primary/10 before:absolute before:left-0 before:top-1/2 before:h-9 before:w-1.5 before:-translate-y-1/2 before:rounded-r-full before:bg-primary before:content-['']"
                     : "text-on-surface-variant hover:translate-x-1 hover:bg-surface-container hover:text-on-surface",
                 )}
                 title={sidebarCollapsed ? label : undefined}
@@ -142,17 +148,18 @@ export default function Sidebar() {
           )}
           <nav className="space-y-2">
             {quickItems.map((item) => {
-              const active = pathname.startsWith(item.href);
+              const active = isActiveHref(pathname, item.href);
               const label = t(item.labelKey);
               return (
                 <Link
                   key={item.href}
                   href={item.href as Route}
+                  aria-current={active ? "page" : undefined}
                   className={cn(
-                    "flex items-center rounded-lg p-3 text-sm font-medium transition-all",
+                    "relative flex items-center rounded-lg p-3 text-sm font-medium transition-all",
                     sidebarCollapsed ? "justify-center" : "space-x-3",
                     active
-                      ? "bg-surface-container font-bold text-primary"
+                      ? "bg-gradient-to-r from-primary/25 via-primary/10 to-transparent font-bold text-on-surface ring-1 ring-inset ring-primary/30 shadow-sm shadow-primary/10 before:absolute before:left-0 before:top-1/2 before:h-9 before:w-1.5 before:-translate-y-1/2 before:rounded-r-full before:bg-primary before:content-['']"
                       : "text-on-surface-variant hover:translate-x-1 hover:bg-surface-container hover:text-on-surface",
                   )}
                   title={sidebarCollapsed ? label : undefined}

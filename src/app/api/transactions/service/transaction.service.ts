@@ -16,7 +16,7 @@ export async function getAllTransactions(
 ): Promise<Transaction[]> {
     const { data, error } = await supabase
         .from("transactions")
-        .select("id, type, amount, category_id, wallet_id, date, note")
+        .select("id, type, amount, category_id, wallet_id, date, note, is_bill")
         .eq("user_id", userId)
         .order("date", { ascending: false });
 
@@ -34,7 +34,7 @@ export async function getTransactionById(
 ): Promise<Transaction> {
     const { data, error } = await supabase
         .from("transactions")
-        .select("id, type, amount, category_id, wallet_id, date, note")
+        .select("id, type, amount, category_id, wallet_id, date, note, is_bill")
         .eq("id", id)
         .eq("user_id", userId)
         .single();
@@ -67,7 +67,7 @@ export async function getTransactionsByFilter(
 ): Promise<Transaction[]> {
     let query = supabase
         .from("transactions")
-        .select("id, type, amount, category_id, wallet_id, date, note")
+        .select("id, type, amount, category_id, wallet_id, date, note, is_bill")
         .eq("user_id", userId)
         .order("date", { ascending: false });
 
@@ -118,7 +118,7 @@ export async function createTransaction(
     const { data, error } = await supabase
         .from("transactions")
         .insert(insertRow)
-        .select("id, type, amount, category_id, wallet_id, date, note")
+        .select("id, type, amount, category_id, wallet_id, date, note, is_bill")
         .single();
 
     if (error) {
@@ -141,7 +141,7 @@ export async function updateTransaction(
         .update(updateRow)
         .eq("id", id)
         .eq("user_id", userId)
-        .select("id, type, amount, category_id, wallet_id, date, note")
+        .select("id, type, amount, category_id, wallet_id, date, note, is_bill")
         .single();
 
     if (error) {

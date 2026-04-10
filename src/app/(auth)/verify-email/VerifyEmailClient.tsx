@@ -68,7 +68,7 @@ export default function VerifyEmailClient() {
   const handleLogout = async () => {
     await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
     window.dispatchEvent(new Event("auth:changed"));
-    router.push("/login");
+    router.push("/beranda");
   };
 
   return (

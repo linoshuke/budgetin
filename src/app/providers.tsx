@@ -30,6 +30,8 @@ function AuthGate({ children }: { children: ReactNode }) {
   const user = useAuthStore((state) => state.user);
   const pathname = usePathname();
   const router = useRouter();
+  const [mounted, setMounted] = useState(false);
+
   const isPublicAuthRoute =
     pathname.startsWith("/login") ||
     pathname.startsWith("/register") ||
@@ -42,6 +44,11 @@ function AuthGate({ children }: { children: ReactNode }) {
   );
 
   useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  useEffect(() => {
+    if (!mounted) return;
     if (loading) return;
     if (!user) return;
     if (isAnonymous) return;
@@ -49,13 +56,13 @@ function AuthGate({ children }: { children: ReactNode }) {
     if (pathname.startsWith("/verify-email")) return;
     const email = user.email ?? "";
     router.replace(`/verify-email?email=${encodeURIComponent(email)}`);
-  }, [emailVerified, isAnonymous, loading, pathname, router, user]);
+  }, [emailVerified, isAnonymous, loading, pathname, router, user, mounted]);
 
   if (isPublicAuthRoute) {
     return <>{children}</>;
   }
 
-  if (loading) {
+  if (!mounted || loading) {
     return (
       <div className="flex min-h-screen items-center justify-center">
         <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-indigo)]/30 border-t-[var(--accent-indigo)]" />

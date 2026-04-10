@@ -420,7 +420,7 @@ export default function BudgetsPage() {
 
   const { data: budgetsData = [], isLoading: budgetsLoading } = useQuery({
     queryKey: ["category-budgets", user?.id ?? "anon", currentKey],
-    enabled: Boolean(user),
+    enabled: Boolean(user) && !isAnonymous,
     queryFn: async () => {
       if (!user) return [];
       const response = await fetch(`/api/category-budgets?monthKey=${encodeURIComponent(currentKey)}`, {
@@ -435,7 +435,7 @@ export default function BudgetsPage() {
 
   const { data: goalsData = [], isLoading: goalsLoading } = useQuery({
     queryKey: ["goals", user?.id ?? "anon"],
-    enabled: Boolean(user),
+    enabled: Boolean(user) && !isAnonymous,
     queryFn: async () => {
       if (!user) return [];
       const response = await fetch("/api/goals", { credentials: "include" });
@@ -452,7 +452,7 @@ export default function BudgetsPage() {
 
   const { data: transactionsData = [], isLoading: transactionsLoading } = useQuery({
     queryKey: ["transactions", "budget", user?.id ?? "anon", start, end],
-    enabled: Boolean(user),
+    enabled: Boolean(user) && !isAnonymous,
     queryFn: async () => {
       if (!user) return [];
       const pageLimit = 500;
@@ -944,7 +944,7 @@ export default function BudgetsPage() {
     );
   }
 
-  if (isAnonymous) {
+  if (!user || isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <LockWidget message="Anggaran & goals tersedia setelah Anda login." />

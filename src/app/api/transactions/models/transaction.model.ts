@@ -9,6 +9,7 @@ export interface TransactionRow {
     wallet_id: string | null;
     date: string;
     note: string | null;
+    is_bill: boolean;
     created_at?: string;
 }
 
@@ -19,6 +20,7 @@ export interface CreateTransactionDTO {
     walletId: string;
     date: string;
     note?: string;
+    isBill?: boolean;
 }
 
 export type UpdateTransactionDTO = CreateTransactionDTO;
@@ -32,6 +34,7 @@ export function mapRowToTransaction(row: TransactionRow): Transaction {
         walletId: row.wallet_id ?? "",
         date: row.date,
         note: row.note ?? "",
+        isBill: row.is_bill,
     };
 }
 
@@ -47,6 +50,7 @@ export function mapCreateDTOToInsertRow(dto: CreateTransactionDTO): Omit<Transac
         wallet_id: dto.walletId,
         date: dto.date,
         note: dto.note ?? "",
+        is_bill: dto.isBill ?? false,
     };
 }
 
@@ -58,5 +62,6 @@ export function mapUpdateDTOToUpdateRow(dto: UpdateTransactionDTO): Omit<Transac
         wallet_id: dto.walletId,
         date: dto.date,
         note: dto.note ?? "",
+        is_bill: dto.isBill ?? false,
     };
 }

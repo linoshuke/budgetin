@@ -17,6 +17,7 @@ import type { Transaction } from "@/types/transaction";
 import { TRANSACTIONS_CHANGED_EVENT } from "@/lib/transaction-events";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useI18n } from "@/hooks/useI18n";
+import { useAuth } from "@/hooks/useAuth";
 
 const pageSize = 50;
 
@@ -59,6 +60,7 @@ function TransactionsPageInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const { user, isAnonymous } = useAuth();
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
   const loading = useBudgetStore((state) => state.loading);
@@ -107,6 +109,7 @@ function TransactionsPageInner() {
   const [showCategoryFilter, setShowCategoryFilter] = useState(false);
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const handledNewParamRef = useRef(false);
+  const canManageWallets = Boolean(user) && !isAnonymous;
 
   const walletFilter = useWalletFilter();
   // Pisahkan filter dari transactions — tidak meneruskan transactions ke hook
@@ -342,7 +345,7 @@ function TransactionsPageInner() {
     return {
       percent,
       increase: delta > 0,
-      label: `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}% vs bulan lalu`,
+      label: `${percent >= 0 ? "+" : ""}${percent.toFixed(1)}% dari bulan lalu`,
     };
   }, [filter.period, filter.selectedMonth, selectedCategoryIds, transactions, walletFilter.selectedWalletIds]);
 
@@ -585,7 +588,7 @@ function TransactionsPageInner() {
                       {largestExpense ? categoryMap.get(largestExpense.categoryId)?.name ?? t("common.uncategorized") : "-"}
                     </p>
                   </div>
-                  <span className="material-symbols-outlined text-3xl text-primary-container">home</span>
+
                 </div>
               </div>
 
@@ -827,7 +830,7 @@ function TransactionsPageInner() {
             categories={categories}
             wallets={wallets}
             onSubmit={handleSubmit}
-            onCreateWallet={(payload) => budgetActions.addWallet(payload)}
+            onCreateWallet={canManageWallets ? (payload) => budgetActions.addWallet(payload) : undefined}
             submitLabel={editingTransaction ? t("transactions.submit.edit") : t("transactions.submit.add")}
             onCancel={() => {
               setShowTransactionModal(false);

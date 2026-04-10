@@ -41,6 +41,7 @@ export default function TransactionForm({
   const [walletId, setWalletId] = useState(initialValue?.walletId ?? defaultWalletId ?? "");
   const [date, setDate] = useState(initialValue?.date ?? getIsoDateToday());
   const [note, setNote] = useState(initialValue?.note ?? "");
+  const [isBill, setIsBill] = useState(initialValue?.isBill ?? false);
   const [newWalletName, setNewWalletName] = useState("");
   const [showWalletInput, setShowWalletInput] = useState(false);
   const [walletError, setWalletError] = useState("");
@@ -96,6 +97,7 @@ export default function TransactionForm({
       walletId: selectedWalletId,
       date,
       note: note.trim(),
+      isBill,
     });
 
     if (!initialValue) {
@@ -189,9 +191,11 @@ export default function TransactionForm({
             </Button>
           </div>
           {wallets.length === 0 ? (
-            <p className="text-xs text-rose-400">
-              Belum ada dompet. Tambahkan dompet terlebih dahulu.
-            </p>
+            disabled ? (
+              <p className="text-xs text-[var(--text-dimmed)]">Memuat dompet...</p>
+            ) : (
+              <p className="text-xs text-rose-400">Belum ada dompet. Tambahkan dompet terlebih dahulu.</p>
+            )
           ) : null}
           {showWalletInput ? (
             <div className="space-y-2 rounded-lg border border-[var(--border-soft)] bg-[var(--bg-card-muted)] p-2">
@@ -242,6 +246,25 @@ export default function TransactionForm({
             disabled={disabled}
           />
         </div>
+
+        {type === "expense" && (
+          <div className="flex items-center gap-2 sm:col-span-2">
+            <input
+              id="is-bill-checkbox"
+              type="checkbox"
+              checked={isBill}
+              onChange={(e) => setIsBill(e.target.checked)}
+              className="h-4 w-4 rounded border-[var(--border-soft)] bg-[var(--bg-card-muted)] text-[var(--primary)] focus:ring-[var(--primary)]"
+              disabled={disabled}
+            />
+            <label htmlFor="is-bill-checkbox" className="text-sm font-medium text-[var(--text-primary)] cursor-pointer select-none">
+              Tandai sebagai Tagihan Mendesak
+            </label>
+            <p className="text-[10px] text-[var(--text-dimmed)] ml-1">
+              (Akan muncul di bagian Tagihan Mendesak pada Beranda)
+            </p>
+          </div>
+        )}
       </div>
 
       <div className="flex flex-wrap items-center gap-2">

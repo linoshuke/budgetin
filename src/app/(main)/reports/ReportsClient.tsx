@@ -88,8 +88,8 @@ function isCurrentMonth(year: number, month: number) {
 }
 
 export default function ReportsClient() {
-  const { selectedWallets, isAnonymous } = useWallets();
-  const { user } = useAuth();
+  const { selectedWallets } = useWallets();
+  const { user, isAnonymous, loading: authLoading } = useAuth();
   const { currentMonth, prevMonth, nextMonth } = useTransactionStore();
   const categories = useBudgetStore((state) => state.categories) as Category[];
 
@@ -108,6 +108,7 @@ export default function ReportsClient() {
 
   const { data } = useQuery({
     queryKey: ["transactions", "reports", user?.id ?? "anon", currentMonth.year, currentMonth.month],
+    enabled: Boolean(user) && !isAnonymous,
     queryFn: async () => {
       if (!user) return [];
       const { start, end } = getMonthRange(currentMonth.year, currentMonth.month);
@@ -291,7 +292,15 @@ export default function ReportsClient() {
       .slice(0, 3);
   }, [walletStats]);
 
-  if (isAnonymous) {
+  if (authLoading) {
+    return (
+      <div className="flex min-h-[60vh] items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+      </div>
+    );
+  }
+
+  if (!user || isAnonymous) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
         <LockWidget message="Laporan lengkap tersedia setelah Anda login." />

@@ -6,6 +6,7 @@ import { UpdateWalletSchema } from "@/lib/validators";
 import { rateLimit } from "@/lib/rate-limit";
 import { withNoStore } from "@/lib/http";
 import { requireRecentMfa } from "@/lib/mfa";
+import { assertRegisteredUser } from "@/lib/anonymous";
 
 type RouteContext = {
   params: Promise<{ id: string }>;
@@ -14,6 +15,7 @@ type RouteContext = {
 export async function PATCH(request: NextRequest, context: RouteContext) {
   try {
     const { user, supabase } = await getAuthUser();
+    assertRegisteredUser(user, "Fitur dompet hanya tersedia untuk akun terdaftar.");
     const limiter = await rateLimit({
       request,
       key: `wallets:update:${user.id}`,
@@ -43,6 +45,7 @@ export async function PATCH(request: NextRequest, context: RouteContext) {
 export async function DELETE(_: NextRequest, context: RouteContext) {
   try {
     const { user, supabase } = await getAuthUser();
+    assertRegisteredUser(user, "Fitur dompet hanya tersedia untuk akun terdaftar.");
     requireRecentMfa(user);
     const limiter = await rateLimit({
       request: _,

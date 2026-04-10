@@ -9,6 +9,7 @@ export const CreateTransactionSchema = z.object({
     walletId: z.string().uuid("Wallet ID harus berupa UUID yang valid."),
     date: z.string().date("Format tanggal harus YYYY-MM-DD."),
     note: z.string().max(500, "Catatan maksimal 500 karakter.").optional().default(""),
+    isBill: z.boolean().optional().default(false),
 });
 
 export const UpdateTransactionSchema = CreateTransactionSchema;
@@ -64,4 +65,3 @@ export const PasswordPolicy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
 export function validatePassword(password: string) {
     return PasswordPolicy.test(password);
 }
-
