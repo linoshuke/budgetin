@@ -92,7 +92,18 @@ export const budgetActions = {
   },
 
   setAuthState(isAuthenticated: boolean) {
-    setState((c) => ({ ...c, isAuthenticated }));
+    setState((current) =>
+      isAuthenticated
+        ? { ...current, isAuthenticated: true }
+        : {
+            ...current,
+            isAuthenticated: false,
+            transactions: [],
+            categories: [],
+            wallets: [],
+            profile: { ...initialState.profile },
+          },
+    );
   },
 
   async loadSystemWallets() {

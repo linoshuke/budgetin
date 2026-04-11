@@ -146,11 +146,17 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
 
       <p className="text-center text-xs text-[var(--text-dimmed)]">
         Dengan masuk, Anda menyetujui{" "}
-        <Link href={"/privacy" as Route} className="underline">
+        <Link
+          href={"/privacy" as Route}
+          className="font-medium text-white underline underline-offset-4 decoration-indigo-400/70 transition hover:decoration-indigo-300/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]"
+        >
           Kebijakan Privasi
         </Link>{" "}
         dan{" "}
-        <Link href={"/terms" as Route} className="underline">
+        <Link
+          href={"/terms" as Route}
+          className="font-medium text-white underline underline-offset-4 decoration-indigo-400/70 transition hover:decoration-indigo-300/90 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-indigo-500/40 focus-visible:ring-offset-2 focus-visible:ring-offset-[var(--bg-base)]"
+        >
           Ketentuan Layanan
         </Link>
         .

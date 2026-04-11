@@ -11,6 +11,7 @@ import type { User } from "@supabase/supabase-js";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useAuth } from "@/hooks/useAuth";
 import { getPublicOrigin } from "@/lib/public-url";
+import { validatePassword } from "@/lib/validators";
 
 function getProvider(user: User | null) {
   if (user?.is_anonymous) return "anonim";
@@ -45,11 +46,24 @@ export default function ProfilePage() {
 
   const [showEditName, setShowEditName] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
+  const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [upgradeEmail, setUpgradeEmail] = useState("");
+  const [upgradePassword, setUpgradePassword] = useState("");
+  const [upgradeConfirmPassword, setUpgradeConfirmPassword] = useState("");
+  const [upgradingAccount, setUpgradingAccount] = useState(false);
+  const [upgradeError, setUpgradeError] = useState("");
+  const [upgradeNotice, setUpgradeNotice] = useState("");
+
+  const [showPurgeModal, setShowPurgeModal] = useState(false);
+  const [purgePhrase, setPurgePhrase] = useState("");
+  const [purgingData, setPurgingData] = useState(false);
+  const [purgeError, setPurgeError] = useState("");
 
   useEffect(() => {
     if (authLoading) return;
     setName(displayName);
     setEmail(authUser?.email ?? "");
+    setUpgradeEmail(authUser?.email ?? "");
   }, [authLoading, authUser?.email, displayName]);
 
   useEffect(() => {
@@ -72,7 +86,9 @@ export default function ProfilePage() {
   const googleIdentity = identities.find((identity) => identity.provider === "google");
   const hasGoogle = Boolean(googleIdentity) || providers.includes("google");
   const canUnlinkGoogle = hasGoogle && isEmailProvider;
-  const canChangePassword = !isAnonymous && isEmailProvider;
+  const hasPasswordLogin = isEmailProvider;
+  const canChangePassword = !isAnonymous && Boolean(authUser?.email);
+  const passwordActionLabel = hasPasswordLogin ? "Ubah Password" : "Buat Password";
   const isVerified = Boolean(authUser?.email_confirmed_at);
   const verificationLabel = isAnonymous ? "Anonim" : isVerified ? "Terverifikasi" : "Belum terverifikasi";
   const createdDate = authUser?.created_at ? formatDate(authUser.created_at, true) : "-";
@@ -234,10 +250,6 @@ export default function ProfilePage() {
   };
 
   const handleUnlinkGoogle = async () => {
-    if (!googleIdentity?.identity_id) {
-      setLinkError("Identitas Google tidak ditemukan.");
-      return;
-    }
     if (!canUnlinkGoogle) {
       setLinkError("Tambahkan login email/password sebelum memutuskan Google.");
       return;
@@ -252,7 +264,7 @@ export default function ProfilePage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         credentials: "include",
-        body: JSON.stringify({ identityId: googleIdentity.identity_id }),
+        body: JSON.stringify({ provider: "google" }),
       });
       const payload = (await response.json().catch(() => ({}))) as { error?: string };
       if (!response.ok) {
@@ -272,8 +284,7 @@ export default function ProfilePage() {
     setPasswordError("");
     setPasswordNotice("");
 
-    const passwordPolicy = /^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{8,}$/;
-    if (!passwordPolicy.test(newPassword)) {
+    if (!validatePassword(newPassword)) {
       setSavingPassword(false);
       setPasswordError("Kata sandi minimal 8 karakter dengan huruf besar, huruf kecil, dan angka.");
       return;
@@ -305,12 +316,96 @@ export default function ProfilePage() {
 
     setNewPassword("");
     setConfirmPassword("");
-    setPasswordNotice("Kata sandi berhasil diubah.");
+    setPasswordNotice(hasPasswordLogin ? "Kata sandi berhasil diubah." : "Password berhasil dibuat.");
+    window.dispatchEvent(new Event("auth:changed"));
     setShowPasswordModal(false);
   };
 
   const handleUpgradeAccount = () => {
-    router.push((`/login${nextParam}`) as import("next").Route);
+    setUpgradeError("");
+    setUpgradeNotice("");
+    setShowUpgradeModal(true);
+  };
+
+  const handleUpgradeWithEmail = async () => {
+    const nextEmail = upgradeEmail.trim();
+
+    setUpgradingAccount(true);
+    setUpgradeError("");
+    setUpgradeNotice("");
+
+    if (!nextEmail) {
+      setUpgradingAccount(false);
+      setUpgradeError("Email wajib diisi.");
+      return;
+    }
+
+    if (!validatePassword(upgradePassword)) {
+      setUpgradingAccount(false);
+      setUpgradeError("Kata sandi minimal 8 karakter dengan huruf besar, huruf kecil, dan angka.");
+      return;
+    }
+
+    if (upgradePassword !== upgradeConfirmPassword) {
+      setUpgradingAccount(false);
+      setUpgradeError("Konfirmasi kata sandi tidak sama.");
+      return;
+    }
+
+    try {
+      const response = await fetch("/api/auth/upgrade-email", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ email: nextEmail, password: upgradePassword, name: name.trim() }),
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? `HTTP ${response.status}`);
+      }
+
+      setUpgradeNotice("Berhasil! Silakan verifikasi email untuk mengaktifkan akun permanen.");
+      window.dispatchEvent(new Event("auth:changed"));
+      setShowUpgradeModal(false);
+      router.push(`/verify-email?email=${encodeURIComponent(nextEmail)}`);
+    } catch (error) {
+      setUpgradeError(error instanceof Error ? error.message : "Gagal menyimpan akun permanen.");
+    } finally {
+      setUpgradingAccount(false);
+      setUpgradePassword("");
+      setUpgradeConfirmPassword("");
+    }
+  };
+
+  const handlePurgeData = async () => {
+    if (purgePhrase.trim().toUpperCase() !== "HAPUS") {
+      setPurgeError("Ketik HAPUS untuk melanjutkan.");
+      return;
+    }
+
+    setPurgingData(true);
+    setPurgeError("");
+
+    try {
+      const response = await fetch("/api/auth/purge-data", {
+        method: "POST",
+        credentials: "include",
+      });
+      const payload = (await response.json().catch(() => ({}))) as { error?: string };
+      if (!response.ok) {
+        throw new Error(payload.error ?? `HTTP ${response.status}`);
+      }
+
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+      window.dispatchEvent(new Event("auth:changed"));
+      setShowPurgeModal(false);
+      router.replace("/beranda");
+    } catch (error) {
+      setPurgeError(error instanceof Error ? error.message : "Gagal menghapus data.");
+    } finally {
+      setPurgingData(false);
+      setPurgePhrase("");
+    }
   };
 
   if (!authUser && !loadingUser) {
@@ -382,9 +477,9 @@ export default function ProfilePage() {
               <div className="rounded-2xl border border-primary/20 bg-primary/10 p-6">
                 <h2 className="font-headline text-lg font-bold text-on-surface">Simpan Data Permanen</h2>
                 <p className="mt-2 text-sm text-on-surface-variant">
-                  Akun Anda masih anonim. Hubungkan dengan email atau OAuth agar data tersimpan aman dan bisa dipulihkan kapan pun.
+                  Akun Anda masih anonim. Simpan permanen agar data transaksi Anda tetap aman, bisa login di perangkat lain, dan mudah dipulihkan.
                 </p>
-                <div className="mt-4 flex flex-wrap gap-2">
+                <div className="mt-4 flex flex-wrap items-center gap-3">
                   <button
                     type="button"
                     onClick={handleUpgradeAccount}
@@ -395,11 +490,14 @@ export default function ProfilePage() {
                   <button
                     type="button"
                     onClick={() => router.push((`/register${nextParam}`) as import("next").Route)}
-                    className="rounded-lg border border-outline-variant/30 px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface"
+                    className="text-sm font-semibold text-on-surface-variant underline underline-offset-4 decoration-outline-variant/40 transition hover:text-on-surface hover:decoration-outline-variant/70"
                   >
                     Buat Akun Baru
                   </button>
                 </div>
+                <p className="mt-3 text-xs text-on-surface-variant">
+                  Catatan: Buat akun baru akan membuat ID baru dan data anonim Anda tidak otomatis ikut.
+                </p>
               </div>
             ) : null}
             <div className="rounded-2xl border border-outline-variant/5 bg-surface-container-low p-6">
@@ -448,14 +546,14 @@ export default function ProfilePage() {
                   onClick={() => setShowPasswordModal(true)}
                   disabled={!canChangePassword}
                 >
-                  Ubah Password
+                  {passwordActionLabel}
                   <span className="text-on-surface-variant">&gt;</span>
                 </button>
                 {!canChangePassword ? (
                   <p className="text-xs text-on-surface-variant">
                     {isAnonymous
-                      ? "Upgrade akun untuk mengatur kata sandi."
-                      : "Password hanya tersedia untuk akun email/password."}
+                      ? "Simpan permanen dulu untuk mengatur kata sandi."
+                      : "Buat password agar bisa login dengan email juga."}
                   </p>
                 ) : null}
                 <button
@@ -484,19 +582,113 @@ export default function ProfilePage() {
             <div className="rounded-2xl border border-error/30 bg-error/10 p-6">
               <h2 className="font-headline text-lg font-bold text-error">Danger Zone</h2>
               <p className="mt-2 text-sm text-error/80">
-                Hapus akun akan menghapus semua data permanen. Aksi ini belum tersedia.
+                Menghapus data akan menghapus transaksi, dompet, kategori, goals, dan target budget yang tersimpan di akun ini.
+                Akun login Anda akan tetap ada, tetapi data Budgetin akan kembali kosong.
               </p>
               <button
                 type="button"
-                className="mt-4 w-full rounded-xl border border-error/40 px-4 py-3 text-sm font-semibold text-error"
-                onClick={() => alert("Hapus akun belum tersedia.")}
+                className="mt-4 w-full rounded-xl border border-error/40 px-4 py-3 text-sm font-semibold text-error transition hover:bg-error/10"
+                onClick={() => {
+                  setPurgeError("");
+                  setPurgePhrase("");
+                  setShowPurgeModal(true);
+                }}
               >
-                Hapus Akun
+                Hapus Semua Data Budgetin
               </button>
             </div>
           </section>
         </div>
       </div>
+
+      <Modal
+        open={showUpgradeModal}
+        title="Simpan Data Permanen"
+        onClose={() => setShowUpgradeModal(false)}
+        sizeClassName="max-w-lg"
+      >
+        <div className="space-y-4">
+          {upgradeError ? (
+            <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+              {upgradeError}
+            </p>
+          ) : null}
+          {upgradeNotice ? (
+            <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
+              {upgradeNotice}
+            </p>
+          ) : null}
+
+          <div className="rounded-2xl border border-outline-variant/10 bg-surface-container px-4 py-4">
+            <h3 className="text-sm font-bold text-on-surface">Opsi 1 (Rekomendasi): Hubungkan Google</h3>
+            <p className="mt-1 text-xs text-on-surface-variant">
+              Login lebih cepat tanpa kata sandi, dan tetap menggunakan data transaksi yang sama.
+            </p>
+            <button
+              type="button"
+              onClick={handleLinkGoogle}
+              disabled={linkingGoogle || upgradingAccount}
+              className="mt-3 w-full rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-60"
+            >
+              {linkingGoogle ? "Menghubungkan..." : "Hubungkan Google"}
+            </button>
+          </div>
+
+          <div className="rounded-2xl border border-outline-variant/10 bg-surface-container px-4 py-4">
+            <h3 className="text-sm font-bold text-on-surface">Opsi 2: Email &amp; Password</h3>
+            <p className="mt-1 text-xs text-on-surface-variant">
+              Kami akan mengubah akun anonim ini menjadi akun permanen. Anda perlu verifikasi email.
+            </p>
+
+            <div className="mt-4 grid gap-3">
+              <label className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+                Email
+                <input
+                  type="email"
+                  value={upgradeEmail}
+                  onChange={(event) => setUpgradeEmail(event.target.value)}
+                  placeholder="nama@email.com"
+                  className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
+                  disabled={upgradingAccount}
+                />
+              </label>
+
+              <label className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+                Password Baru
+                <input
+                  type="password"
+                  value={upgradePassword}
+                  onChange={(event) => setUpgradePassword(event.target.value)}
+                  placeholder="Minimal 8 karakter"
+                  className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
+                  disabled={upgradingAccount}
+                />
+              </label>
+
+              <label className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
+                Konfirmasi Password
+                <input
+                  type="password"
+                  value={upgradeConfirmPassword}
+                  onChange={(event) => setUpgradeConfirmPassword(event.target.value)}
+                  placeholder="Ulangi password"
+                  className="mt-2 w-full rounded-lg border border-outline-variant/20 bg-surface-container-high px-3 py-2 text-sm text-on-surface"
+                  disabled={upgradingAccount}
+                />
+              </label>
+            </div>
+
+            <button
+              type="button"
+              onClick={handleUpgradeWithEmail}
+              disabled={upgradingAccount || linkingGoogle}
+              className="mt-4 w-full rounded-lg border border-outline-variant/25 bg-surface-container-high px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high/70 disabled:opacity-60"
+            >
+              {upgradingAccount ? "Menyimpan..." : "Simpan dengan Email"}
+            </button>
+          </div>
+        </div>
+      </Modal>
 
       <Modal
         open={showEditName}
@@ -584,7 +776,7 @@ export default function ProfilePage() {
 
       <Modal
         open={showPasswordModal}
-        title="Ubah Password"
+        title={passwordActionLabel}
         onClose={() => setShowPasswordModal(false)}
         sizeClassName="max-w-md"
       >
@@ -637,6 +829,55 @@ export default function ProfilePage() {
               onClick={() => setShowPasswordModal(false)}
               className="rounded-lg border border-outline-variant/30 px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface"
               disabled={savingPassword}
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showPurgeModal}
+        title="Konfirmasi Hapus Data"
+        onClose={() => setShowPurgeModal(false)}
+        sizeClassName="max-w-md"
+      >
+        <div className="space-y-4">
+          {purgeError ? (
+            <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
+              {purgeError}
+            </p>
+          ) : null}
+
+          <div className="rounded-xl border border-error/30 bg-error/10 p-4">
+            <p className="text-sm font-semibold text-error">Aksi ini tidak bisa dibatalkan.</p>
+            <p className="mt-1 text-sm text-error/80">
+              Untuk melanjutkan, ketik <span className="font-bold">HAPUS</span> di bawah ini.
+            </p>
+          </div>
+
+          <input
+            value={purgePhrase}
+            onChange={(event) => setPurgePhrase(event.target.value)}
+            placeholder="Ketik HAPUS"
+            className="w-full rounded-lg border border-outline-variant/20 bg-surface-container px-3 py-2 text-sm text-on-surface"
+            disabled={purgingData}
+          />
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={handlePurgeData}
+              disabled={purgingData}
+              className="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-on-error disabled:opacity-60"
+            >
+              {purgingData ? "Menghapus..." : "Hapus Sekarang"}
+            </button>
+            <button
+              type="button"
+              onClick={() => setShowPurgeModal(false)}
+              disabled={purgingData}
+              className="rounded-lg border border-outline-variant/30 px-4 py-2 text-sm text-on-surface-variant hover:text-on-surface disabled:opacity-60"
             >
               Batal
             </button>

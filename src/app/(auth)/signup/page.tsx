@@ -158,15 +158,17 @@ export default function SignupPage() {
         <p className="mt-6 text-center text-[11px] text-[var(--text-dimmed)]">
           Dengan daftar, Anda menyetujui
           <button
-            className="mx-1 text-[var(--accent-indigo)]"
-            onClick={() => setWebview({ title: "Syarat & Ketentuan", url: "https://example.com/terms" })}
+            type="button"
+            className="mx-1 font-medium text-[var(--accent-indigo)] underline underline-offset-4 decoration-[var(--accent-indigo)]/50 transition hover:decoration-[var(--accent-indigo)]"
+            onClick={() => setWebview({ title: "Syarat & Ketentuan", url: "/terms" })}
           >
             Syarat
           </button>
           dan
           <button
-            className="mx-1 text-[var(--accent-indigo)]"
-            onClick={() => setWebview({ title: "Kebijakan Privasi", url: "https://example.com/privacy" })}
+            type="button"
+            className="mx-1 font-medium text-[var(--accent-indigo)] underline underline-offset-4 decoration-[var(--accent-indigo)]/50 transition hover:decoration-[var(--accent-indigo)]"
+            onClick={() => setWebview({ title: "Kebijakan Privasi", url: "/privacy" })}
           >
             Kebijakan Privasi
           </button>

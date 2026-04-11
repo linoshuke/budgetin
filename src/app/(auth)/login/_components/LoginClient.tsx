@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import Image from "next/image";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
-import { KeyRound, MailCheck, ShieldCheck } from "lucide-react";
 import LoginForm from "./LoginForm";
 import ForgotPasswordForm from "./ForgotPasswordForm";
 import ResetPasswordForm from "./ResetPasswordForm";
@@ -79,7 +79,6 @@ export default function LoginClient() {
         label: "Lupa Password",
         title: "Pulihkan akses Anda",
         description: "Masukkan email terdaftar untuk menerima tautan reset kata sandi.",
-        Icon: MailCheck,
       };
     }
     if (mode === "reset") {
@@ -87,14 +86,12 @@ export default function LoginClient() {
         label: "Reset Password",
         title: "Buat kata sandi baru",
         description: "Pastikan kata sandi baru aman dan mudah Anda ingat.",
-        Icon: ShieldCheck,
       };
     }
     return {
       label: "Masuk",
       title: "Selamat datang kembali",
       description: "Lanjutkan pengelolaan cashflow dan pantau dompet Anda.",
-      Icon: KeyRound,
     };
   }, [mode]);
 
@@ -102,15 +99,18 @@ export default function LoginClient() {
     <div className="min-h-screen bg-[var(--bg-base)]">
       <div className="flex min-h-screen items-center justify-center px-6 lg:px-8">
         <section className="w-full max-w-md">
-          <header className="mb-6 text-center">
-            <p className="text-xs uppercase tracking-[0.24em] text-[var(--text-dimmed)]">Budgetin</p>
-            <h1 className="mt-2 text-base font-semibold text-[var(--text-primary)]">{viewMeta.label}</h1>
-          </header>
-
           <main className="space-y-6">
+            <h1 className="sr-only">{viewMeta.label}</h1>
             <div className="flex flex-col items-center gap-3 text-center">
-              <div className="flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600/15 text-indigo-500">
-                <viewMeta.Icon size={36} />
+              <div className="relative h-20 w-20 overflow-hidden rounded-3xl bg-indigo-600/10 ring-1 ring-white/10">
+                <Image
+                  src="/Budgetin.png"
+                  alt="Budgetin"
+                  fill
+                  priority
+                  sizes="80px"
+                  className="object-cover"
+                />
               </div>
               <h2 className="text-2xl font-bold text-[var(--text-primary)]">{viewMeta.title}</h2>
               <p className="text-sm text-[var(--text-dimmed)]">{viewMeta.description}</p>
