@@ -39,16 +39,8 @@ export async function POST(request: Request) {
     return NextResponse.json(AUTH_ERROR, { status: 401, headers: withNoStore(limiter.headers) });
   }
 
-  const mfaEnrolled = Boolean(data.user?.user_metadata?.mfa_enrolled);
-  const response = NextResponse.json(
-    { user: data.user ?? null, mfa_enrolled: mfaEnrolled },
+  return NextResponse.json(
+    { user: data.user ?? null },
     { status: 200, headers: withNoStore(limiter.headers) },
   );
-  response.cookies.set("mfa_enrolled", String(mfaEnrolled), {
-    sameSite: "lax",
-    secure: true,
-    httpOnly: false,
-    path: "/",
-  });
-  return response;
 }

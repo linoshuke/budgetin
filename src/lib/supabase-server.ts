@@ -19,9 +19,13 @@ export async function createServerSupabase() {
                 setAll(cookiesToSet) {
                     try {
                         cookiesToSet.forEach(({ name, value, options }) => {
+                            const isPkceVerifierCookie = name.includes("-code-verifier");
                             const nextOptions: NextCookieOptions = {
                                 ...((options ?? {}) as NextCookieOptions),
-                                httpOnly: true,
+                                // PKCE verifier cookies are written by the browser client during OAuth.
+                                // If we mark them as httpOnly here, the browser cannot overwrite them,
+                                // leading to "code challenge does not match previously saved code verifier".
+                                httpOnly: isPkceVerifierCookie ? false : true,
                                 sameSite: "lax",
                                 secure: isProd,
                             };

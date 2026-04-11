@@ -4,7 +4,7 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Link from "next/link";
 import type { Route } from "next";
-import { FormEvent, useState } from "react";
+import { FormEvent, useRef, useState } from "react";
 import { getPublicOrigin } from "@/lib/public-url";
 
 interface LoginFormProps {
@@ -18,6 +18,7 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const oauthInFlight = useRef(false);
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -41,6 +42,8 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
   };
 
   const handleGoogle = async () => {
+    if (oauthInFlight.current) return;
+    oauthInFlight.current = true;
     setLoading(true);
     setError("");
 
@@ -55,6 +58,7 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
 
     setLoading(false);
     if (oauthError) {
+      oauthInFlight.current = false;
       setError(oauthError.message);
     }
   };

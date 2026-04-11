@@ -90,15 +90,6 @@ export async function proxy(request: NextRequest) {
     return redirectResponse;
   }
 
-  const mfaFlag = request.cookies.get("mfa_enrolled")?.value;
-  if (mfaFlag === "false" && !pathname.startsWith("/mfa")) {
-    const setupUrl = new URL("/mfa/setup", request.url);
-    const redirectResponse = NextResponse.redirect(setupUrl);
-    redirectResponse.headers.set(cspHeaderName, csp);
-    redirectResponse.headers.set("x-csp-nonce", nonce);
-    return redirectResponse;
-  }
-
   return response;
 }
 

@@ -5,7 +5,7 @@ import Input from "@/components/ui/Input";
 import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import type { Route } from "next";
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { getPublicOrigin } from "@/lib/public-url";
 import { validatePassword } from "@/lib/validators";
 
@@ -21,6 +21,7 @@ export default function RegisterClient() {
   const searchParams = useSearchParams();
   const nextPath = useMemo(() => sanitizeRedirect(searchParams.get("next")), [searchParams]);
 
+  const oauthInFlight = useRef(false);
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -97,10 +98,12 @@ export default function RegisterClient() {
       return;
     }
 
-    setNotice("Akun berhasil dibuat. Cek email Anda untuk verifikasi.");
+    router.replace(`/verify-email?email=${encodeURIComponent(email)}`);
   };
 
   const handleGoogle = async () => {
+    if (oauthInFlight.current) return;
+    oauthInFlight.current = true;
     setLoading(true);
     setError("");
     setNotice("");
@@ -116,6 +119,7 @@ export default function RegisterClient() {
 
     setLoading(false);
     if (oauthError) {
+      oauthInFlight.current = false;
       setError(oauthError.message);
     }
   };

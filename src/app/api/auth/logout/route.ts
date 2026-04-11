@@ -22,6 +22,5 @@ export async function POST() {
   }
 
   const res = NextResponse.json({ ok: true, anonymous }, { status: 200, headers: withNoStore() });
-  res.cookies.set("mfa_enrolled", "", { maxAge: 0, path: "/" });
   return res;
 }

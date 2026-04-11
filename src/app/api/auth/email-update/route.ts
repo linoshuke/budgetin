@@ -2,7 +2,6 @@ import { NextResponse } from "next/server";
 import { createServerSupabase } from "@/lib/supabase-server";
 import { rateLimit } from "@/lib/rate-limit";
 import { withNoStore } from "@/lib/http";
-import { requireRecentMfa } from "@/lib/mfa";
 import { AUTH_ERROR, GENERIC_REQUEST_ERROR } from "@/lib/auth-errors";
 
 export async function POST(request: Request) {
@@ -35,15 +34,6 @@ export async function POST(request: Request) {
     return NextResponse.json(
       GENERIC_REQUEST_ERROR,
       { status: 401, headers: withNoStore(limiter.headers) },
-    );
-  }
-
-  try {
-    requireRecentMfa(user);
-  } catch {
-    return NextResponse.json(
-      { error: "MFA diperlukan untuk mengganti email." },
-      { status: 403, headers: withNoStore(limiter.headers) },
     );
   }
 
