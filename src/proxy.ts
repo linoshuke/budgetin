@@ -1,5 +1,5 @@
 import { refreshSession } from "@/lib/supabase/proxy";
-import { NextResponse, type NextRequest } from "next/server";
+import { type NextRequest } from "next/server";
 
 const AUTH_ROUTES = ["/login", "/register", "/signup", "/verify-email"];
 
@@ -52,14 +52,6 @@ function buildCsp(nonce: string) {
     .join("; ");
 }
 
-function hasSessionCookie(request: NextRequest) {
-  const cookies = request.cookies.getAll();
-  return cookies.some((cookie) => {
-    if (cookie.name === "sb-access-token" || cookie.name === "sb-refresh-token") return true;
-    return cookie.name.includes("auth-token");
-  });
-}
-
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const nonce = createNonce();
@@ -77,17 +69,6 @@ export async function proxy(request: NextRequest) {
 
   if (AUTH_ROUTES.some((route) => pathname.startsWith(route))) {
     return response;
-  }
-
-  if (!hasSessionCookie(request)) {
-    const loginUrl = new URL("/login", request.url);
-    if (pathname && pathname !== "/") {
-      loginUrl.searchParams.set("next", pathname);
-    }
-    const redirectResponse = NextResponse.redirect(loginUrl);
-    redirectResponse.headers.set(cspHeaderName, csp);
-    redirectResponse.headers.set("x-csp-nonce", nonce);
-    return redirectResponse;
   }
 
   return response;

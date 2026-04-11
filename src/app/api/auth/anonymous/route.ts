@@ -5,7 +5,8 @@ import { withNoStore } from "@/lib/http";
 import { GENERIC_REQUEST_ERROR } from "@/lib/auth-errors";
 
 export async function POST(request: Request) {
-  if (process.env.NEXT_PUBLIC_ALLOW_ANONYMOUS !== "true") {
+  const allowAnonymous = process.env.NEXT_PUBLIC_ALLOW_ANONYMOUS !== "false";
+  if (!allowAnonymous) {
     return NextResponse.json(
       { user: null, disabled: true },
       { status: 200, headers: withNoStore() },

@@ -60,7 +60,7 @@ function TransactionsPageInner() {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const { user, isAnonymous } = useAuth();
+  const { user, isAnonymous, loading: authLoading } = useAuth();
   const categories = useBudgetStore((state) => state.categories);
   const wallets = useBudgetStore((state) => state.wallets);
   const loading = useBudgetStore((state) => state.loading);
@@ -110,6 +110,7 @@ function TransactionsPageInner() {
   const [selectedCategoryIds, setSelectedCategoryIds] = useState<string[]>([]);
   const handledNewParamRef = useRef(false);
   const canManageWallets = Boolean(user) && !isAnonymous;
+  const userId = user?.id ?? null;
 
   const walletFilter = useWalletFilter();
   // Pisahkan filter dari transactions — tidak meneruskan transactions ke hook
@@ -147,6 +148,7 @@ function TransactionsPageInner() {
   const fetchPage = useCallback(
     async (offset: number, reset = false) => {
       if (loadingRef.current) return;
+      if (!userId) return;
       loadingRef.current = true;
       setLoadingPage(true);
       setLoadError("");
@@ -210,21 +212,24 @@ function TransactionsPageInner() {
       }
     },
     // fetchPage tidak bergantung pada nilai filter — dibaca via ref
-    [t],
+    [t, userId],
   );
 
   const refreshTransactions = useCallback(() => {
+    if (!userId) return;
     setTransactions([]);
     setPageOffset(0);
     setHasMore(true);
     void fetchPage(0, true);
-  }, [fetchPage]);
+  }, [fetchPage, userId]);
 
   // Trigger refresh HANYA saat filter primitif berubah (bukan saat data berubah)
   useEffect(() => {
+    if (!userId) return;
     refreshTransactions();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [
+    userId,
     filter.period,
     selectedMonthKey,
     filter.fromDate,
@@ -414,6 +419,14 @@ function TransactionsPageInner() {
     step: 60,
     resetKey: renderResetKey,
   });
+
+  if (authLoading || !userId) {
+    return (
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-2 border-[var(--accent-indigo)]/30 border-t-[var(--accent-indigo)]" />
+      </div>
+    );
+  }
 
   const handleSubmit = async (payload: Omit<Transaction, "id">) => {
     try {

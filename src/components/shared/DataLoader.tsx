@@ -22,7 +22,7 @@ export default function DataLoader() {
   const [refreshKey, setRefreshKey] = useState(0);
   const [anonymousRequested, setAnonymousRequested] = useState(false);
   const lastUserIdRef = useRef<string | null>(null);
-  const allowAnonymous = process.env.NEXT_PUBLIC_ALLOW_ANONYMOUS === "true";
+  const allowAnonymous = process.env.NEXT_PUBLIC_ALLOW_ANONYMOUS !== "false";
 
   useEffect(() => {
     if (isAuthRoute(pathname)) return;
@@ -43,10 +43,13 @@ export default function DataLoader() {
 
     const createAnonymous = async () => {
       try {
-        await fetch("/api/auth/anonymous", { method: "POST", credentials: "include" });
+        const response = await fetch("/api/auth/anonymous", { method: "POST", credentials: "include" });
+        const payload = (await response.json().catch(() => ({}))) as { disabled?: boolean };
         if (!active) return;
         setAnonymousRequested(true);
-        window.dispatchEvent(new Event("auth:changed"));
+        if (!payload?.disabled) {
+          window.dispatchEvent(new Event("auth:changed"));
+        }
       } catch {
         if (!active) return;
         setAnonymousRequested(true);
