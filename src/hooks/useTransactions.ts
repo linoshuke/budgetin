@@ -45,10 +45,12 @@ export function useTransactions(options: TransactionQueryOptions = {}) {
         params.set("walletIds", walletIds.join(","));
       }
 
-      const response = await fetch(`/api/transactions?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      const response = await fetch(`/api/transactions?${params.toString()}`, { 
+        credentials: "include", 
+      }); 
+      if (!response.ok) { 
+        throw new Error(`HTTP ${response.status}`); 
+      } 
       const payload = (await response.json()) as {
         items: Array<{
           id: string;
@@ -111,10 +113,12 @@ export function useMonthlySummary(
         params.set("walletIds", walletIds.join(","));
       }
 
-      const response = await fetch(`/api/monthly-summary?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      const response = await fetch(`/api/monthly-summary?${params.toString()}`, { 
+        credentials: "include", 
+      }); 
+      if (!response.ok) { 
+        throw new Error(`HTTP ${response.status}`); 
+      } 
       const summary = (await response.json()) as MonthlySummary[];
       const totalIncome = summary.reduce((acc, item) => acc + Number(item.total_income ?? 0), 0);
       const totalExpense = summary.reduce((acc, item) => acc + Number(item.total_expense ?? 0), 0);
@@ -145,10 +149,12 @@ export function useExpenseByCategory(walletIds: string[] = []) {
         params.set("walletIds", walletIds.join(","));
       }
 
-      const response = await fetch(`/api/transactions?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      const response = await fetch(`/api/transactions?${params.toString()}`, { 
+        credentials: "include", 
+      }); 
+      if (!response.ok) { 
+        throw new Error(`HTTP ${response.status}`); 
+      } 
       const payload = (await response.json()) as {
         items: Array<{
           id: string;

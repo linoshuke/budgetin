@@ -139,11 +139,13 @@ export default function CashFlowChartCard() {
         params.set("walletIds", selectedWalletIds.join(","));
       }
 
-      const response = await fetch(`/api/monthly-summary?${params.toString()}`);
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-      return (await response.json()) as MonthlySummary[];
+      const response = await fetch(`/api/monthly-summary?${params.toString()}`, { 
+        credentials: "include", 
+      }); 
+      if (!response.ok) { 
+        throw new Error(`HTTP ${response.status}`); 
+      } 
+      return (await response.json()) as MonthlySummary[]; 
     },
   });
 

@@ -41,7 +41,7 @@ function buildCsp(nonce: string) {
     "img-src 'self' data: blob: https:",
     "font-src 'self' data: https://fonts.gstatic.com",
     `style-src ${styleSrc}`,
-    isDev ? "style-src-attr 'unsafe-inline'" : "",
+    "style-src-attr 'unsafe-inline'",
     `script-src ${scriptSrc}`,
     `script-src-elem ${scriptSrc}`,
     `connect-src 'self' ${supabaseHost || "https://*.supabase.co"} https: wss:`,

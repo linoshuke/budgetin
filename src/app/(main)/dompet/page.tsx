@@ -468,11 +468,13 @@ export default function BudgetsPage() {
           dateTo: end,
         });
 
-        const response = await fetch(`/api/transactions?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
-        const payload = (await response.json()) as {
+        const response = await fetch(`/api/transactions?${params.toString()}`, { 
+          credentials: "include", 
+        }); 
+        if (!response.ok) { 
+          throw new Error(`HTTP ${response.status}`); 
+        } 
+        const payload = (await response.json()) as { 
           items: Array<{
             id: string;
             amount: number;

@@ -4,8 +4,23 @@ import Button from "@/components/ui/Button";
 import Input from "@/components/ui/Input";
 import Link from "next/link";
 import type { Route } from "next";
-import { FormEvent, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { getPublicOrigin } from "@/lib/public-url";
+import { useSearchParams } from "next/navigation";
+
+function getOAuthErrorMessage(errorCode: string | null): string {
+  if (!errorCode) return "";
+  if (errorCode === "identity_already_exists") {
+    return "Akun Google ini sudah terhubung ke akun lain. Coba gunakan akun Google yang berbeda atau login langsung ke akun tersebut.";
+  }
+  if (errorCode === "oauth_exchange_failed") {
+    return "Autentikasi Google gagal. Coba lagi atau muat ulang halaman.";
+  }
+  if (errorCode === "oauth_missing_code") {
+    return "Proses Google dibatalkan atau terjadi kesalahan. Silakan coba lagi.";
+  }
+  return "Terjadi kesalahan saat login. Silakan coba lagi.";
+}
 
 interface LoginFormProps {
   nextPath: string;
@@ -19,6 +34,15 @@ export default function LoginForm({ nextPath, onForgotPassword }: LoginFormProps
   const [error, setError] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const oauthInFlight = useRef(false);
+  const searchParams = useSearchParams();
+
+  // Tampilkan error dari redirect OAuth (contoh: ?error=oauth_missing_code)
+  useEffect(() => {
+    const oauthError = searchParams.get("error");
+    if (oauthError) {
+      setError(getOAuthErrorMessage(oauthError));
+    }
+  }, [searchParams]);
 
   const handleLogin = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();

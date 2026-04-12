@@ -11,6 +11,9 @@ function getUpgradeErrorMessage(message: string) {
   if (lower.includes("already") && (lower.includes("registered") || lower.includes("exists"))) {
     return "Email sudah digunakan. Pakai email lain atau hubungkan Google.";
   }
+  if (lower.includes("identity") && lower.includes("already")) {
+    return "Akun dengan email ini sudah terdaftar. Coba login langsung dengan akun tersebut, atau gunakan email berbeda.";
+  }
   if (lower.includes("invalid") && lower.includes("email")) {
     return "Format email tidak valid.";
   }
@@ -78,8 +81,9 @@ export async function POST(request: Request) {
     const isProd = process.env.NODE_ENV === "production";
     const friendlyMessage = getUpgradeErrorMessage(error.message);
     console.error("Upgrade email failed:", error.message);
+    const publicMessage = friendlyMessage || (isProd ? GENERIC_REQUEST_ERROR.error : error.message || GENERIC_REQUEST_ERROR.error);
     return NextResponse.json(
-      isProd ? GENERIC_REQUEST_ERROR : { error: friendlyMessage || error.message || GENERIC_REQUEST_ERROR.error },
+      { error: publicMessage },
       { status: 400, headers: withNoStore(limiter.headers) },
     );
   }
@@ -89,4 +93,3 @@ export async function POST(request: Request) {
     { status: 200, headers: withNoStore(limiter.headers) },
   );
 }
-

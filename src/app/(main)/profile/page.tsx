@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import AuthGate from "@/components/shared/AuthGate";
@@ -58,6 +58,8 @@ export default function ProfilePage() {
   const [purgePhrase, setPurgePhrase] = useState("");
   const [purgingData, setPurgingData] = useState(false);
   const [purgeError, setPurgeError] = useState("");
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
 
   useEffect(() => {
     if (authLoading) return;
@@ -68,16 +70,37 @@ export default function ProfilePage() {
 
   useEffect(() => {
     const linked = searchParams?.get("linked");
-    if (linked !== "google") return;
-    setLinkNotice("Google berhasil terhubung.");
-    try {
-      const url = new URL(window.location.href);
-      url.searchParams.delete("linked");
-      router.replace(`${url.pathname}${url.search}` as import("next").Route);
-    } catch {
-      // ignore cleanup errors
+    if (linked === "google") {
+      setLinkNotice("Google berhasil terhubung.");
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("linked");
+        router.replace(`${url.pathname}${url.search}` as import("next").Route);
+      } catch {
+        // ignore cleanup errors
+      }
+      return;
     }
-  }, [router, searchParams]);
+
+    const linkError = searchParams?.get("link_error");
+    if (linkError === "identity_already_exists") {
+      const message =
+        "Akun Google ini sudah terhubung ke akun lain. Untuk menyimpan data anonim ini, gunakan akun Google lain (yang belum pernah dipakai di Budgetin) atau simpan dengan email baru.";
+
+      setLinkError(message);
+      if (isAnonymous) {
+        setUpgradeError(message);
+        setShowUpgradeModal(true);
+      }
+      try {
+        const url = new URL(window.location.href);
+        url.searchParams.delete("link_error");
+        router.replace(`${url.pathname}${url.search}` as import("next").Route);
+      } catch {
+        // ignore cleanup errors
+      }
+    }
+  }, [isAnonymous, router, searchParams]);
 
   const provider = getProvider(authUser ?? null);
   const providers = (authUser?.app_metadata?.providers as string[] | undefined) ?? [];
@@ -110,10 +133,12 @@ export default function ProfilePage() {
           limit: "500",
           offset: String(offset),
         });
-        const response = await fetch(`/api/transactions?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        const response = await fetch(`/api/transactions?${params.toString()}`, { 
+          credentials: "include", 
+        }); 
+        if (!response.ok) { 
+          throw new Error(`HTTP ${response.status}`); 
+        } 
         const payload = (await response.json()) as {
           items: Transaction[];
           hasMore: boolean;
@@ -220,15 +245,27 @@ export default function ProfilePage() {
     }
   };
 
-  const handleLinkGoogle = async () => {
-    setLinkingGoogle(true);
-    setLinkError("");
-    setLinkNotice("");
-
-    try {
-      const redirectTo = `${getPublicOrigin()}/auth/callback?next=${encodeURIComponent(
+  const handleLinkGoogle = async () => { 
+    if (loadingUser) { 
+      setLinkError("Tunggu sebentar, sesi sedang disiapkan."); 
+      return; 
+    } 
+ 
+    if (!authUser) { 
+      setLinkError("Sesi login belum tersedia. Muat ulang halaman atau login kembali."); 
+      return; 
+    } 
+ 
+    setLinkingGoogle(true); 
+    setLinkError(""); 
+    setLinkNotice(""); 
+ 
+    try { 
+      // Gunakan /auth/callback-client agar hash fragment error (identity_already_exists)
+      // dari Supabase bisa dibaca di sisi client (server tidak bisa baca URL hash).
+      const redirectTo = `${getPublicOrigin()}/auth/callback-client?next=${encodeURIComponent(
         "/profile?linked=google",
-      )}`;
+      )}`; 
       const response = await fetch("/api/auth/link", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -408,6 +445,18 @@ export default function ProfilePage() {
     }
   };
 
+  const executeLogout = async () => {
+    setLoggingOut(true);
+    try {
+      await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
+    } finally {
+      window.dispatchEvent(new Event("auth:changed"));
+      setShowLogoutModal(false);
+      setLoggingOut(false);
+      router.replace("/beranda");
+    }
+  };
+
   if (!authUser && !loadingUser) {
     return (
       <div className="flex min-h-[60vh] items-center justify-center">
@@ -489,14 +538,15 @@ export default function ProfilePage() {
                   </button>
                   <button
                     type="button"
-                    onClick={() => router.push((`/register${nextParam}`) as import("next").Route)}
+                    onClick={() => router.push((`/login${nextParam}`) as import("next").Route)}
                     className="text-sm font-semibold text-on-surface-variant underline underline-offset-4 decoration-outline-variant/40 transition hover:text-on-surface hover:decoration-outline-variant/70"
                   >
-                    Buat Akun Baru
+                    Punya akun? Login
                   </button>
                 </div>
                 <p className="mt-3 text-xs text-on-surface-variant">
-                  Catatan: Buat akun baru akan membuat ID baru dan data anonim Anda tidak otomatis ikut.
+                  Catatan: Untuk menyimpan data anonim ini, Anda harus menggunakan kredensial baru (email/Google yang belum pernah dipakai di Budgetin).
+                  Login ke akun lama akan berpindah akun dan data anonim ini tidak ikut.
                 </p>
               </div>
             ) : null}
@@ -521,25 +571,44 @@ export default function ProfilePage() {
                   Pengaturan Aplikasi
                   <span className="text-on-surface-variant">&gt;</span>
                 </button>
-                <button
-                  type="button"
-                  className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-60"
-                  onClick={hasGoogle ? handleUnlinkGoogle : handleLinkGoogle}
-                  disabled={linkingGoogle}
-                >
-                  {hasGoogle ? "Putuskan Google" : "Hubungkan Google"}
-                  <span className="text-on-surface-variant">&gt;</span>
-                </button>
-                {!hasGoogle ? (
-                  <p className="text-xs text-on-surface-variant">
-                    Hubungkan Google agar login lebih cepat tanpa kata sandi.
-                  </p>
-                ) : null}
-                {hasGoogle && !canUnlinkGoogle ? (
-                  <p className="text-xs text-on-surface-variant">
-                    Tambahkan login email/password sebelum memutuskan Google agar akses tetap aman.
-                  </p>
-                ) : null}
+                {isAnonymous ? (
+                  <>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-xl border border-primary/20 bg-primary/10 px-4 py-3 text-sm font-semibold text-on-surface transition-colors hover:bg-primary/15 disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={handleUpgradeAccount}
+                      disabled={loadingUser || !authUser}
+                    >
+                      Simpan Data Permanen
+                      <span className="text-on-surface-variant">&gt;</span>
+                    </button>
+                    <p className="text-xs text-on-surface-variant">
+                      Pilih email/Google baru untuk mengunci data anonim ini. Jika Anda sudah punya akun, login hanya untuk berpindah akun (data anonim ini tidak ikut).
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-60"
+                      onClick={hasGoogle ? handleUnlinkGoogle : handleLinkGoogle}
+                      disabled={linkingGoogle || loadingUser || !authUser}
+                    >
+                      {hasGoogle ? "Putuskan Google" : "Hubungkan Google"}
+                      <span className="text-on-surface-variant">&gt;</span>
+                    </button>
+                    {!hasGoogle ? (
+                      <p className="text-xs text-on-surface-variant">
+                        Hubungkan Google agar login lebih cepat tanpa kata sandi.
+                      </p>
+                    ) : null}
+                    {hasGoogle && !canUnlinkGoogle ? (
+                      <p className="text-xs text-on-surface-variant">
+                        Tambahkan login email/password sebelum memutuskan Google agar akses tetap aman.
+                      </p>
+                    ) : null}
+                  </>
+                )}
                 <button
                   type="button"
                   className="flex w-full items-center justify-between rounded-xl border border-outline-variant/10 bg-surface-container px-4 py-3 text-sm text-on-surface transition-colors hover:bg-surface-container-high disabled:cursor-not-allowed disabled:opacity-60"
@@ -567,13 +636,10 @@ export default function ProfilePage() {
                 <button
                   type="button"
                   className="flex w-full items-center justify-between rounded-xl border border-error/30 bg-error/10 px-4 py-3 text-sm text-error transition-colors hover:bg-error/20"
-                  onClick={async () => {
-                    await fetch("/api/auth/logout", { method: "POST", credentials: "include" });
-                    window.dispatchEvent(new Event("auth:changed"));
-                    router.replace("/beranda");
-                  }}
+                  onClick={isAnonymous ? () => setShowLogoutModal(true) : executeLogout}
+                  disabled={loggingOut}
                 >
-                  Logout
+                  {loggingOut ? "Logout..." : "Logout"}
                   <span>&gt;</span>
                 </button>
               </div>
@@ -624,6 +690,9 @@ export default function ProfilePage() {
             <p className="mt-1 text-xs text-on-surface-variant">
               Login lebih cepat tanpa kata sandi, dan tetap menggunakan data transaksi yang sama.
             </p>
+            <p className="mt-2 text-xs text-on-surface-variant">
+              Penting: pilih akun Google yang belum pernah dipakai di Budgetin. Akun Google yang sudah terdaftar tidak bisa digunakan untuk menyimpan data anonim ini.
+            </p>
             <button
               type="button"
               onClick={handleLinkGoogle}
@@ -638,6 +707,9 @@ export default function ProfilePage() {
             <h3 className="text-sm font-bold text-on-surface">Opsi 2: Email &amp; Password</h3>
             <p className="mt-1 text-xs text-on-surface-variant">
               Kami akan mengubah akun anonim ini menjadi akun permanen. Anda perlu verifikasi email.
+            </p>
+            <p className="mt-2 text-xs text-on-surface-variant">
+              Gunakan email yang belum pernah dipakai di Budgetin. Jika email sudah terdaftar, Anda perlu memakai email lain.
             </p>
 
             <div className="mt-4 grid gap-3">
@@ -685,6 +757,42 @@ export default function ProfilePage() {
               className="mt-4 w-full rounded-lg border border-outline-variant/25 bg-surface-container-high px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high/70 disabled:opacity-60"
             >
               {upgradingAccount ? "Menyimpan..." : "Simpan dengan Email"}
+            </button>
+          </div>
+        </div>
+      </Modal>
+
+      <Modal
+        open={showLogoutModal}
+        title="Konfirmasi Logout"
+        onClose={() => setShowLogoutModal(false)}
+        sizeClassName="max-w-md"
+      >
+        <div className="space-y-4">
+          <div className="rounded-xl border border-error/30 bg-error/10 p-4">
+            <p className="text-sm font-semibold text-error">Anda sedang memakai akun anonim.</p>
+            <p className="mt-1 text-sm text-error/80">
+              Jika logout sekarang, Anda berpotensi kehilangan akses ke data anonim ini di perangkat ini.
+              Simpan data permanen terlebih dahulu bila ingin data tetap aman.
+            </p>
+          </div>
+
+          <div className="flex flex-wrap gap-2">
+            <button
+              type="button"
+              onClick={() => setShowLogoutModal(false)}
+              className="rounded-lg border border-outline-variant/30 px-4 py-2 text-sm font-semibold text-on-surface-variant hover:text-on-surface"
+              disabled={loggingOut}
+            >
+              Batal
+            </button>
+            <button
+              type="button"
+              onClick={executeLogout}
+              className="rounded-lg bg-error px-4 py-2 text-sm font-semibold text-on-error disabled:opacity-60"
+              disabled={loggingOut}
+            >
+              {loggingOut ? "Logout..." : "Logout Sekarang"}
             </button>
           </div>
         </div>

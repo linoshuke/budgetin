@@ -185,10 +185,12 @@ function TransactionsPageInner() {
           params.set("categoryIds", categoryIds.join(","));
         }
 
-        const response = await fetch(`/api/transactions?${params.toString()}`);
-        if (!response.ok) {
-          throw new Error(`HTTP ${response.status}`);
-        }
+        const response = await fetch(`/api/transactions?${params.toString()}`, { 
+          credentials: "include", 
+        }); 
+        if (!response.ok) { 
+          throw new Error(`HTTP ${response.status}`); 
+        } 
 
         const payload = (await response.json()) as {
           items: Transaction[];
