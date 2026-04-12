@@ -1,41 +1,92 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Budgetin
 
-## Getting Started
+Budgetin adalah aplikasi manajemen keuangan pribadi yang membantu Anda melacak pengeluaran, merencanakan anggaran, dan memantau tagihan mendesak dengan mudah. Pengalaman *tracking* keuangan menjadi lebih mulus dan interaktif.
 
-First, run the development server:
+## 🚀 Fitur Utama
+
+- **Pencatatan Keuangan**: Catat dengan mudah semua pemasukan dan pengeluaran harian Anda.
+- **Smart Savings (Segera Hadir)**: Fitur tabungan cerdas untuk membantu Anda mengatur dan mencapai target tabungan secara lebih terarah.
+- **Tagihan Mendesak**: Kemampuan untuk menandai pengeluaran sebagai tagihan mendesak (*urgent bills*) secara manual untuk memprioritaskan pembayaran melalui form transaksi.
+- **Laporan & Analitik**: Visualisasi data pengeluaran dan pemasukan dengan *bar chart* yang jelas dan tabel transaksi detail berdasarkan periode waktu (Harian, Mingguan, Bulanan, Tahunan).
+- **Keamanan & Autentikasi**: Mendukung pendaftaran akun anonim (Guest), *upgrade* ke akun permanen, autentikasi multi-faktor (MFA), dan login dengan Google OAuth yang aman.
+
+## 🛠️ Teknologi yang Digunakan
+
+Proyek ini dibangun menggunakan _stack_ modern:
+- **Framework**: [Next.js](https://nextjs.org/) (App Router, Versi 16)
+- **Backend (BaaS)**: [Supabase](https://supabase.com/) (Database PostgreSQL & Auth)
+- **Styling**: [Tailwind CSS v4](https://tailwindcss.com/)
+- **Visualisasi Data**: [Recharts](https://recharts.org/)
+- **State & Data Management**: [Zustand](https://zustand-demo.pmnd.rs/), [React Query](https://tanstack.com/query/latest), [React Hook Form](https://react-hook-form.com/) & Zod
+- **Rate Limiting**: [Upstash Redis](https://upstash.com/)
+
+## ⚙️ Persyaratan Sistem
+
+Sebelum menjalankan proyek ini, pastikan Anda telah menyiapkan:
+- [Node.js](https://nodejs.org/) (Versi 18+ disarankan) atau [Bun](https://bun.sh/)
+- Akun [Supabase](https://supabase.com/) untuk Database dan Autentikasi
+- Akun [Upstash](https://upstash.com/) untuk instance Redis (Opsional, untuk Rate Limiting)
+
+## 💻 Panduan Menjalankan Proyek Secara Lokal
+
+Ikuti langkah-langkah berikut untuk mereplikasi dan menjalankan "Budgetin" di komputer (lokal) Anda:
+
+### 1. Kloning Repositori
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+git clone <URL_REPOSITORY_ANDA>
+cd budgetin
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### 2. Instalasi Dependensi
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Disarankan menjalankan instalasi via `bun`, namun `npm`, `yarn`, atau `pnpm` juga dapat digunakan.
 
-## Security: Rate limiting (Auth)
-Auth endpoints are rate limited via Upstash Redis when `UPSTASH_REDIS_REST_URL` and
-`UPSTASH_REDIS_REST_TOKEN` are configured. If not, configure rate limiting at your
-CDN/WAF (see `docs/waf-rate-limits.md`).
+```bash
+bun install
+# atau
+npm install
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 3. Konfigurasi Variabel Lingkungan (.env)
 
-## Learn More
+Buat file bernama `.env.local` di *root* direktori proyek, lalu isi dengan kredensial Supabase dan Upstash Anda sebagai berikut:
 
-To learn more about Next.js, take a look at the following resources:
+```env
+# URL dan Keys Supabase (Bisa didapat dari Project Settings -> API di dashboard Supabase)
+NEXT_PUBLIC_SUPABASE_URL=https://your-project-id.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-supabase-anon-key
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+# OAuth Google Secret (Opsional jika ingin mengaktifkan Google Login)
+SUPABASE_AUTH_EXTERNAL_GOOGLE_SECRET=your-google-oauth-secret
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+# Konfigurasi Upstash Redis (Untuk API Rate Limiting perlindungan Auth)
+UPSTASH_REDIS_REST_URL=https://your-upstash-url.upstash.io
+UPSTASH_REDIS_REST_TOKEN=your-upstash-token
+```
 
-## Deploy on Vercel
+### 4. Setup Skema Database (Supabase)
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+Pastikan *backend* Supabase Anda memiliki tabel dan keamanan (RLS) yang diperlukan. Anda dapat menjalankan *migrations* menggunakan Supabase CLI, atau mengeksekusi SQL di tab SQL Editor Supabase:
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+```bash
+# Contoh dengan Supabase CLI
+npx supabase link --project-ref your-project-ref
+npx supabase db push
+```
+*(Catatan: Sesuaikan dengan struktur schema proyek ini seperti pembuatan tabel pendaftaran, transaksi, kategori, dsb.)*
+
+### 5. Jalankan Development Server
+
+Mulai server lokal:
+
+```bash
+bun run dev
+# atau
+npm run dev
+```
+
+Buka [http://localhost:3000](http://localhost:3000) di browser (seperti Chrome/Edge/Firefox) untuk melihat hasil run proyek. Semua perubahan pada kode akan diperbarui secara otomatis.
+
+---
+*Dikembangkan sebagai bagian dari penyelesaian program Capstone Project - CC26-PS108 (Dicoding).*
