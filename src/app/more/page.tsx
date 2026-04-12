@@ -7,28 +7,26 @@ import AuthGate from "@/components/shared/AuthGate";
 import Link from "next/link";
 import type { Route } from "next";
 
-const quickLinks = [
+const moreLinks = [
   {
-    label: "Profil & Keamanan",
+    label: "Pengaturan Aplikasi",
+    href: "/pengaturan",
+    description: "Bahasa, mata uang, privasi, dan preferensi aplikasi.",
+    icon: "settings",
+  },
+  {
+    label: "Pengaturan Akun",
     href: "/profile",
-    description: "Kelola akun, password, dan ekspor data.",
+    description: "Kelola akun, keamanan, password, dan ekspor data.",
+    icon: "person",
   },
   {
     label: "Kategori",
     href: "/categories",
     description: "Tambah dan kelola kategori transaksi.",
+    icon: "category",
   },
-  {
-    label: "Laporan & Analitik",
-    href: "/reports",
-    description: "Lihat ringkasan dan tren keuangan.",
-  },
-  {
-    label: "Riwayat Transaksi",
-    href: "/transactions",
-    description: "Filter transaksi berdasarkan periode dan dompet.",
-  },
-] satisfies Array<{ label: string; href: Route; description: string }>;
+] satisfies Array<{ label: string; href: Route; description: string; icon: string }>;
 
 export default function MorePage() {
   return (
@@ -41,45 +39,37 @@ export default function MorePage() {
           <MobileAppBar title="Lainnya" />
         </div>
 
-        <main className="page-shell space-y-6">
-          <section className="space-y-2">
-            <h1 className="text-2xl font-semibold text-[var(--text-primary)]">Pusat Utilitas</h1>
+        <main className="page-shell space-y-4">
+          <section className="space-y-2 md:space-y-1">
+            <h1 className="text-xl font-semibold text-[var(--text-primary)] md:text-2xl">Lainnya</h1>
             <p className="text-sm text-[var(--text-dimmed)]">
-              Akses cepat ke pengaturan akun, kategori, dan laporan analitik.
+              Akses cepat ke pengaturan aplikasi, akun, dan kategori.
             </p>
           </section>
 
-          <section className="grid grid-cols-1 gap-4 md:grid-cols-2">
-            {quickLinks.map((item) => (
+          <section className="grid gap-3">
+            {moreLinks.map((item) => (
               <Link
                 key={item.label}
                 href={item.href}
-                className="glass-panel group flex flex-col justify-between gap-3 p-4 transition hover:border-[var(--border-strong)]"
+                className="glass-panel group flex items-center gap-4 p-4 transition-colors hover:border-[var(--border-strong)] hover:bg-[var(--bg-card-muted)]/25 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--border-strong)]"
               >
-                <div>
-                  <p className="text-sm text-[var(--text-dimmed)]">Shortcut</p>
-                  <h2 className="text-lg font-semibold text-[var(--text-primary)]">{item.label}</h2>
-                  <p className="mt-1 text-sm text-[var(--text-dimmed)]">{item.description}</p>
+                <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-[var(--border-soft)] bg-[var(--bg-card-muted)] text-[var(--text-primary)]">
+                  <span className="material-symbols-outlined text-[22px]">{item.icon}</span>
+                </span>
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-semibold text-[var(--text-primary)] md:text-base">
+                    {item.label}
+                  </p>
+                  <p className="mt-0.5 line-clamp-2 text-xs text-[var(--text-dimmed)] md:text-sm">
+                    {item.description}
+                  </p>
                 </div>
-                <span className="text-xs text-[var(--text-dimmed)] group-hover:text-[var(--text-primary)]">
-                  Buka &gt;
+                <span className="material-symbols-outlined text-[18px] text-[var(--text-dimmed)] transition group-hover:text-[var(--text-primary)]">
+                  chevron_right
                 </span>
               </Link>
             ))}
-          </section>
-
-          <section className="glass-panel p-4">
-            <div className="flex flex-wrap items-center justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-[var(--text-primary)]">Fitur Eksperimental</h2>
-                <p className="text-sm text-[var(--text-dimmed)]">
-                  Kalender transaksi dan ekspor lanjutan sedang dikembangkan.
-                </p>
-              </div>
-              <span className="rounded-full border border-[var(--border-soft)] bg-[var(--bg-card-muted)] px-3 py-1 text-xs text-[var(--text-dimmed)]">
-                Coming soon
-              </span>
-            </div>
           </section>
         </main>
 

@@ -38,8 +38,14 @@ export default function SensitiveCurrency({
   const [revealed, setRevealed] = useState(false);
 
   useEffect(() => {
-    if (!privacyHideAmounts) setRevealed(false);
-  }, [privacyHideAmounts]);
+    let lastPrivacy = useAppSettingsStore.getState().privacyHideAmounts;
+    const unsubscribe = useAppSettingsStore.subscribe((state) => {
+      if (state.privacyHideAmounts === lastPrivacy) return;
+      lastPrivacy = state.privacyHideAmounts;
+      setRevealed(false);
+    });
+    return unsubscribe;
+  }, []);
 
   useEffect(() => {
     if (!revealed) return undefined;
@@ -49,7 +55,7 @@ export default function SensitiveCurrency({
 
   const formatted = useMemo(() => {
     const safe = Number.isFinite(value) ? value : 0;
-    return new Intl.NumberFormat(numberLocale ?? "id-ID", {
+    const valueFormatted = new Intl.NumberFormat(numberLocale ?? "id-ID", {
       style: "currency",
       currency: currency ?? "IDR",
       notation,
@@ -57,6 +63,10 @@ export default function SensitiveCurrency({
       minimumFractionDigits,
       maximumFractionDigits,
     }).format(safe);
+
+    // Intl sering memakai NBSP (non-breaking space) antara simbol dan angka.
+    // Di layar kecil ini bisa bikin nominal tidak bisa turun baris dan terlihat "terpotong".
+    return valueFormatted.replace(/\u00A0/g, " ");
   }, [currency, maximumFractionDigits, minimumFractionDigits, notation, numberLocale, value]);
 
   const masked = useMemo(() => maskDigits(formatted), [formatted]);

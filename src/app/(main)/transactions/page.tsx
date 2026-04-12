@@ -66,17 +66,6 @@ function TransactionsPageInner() {
   const loading = useBudgetStore((state) => state.loading);
   const defaultPeriod = useAppSettingsStore((state) => state.defaultPeriod);
   const dateLocale = useAppSettingsStore((state) => state.dateLocale);
-  const currency = useAppSettingsStore((state) => state.currency);
-  const numberLocale = useAppSettingsStore((state) => state.numberLocale);
-  const privacyHideAmounts = useAppSettingsStore((state) => state.privacyHideAmounts);
-
-  const currencyFormatter = useMemo(() => {
-    return new Intl.NumberFormat(numberLocale ?? "id-ID", {
-      style: "currency",
-      currency: currency ?? "IDR",
-      maximumFractionDigits: 0,
-    });
-  }, [currency, numberLocale]);
 
   const dateFormatter = useMemo(() => {
     return new Intl.DateTimeFormat(dateLocale ?? "id-ID", {
@@ -256,7 +245,7 @@ function TransactionsPageInner() {
       const params = new URLSearchParams(searchParams.toString());
       params.delete("new");
       const nextUrl = params.toString() ? `${pathname}?${params.toString()}` : pathname;
-      router.replace(nextUrl as any, { scroll: false });
+      router.replace(nextUrl as import("next").Route, { scroll: false });
       return;
     }
 
@@ -303,11 +292,11 @@ function TransactionsPageInner() {
     return sortTransactionsByDate(filterTransactionsByDateRange(items, filter.fromDate, filter.toDate));
   }, [
     transactions,
-    walletIdsKey,
+    walletFilter.selectedWalletIds,
     filter.period,
-    selectedMonthKey,
     filter.fromDate,
     filter.toDate,
+    filter.selectedMonth,
   ]);
 
   const totals = useMemo(
@@ -573,12 +562,17 @@ function TransactionsPageInner() {
                 <p className="mb-2 font-headline text-xs font-bold uppercase tracking-widest text-on-surface-variant">
                   {t("transactions.stats.monthlySpending")}
                 </p>
-                <div className="flex items-end justify-between">
-                  <h2 className="tnum font-headline text-3xl font-extrabold text-on-surface">
-                    <SensitiveCurrency value={Math.abs(totals.expense)} eyeClassName="h-6 w-6" />
+                <div className="flex flex-col gap-2 sm:flex-row sm:items-end sm:justify-between">
+                  <h2 className="min-w-0 font-headline font-extrabold leading-tight text-on-surface sm:leading-none text-[clamp(1.5rem,6vw,1.875rem)]">
+                    <SensitiveCurrency
+                      value={Math.abs(totals.expense)}
+                      className="break-words"
+                      wrapperClassName="min-w-0 max-w-full flex-wrap gap-2"
+                      eyeClassName="h-6 w-6"
+                    />
                   </h2>
                   <span
-                    className={`flex items-center gap-1 text-sm font-bold ${
+                    className={`flex items-center gap-1 text-sm font-bold sm:justify-end ${
                       spendingTrend.increase ? "text-error" : "text-primary"
                     }`}
                   >
@@ -596,8 +590,13 @@ function TransactionsPageInner() {
                 </p>
                 <div className="flex items-end justify-between">
                   <div>
-                    <h2 className="tnum font-headline text-3xl font-extrabold text-on-surface">
-                      <SensitiveCurrency value={Math.abs(largestExpense?.amount ?? 0)} eyeClassName="h-6 w-6" />
+                    <h2 className="min-w-0 font-headline font-extrabold leading-tight text-on-surface sm:leading-none text-[clamp(1.5rem,6vw,1.875rem)]">
+                      <SensitiveCurrency
+                        value={Math.abs(largestExpense?.amount ?? 0)}
+                        className="break-words"
+                        wrapperClassName="min-w-0 max-w-full flex-wrap gap-2"
+                        eyeClassName="h-6 w-6"
+                      />
                     </h2>
                     <p className="text-sm text-on-surface-variant">
                       {largestExpense ? categoryMap.get(largestExpense.categoryId)?.name ?? t("common.uncategorized") : "-"}

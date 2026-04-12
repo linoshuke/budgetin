@@ -47,6 +47,7 @@ export default function ProfilePage() {
   const [showEditName, setShowEditName] = useState(false);
   const [showPasswordModal, setShowPasswordModal] = useState(false);
   const [showUpgradeModal, setShowUpgradeModal] = useState(false);
+  const [showGoogleLinkConflictCta, setShowGoogleLinkConflictCta] = useState(false);
   const [upgradeEmail, setUpgradeEmail] = useState("");
   const [upgradePassword, setUpgradePassword] = useState("");
   const [upgradeConfirmPassword, setUpgradeConfirmPassword] = useState("");
@@ -72,6 +73,7 @@ export default function ProfilePage() {
     const linked = searchParams?.get("linked");
     if (linked === "google") {
       setLinkNotice("Google berhasil terhubung.");
+      setShowGoogleLinkConflictCta(false);
       try {
         const url = new URL(window.location.href);
         url.searchParams.delete("linked");
@@ -84,13 +86,15 @@ export default function ProfilePage() {
 
     const linkError = searchParams?.get("link_error");
     if (linkError === "identity_already_exists") {
-      const message =
-        "Akun Google ini sudah terhubung ke akun lain. Untuk menyimpan data anonim ini, gunakan akun Google lain (yang belum pernah dipakai di Budgetin) atau simpan dengan email baru.";
-
-      setLinkError(message);
       if (isAnonymous) {
-        setUpgradeError(message);
+        setLinkError("");
+        setUpgradeError("");
         setShowUpgradeModal(true);
+        setShowGoogleLinkConflictCta(true);
+      } else {
+        setLinkError(
+          "Akun Google ini sudah terhubung ke akun lain. Coba gunakan akun Google yang berbeda atau simpan dengan email lain.",
+        );
       }
       try {
         const url = new URL(window.location.href);
@@ -361,6 +365,7 @@ export default function ProfilePage() {
   const handleUpgradeAccount = () => {
     setUpgradeError("");
     setUpgradeNotice("");
+    setShowGoogleLinkConflictCta(false);
     setShowUpgradeModal(true);
   };
 
@@ -670,14 +675,53 @@ export default function ProfilePage() {
       <Modal
         open={showUpgradeModal}
         title="Simpan Data Permanen"
-        onClose={() => setShowUpgradeModal(false)}
+        onClose={() => {
+          setShowUpgradeModal(false);
+          setShowGoogleLinkConflictCta(false);
+        }}
         sizeClassName="max-w-lg"
       >
         <div className="space-y-4">
-          {upgradeError ? (
-            <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">
-              {upgradeError}
-            </p>
+          {showGoogleLinkConflictCta ? (
+            <div
+              className="rounded-2xl border border-error/30 bg-error/10 px-4 py-4 text-on-surface"
+              role="alert"
+              aria-live="polite"
+            >
+              <h3 className="text-base font-bold text-error">Akun Google sudah terhubung ke akun lain</h3>
+              <p className="mt-2 text-sm text-on-surface-variant">
+                Akun Google ini sudah terhubung ke akun lain. Untuk menyimpan data anonim ini, gunakan akun Google lain
+                (yang belum pernah dipakai di Budgetin) atau simpan dengan email baru.
+              </p>
+              <div className="mt-4 grid gap-2 sm:grid-cols-2">
+                <button
+                  type="button"
+                  className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary disabled:opacity-60"
+                  onClick={() => handleLinkGoogle()}
+                  disabled={linkingGoogle || upgradingAccount}
+                >
+                  Pilih akun Google lain
+                </button>
+                <button
+                  type="button"
+                  className="rounded-lg border border-outline-variant/25 bg-surface-container-high px-4 py-2 text-sm font-semibold text-on-surface transition hover:bg-surface-container-high/70 disabled:opacity-60"
+                  onClick={() => {
+                    setShowGoogleLinkConflictCta(false);
+                    setUpgradeError("");
+                    setUpgradeNotice("");
+                    setTimeout(() => {
+                      const element = document.getElementById("upgrade-email");
+                      if (element instanceof HTMLInputElement) element.focus();
+                    }, 0);
+                  }}
+                  disabled={upgradingAccount || linkingGoogle}
+                >
+                  Simpan dengan email baru
+                </button>
+              </div>
+            </div>
+          ) : upgradeError ? (
+            <p className="rounded-lg border border-error/30 bg-error/10 px-3 py-2 text-sm text-error">{upgradeError}</p>
           ) : null}
           {upgradeNotice ? (
             <p className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-primary">
@@ -716,6 +760,7 @@ export default function ProfilePage() {
               <label className="text-xs font-semibold uppercase tracking-widest text-on-surface-variant">
                 Email
                 <input
+                  id="upgrade-email"
                   type="email"
                   value={upgradeEmail}
                   onChange={(event) => setUpgradeEmail(event.target.value)}

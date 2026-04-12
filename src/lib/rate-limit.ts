@@ -27,14 +27,23 @@ const MAX_ENTRIES = 10_000;
 const DEFAULT_PREFIX = "ratelimit";
 
 let redisClient: Redis | null | undefined;
+let redisConfigured = false;
+let redisDisabled = false;
+let redisFallbackWarned = false;
 
 function getRedis() {
   if (redisClient !== undefined) return redisClient;
   const url = process.env.UPSTASH_REDIS_REST_URL;
   const token = process.env.UPSTASH_REDIS_REST_TOKEN;
 
+  redisConfigured = Boolean(url && token);
   if (!url || !token) {
     console.warn("[rate-limit] Upstash env missing, assuming WAF/CDN handles rate limiting.");
+    redisClient = null;
+    return redisClient;
+  }
+
+  if (redisDisabled) {
     redisClient = null;
     return redisClient;
   }
@@ -173,18 +182,30 @@ export async function rateLimit({
       ?.filter((part) => part !== undefined && part !== null)
       .map((part) => hashKeyPart(String(part).toLowerCase())) ?? [];
   const bucketKey = [prefix, key, ip, ...extraKeyParts].join(":");
-  let redis: Redis | null = null;
-  redis = getRedis();
+  const redis = getRedis();
 
   if (redis) {
     try {
       return await rateLimitRedis(redis, bucketKey, limit, windowMs);
     } catch (error) {
-      console.warn("Redis rate limit fallback to memory:", error);
+      const message = error instanceof Error ? error.message : String(error);
+      if (!redisFallbackWarned) {
+        console.warn("[rate-limit] Redis rate limit fallback to memory:", message);
+        redisFallbackWarned = true;
+      }
+
+      if (message.toLowerCase().includes("noperm")) {
+        redisDisabled = true;
+        redisClient = null;
+      }
       return rateLimitMemory(bucketKey, limit, windowMs);
     }
   }
 
-  // No redis backend (e.g., handled at WAF/CDN) -- return a pass result.
+  if (redisConfigured) {
+    return rateLimitMemory(bucketKey, limit, windowMs);
+  }
+
+  // No redis backend configured (e.g., handled at WAF/CDN) -- return a pass result.
   return buildResult(limit, 0, Date.now() + windowMs);
 }

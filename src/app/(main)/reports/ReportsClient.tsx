@@ -6,12 +6,13 @@ import { useQuery } from "@tanstack/react-query";
 import PageIndicator from "@/components/statistics/PageIndicator";
 import LockWidget from "@/components/LockWidget";
 import Button from "@/components/ui/Button";
+import Skeleton from "@/components/ui/Skeleton";
 import ChartDeferred from "@/components/shared/ChartDeferred";
 import StatCard from "@/components/shared/StatCard";
 import SensitiveCurrency from "@/components/shared/SensitiveCurrency";
+import TransactionList from "@/components/history/TransactionList";
 import { useWallets } from "@/hooks/useWallets";
 import { useAuth } from "@/hooks/useAuth";
-import { useNonceStyle } from "@/hooks/useNonceStyle";
 import { useBudgetStore } from "@/store/budgetStore";
 import { useTransactionStore } from "@/stores/transactionStore";
 import { getMonthLabel, getMonthRange } from "@/utils/date";
@@ -23,20 +24,31 @@ const WalletStatCard = dynamic(() => import("@/components/statistics/WalletStatC
   loading: () => <div className="h-[260px] rounded-2xl bg-surface-container-low/50" />,
 });
 
+function clampPercent(value: number) {
+  const safe = Number.isFinite(value) ? value : 0;
+  return Math.min(Math.max(Math.round(safe), 0), 100);
+}
+
 function HeightBar({ percent, className }: { percent: number; className: string }) {
-  const clamped = Math.min(Math.max(percent, 0), 100);
-  const heightClass = useNonceStyle(`height: ${clamped}%;`);
+  const clamped = clampPercent(percent);
   return (
-    <div
-      className={`min-h-[12px] w-full rounded-t-lg transition-all duration-500 ${className} ${heightClass}`}
-    />
+    <div className="h-full w-full overflow-hidden rounded-t-md bg-surface-container-highest/20 flex items-end">
+      <div
+        className={`min-h-[12px] w-full rounded-t-md transition-all duration-500 ${className}`}
+        style={{ height: `${clamped}%` }}
+      />
+    </div>
   );
 }
 
 function ProgressBar({ percent, className }: { percent: number; className: string }) {
-  const clamped = Math.min(Math.max(percent, 0), 100);
-  const widthClass = useNonceStyle(`width: ${clamped}%;`);
-  return <div className={`h-full rounded-full ${className} ${widthClass}`} />;
+  const clamped = clampPercent(percent);
+  return (
+    <div 
+      className={`h-full rounded-full transition-all duration-500 ${className}`} 
+      style={{ width: `${clamped}%` }}
+    />
+  );
 }
 
 function formatISODate(dateValue: Date) {
@@ -106,7 +118,7 @@ export default function ReportsClient() {
     [currentMonth.month, currentMonth.year],
   );
 
-  const { data } = useQuery({
+  const { data, isLoading: queryLoading, isError, refetch } = useQuery({
     queryKey: ["transactions", "reports", user?.id ?? "anon", currentMonth.year, currentMonth.month],
     enabled: Boolean(user) && !isAnonymous,
     queryFn: async () => {
@@ -248,24 +260,31 @@ export default function ReportsClient() {
       ? new Date(now.getFullYear(), now.getMonth(), now.getDate())
       : new Date(currentMonth.year, currentMonth.month, 0);
 
-    const expenseByDate = new Map<string, number>();
+    const expenseByDate = new Map<string, { total: number; items: Array<{ description: string; amount: number; type: string }> }>();
     (data ?? []).forEach((trx) => {
       if (trx.type !== "expense") return;
       const key = trx.date.slice(0, 10);
-      expenseByDate.set(key, (expenseByDate.get(key) ?? 0) + Number(trx.amount ?? 0));
+      const entry = expenseByDate.get(key) ?? { total: 0, items: [] };
+      entry.total += Number(trx.amount ?? 0);
+      entry.items.push({
+        description: trx.description,
+        amount: Number(trx.amount ?? 0),
+        type: trx.type,
+      });
+      expenseByDate.set(key, entry);
     });
 
     const currentDates = Array.from({ length: 7 }, (_, index) => addDays(end, index - 6));
     const prevEnd = addDays(end, -7);
     const prevDates = Array.from({ length: 7 }, (_, index) => addDays(prevEnd, index - 6));
 
-    const currentValues = currentDates.map((dateValue) => expenseByDate.get(formatISODate(dateValue)) ?? 0);
-    const prevValues = prevDates.map((dateValue) => expenseByDate.get(formatISODate(dateValue)) ?? 0);
+    const currentEntries = currentDates.map((dateValue) => expenseByDate.get(formatISODate(dateValue)) ?? { total: 0, items: [] });
+    const prevEntries = prevDates.map((dateValue) => expenseByDate.get(formatISODate(dateValue)) ?? { total: 0, items: [] });
 
-    const total = currentValues.reduce((acc, value) => acc + value, 0);
-    const prevTotal = prevValues.reduce((acc, value) => acc + value, 0);
-    const max = Math.max(...currentValues, 1);
-    const maxIndex = currentValues.reduce((best, value, index) => (value > currentValues[best] ? index : best), 0);
+    const total = currentEntries.reduce((acc, entry) => acc + entry.total, 0);
+    const prevTotal = prevEntries.reduce((acc, entry) => acc + entry.total, 0);
+    const max = Math.max(...currentEntries.map(e => e.total), 1);
+    const maxIndex = currentEntries.reduce((best, entry, index) => (entry.total > currentEntries[best].total ? index : best), 0);
 
     const change =
       prevTotal > 0 ? ((total - prevTotal) / prevTotal) * 100 : total > 0 ? 100 : 0;
@@ -281,8 +300,9 @@ export default function ReportsClient() {
       bars: currentDates.map((dateValue, index) => ({
         label: formatter.format(dateValue).toUpperCase(),
         tooltip: tooltipFormatter.format(dateValue),
-        value: currentValues[index],
-        percent: (currentValues[index] / max) * 100,
+        value: currentEntries[index].total,
+        percent: (currentEntries[index].total / max) * 100,
+        items: currentEntries[index].items,
       })),
     };
   }, [currentMonth.month, currentMonth.year, data]);
@@ -296,8 +316,20 @@ export default function ReportsClient() {
 
   if (authLoading) {
     return (
-      <div className="flex min-h-[60vh] items-center justify-center">
-        <div className="h-10 w-10 animate-spin rounded-full border-2 border-primary/30 border-t-primary" />
+      <div className="space-y-10 animate-fade-in">
+        <section className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-48" />
+          </div>
+          <Skeleton className="h-10 w-48 rounded-xl" />
+        </section>
+        <section className="grid gap-4 md:grid-cols-3">
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
+          <Skeleton className="h-32 w-full rounded-2xl" />
+        </section>
+        <Skeleton className="h-80 w-full rounded-xl" />
       </div>
     );
   }
@@ -395,15 +427,42 @@ export default function ReportsClient() {
               const highlight = index === spendingTrendWeek.maxIndex && bar.value > 0;
               return (
                 <div key={`${bar.label}-${index}`} className="relative group flex h-full flex-1 items-end">
-                  <div className="absolute -top-10 left-1/2 -translate-x-1/2 bg-surface-container-highest px-2 py-1 rounded text-[10px] opacity-0 group-hover:opacity-100 transition-opacity">
-                    {bar.tooltip}: <SensitiveCurrency value={bar.value} showEye={false} />
+                  <div className="absolute bottom-full left-1/2 z-50 -translate-x-1/2 mb-2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+                    <div className="w-max max-w-[200px] rounded-xl border border-outline-variant/20 bg-surface-container-highest p-3 text-[11px] shadow-2xl">
+                      <p className="font-bold text-on-surface mb-2">{bar.tooltip}</p>
+                      <div className="space-y-1.5">
+                        {bar.items.length > 0 ? (
+                          bar.items.slice(0, 3).map((item, i) => (
+                            <div key={i} className="flex justify-between gap-3">
+                              <span className="truncate text-on-surface-variant">{item.description || "Tanpa catatan"}</span>
+                              <span className="font-bold text-error whitespace-nowrap">
+                                <SensitiveCurrency value={item.amount} showEye={false} />
+                              </span>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-on-surface-variant italic">Tidak ada pengeluaran</p>
+                        )}
+                        {bar.items.length > 3 && (
+                          <p className="text-[9px] text-center pt-1 border-t border-outline-variant/30 text-on-surface-variant/70">
+                            +{bar.items.length - 3} transaksi lainnya
+                          </p>
+                        )}
+                      </div>
+                      <div className="mt-2 pt-2 border-t border-outline-variant/30 flex justify-between font-bold">
+                        <span>Total</span>
+                        <span className="text-primary">
+                          <SensitiveCurrency value={bar.value} showEye={false} />
+                        </span>
+                      </div>
+                    </div>
                   </div>
                   <HeightBar
                     percent={bar.percent}
                     className={
                       highlight
-                        ? "bg-primary/30 group-hover:bg-primary/40 border-t-4 border-primary"
-                        : "bg-primary/20 group-hover:bg-primary/30"
+                        ? "bg-primary group-hover:bg-primary/80 border-t-4 border-primary-container"
+                        : "bg-primary/40 group-hover:bg-primary/60"
                     }
                   />
                 </div>
@@ -624,6 +683,19 @@ export default function ReportsClient() {
             Belum ada pengeluaran untuk ditampilkan berdasarkan kategori.
           </div>
         )}
+      </section>
+
+      <section className="space-y-4">
+        <div>
+          <h3 className="font-headline text-lg font-bold text-on-surface">Daftar Transaksi</h3>
+          <p className="text-xs text-on-surface-variant">Detail pengeluaran & pemasukan bulan ini</p>
+        </div>
+        <TransactionList 
+          transactions={data ?? []} 
+          loading={queryLoading} 
+          error={isError} 
+          onRetry={refetch}
+        />
       </section>
     </div>
   );

@@ -4,10 +4,11 @@ import React from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
+import type { Route } from "next";
 
 type NavItem = {
   label: string;
-  href: string;
+  href: Route;
   icon: () => React.ReactElement;
 };
 
@@ -80,7 +81,7 @@ const items: NavItem[] = [
     ),
   },
   {
-    label: "Analitik",
+    label: "Laporan",
     href: "/reports",
     icon: () => (
       <svg viewBox="0 0 24 24" width={26} height={26} aria-hidden="true">
@@ -126,7 +127,7 @@ export default function MobileBottomNav() {
           return (
             <Link
               key={item.label}
-              href={item.href as any}
+              href={item.href}
               className={cn(
                 "flex flex-1 flex-col items-center justify-center gap-1 px-2 py-1 text-[11px] transition-all duration-[250ms] ease-in-out",
                 active ? "-translate-y-3 text-indigo-600" : "text-[var(--text-dimmed)]",
